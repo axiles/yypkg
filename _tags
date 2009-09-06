@@ -1,0 +1,2 @@
+<src>: include
+<src/*.ml> or <src/*.mli> or <src/*.native> or <src/*.byte>: pkg_unix, pkg_mikmatch_pcre, debug, syntax_camlp4o, pkg_sexplib, pkg_sexplib.syntax, pkg_fileutils
