@@ -9,10 +9,8 @@
   (packager_name "ME")
  )
  (
-  ("prefix" (MKdir "${PREFIX}/prefix"))
   ("prefix" (Expand "a" "${PREFIX}/prefix"))
   ("prefix" (Expand "x/y" "${PREFIX}/prefix"))
-  ("t" (MKdir "${PREFIX}/prefix/t"))
   ("t" (Expand "x/z/omega" "${PREFIX}/prefix/t"))
  )
  (

@@ -1,8 +1,6 @@
 open Types
 open Lib
 
-let install_path = "install_path"
-
 let parse_args argv =
   match argv.(1) with
     | "-add"

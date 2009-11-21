@@ -9,13 +9,9 @@
   (packager_name "ME")
  )
  (
-  ("prefix" (MKdir "${PREFIX}/prefix"))
-  ("prefix" (MKdir "${PREFIX}/prefix/pouet"))
-  ("t" (MKdir "${PREFIX}/prefix/t"))
   ("t" (Expand "x/z/omega" "${PREFIX}/prefix/t"))
  )
  (
   (Reverse "t")
-  (Reverse "prefix") 
  )
 )

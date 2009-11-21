@@ -3,7 +3,7 @@ open Sexplib
 open Types
 
 let install_path =
-  Filename.dirname (Filename.basename (Sys.argv.(0)))
+  Filename.dirname Sys.argv.(0)
 
 let ahk_bin =
   Filename.concat install_path "ahk.exe"
@@ -21,7 +21,7 @@ let quote_and_expand x =
   Filename.quote (expand_environment_variables x)
 
 let reduce_path path =
-  FilePath.DefaultPath.reduce path
+  FilePath.reduce path
 
 let dir_sep =
   match Sys.os_type with
@@ -76,34 +76,36 @@ let chop_list list i =
   in
   chop_list_rc i list
 
-let expand pkg i p =
-  let l = (List.length (split_path i)) - 1 in
-  let pkg = quote_and_expand pkg in
-  let iq = quote_and_expand ("./" ^ i) in
-  let pq = quote_and_expand p in
-  let cmd= sprintf "tar xvf %s -C %s --strip-component %d %s" pkg pq (l+1) iq in
-  let lines = command cmd in
-  let actual_path path =
-    filename_concat (p :: (chop_list (split_path path) l))
-  in
-  List.map actual_path lines
-
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   let () = FileUtil.StrUtil.mkdir ~parent:true ~mode:0o755 path in
   [ path_unexpanded ]
 
+let expand pkg i p =
+  let l = List.length (split_path i) in
+  let pkg = quote_and_expand pkg in
+  let iq = quote_and_expand ("./" ^ i) in
+  let pq = quote_and_expand p in
+  let () = ignore (mkdir p) in
+  (* XXX let p2 :: _ = split_path p in *)
+  let cmd = sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
+  let lines = command cmd in
+  let actual_path path =
+    filename_concat (p :: (chop_list (split_path path) (l - 1)))
+  in
+  List.map actual_path lines
+
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   try
-    FileUtil.StrUtil.rm ~force:FileUtil.Force ~recurse:false [ path ];
+    FileUtil.rm ~force:FileUtil.Force ~recurse:true [ path ];
     Printf.printf "Removed: %s\n" path
   with
     | FileUtil.RmDirNotEmpty s ->
         Printf.printf "Not removed: non-empty directory %s\n" s
 
 let open_package package =
-  let script_cmd = Printf.sprintf "tar xf %s -O ./package_script.el" package in
+  let script_cmd = sprintf "tar xf %s -O ./package_script.el" package in
   let script_input = Unix.open_process_in script_cmd in
   let script_sexp = Sexp.input_sexp script_input in
   script_of_sexp script_sexp

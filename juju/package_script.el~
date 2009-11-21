@@ -10,7 +10,7 @@
  )
  (
   ("prefix" (MKdir "${PREFIX}/prefix"))
-  ("prefix" (MKdir "${PREFIX}/pouet"))
+  ("prefix" (MKdir "${PREFIX}/prefix/pouet"))
   ("t" (MKdir "${PREFIX}/prefix/t"))
   ("t" (Expand "x/z/omega" "${PREFIX}/prefix/t"))
  )
