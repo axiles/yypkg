@@ -12,8 +12,12 @@ let parse_args argv =
 
 let main () =
   let db = Db.read db_path in
+  let prefix = Sys.getenv "PREFIX" in
+  let () = ignore (mkdir prefix) in
+  let () = Sys.chdir (Sys.getenv "PREFIX") in
   match parse_args Sys.argv with
     | Install p -> 
+        let p = FilePath.DefaultPath.make_absolute install_path p in
         assert (Sys.file_exists p);
         let updated_db = Install.install_package db p in
         Db.write db_path updated_db

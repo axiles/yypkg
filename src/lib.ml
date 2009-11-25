@@ -3,7 +3,7 @@ open Sexplib
 open Types
 
 let install_path =
-  Filename.dirname Sys.argv.(0)
+  Sys.getcwd ()
 
 let ahk_bin =
   Filename.concat install_path "ahk.exe"
@@ -15,13 +15,14 @@ let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
 
 let expand_environment_variables s =
-  (REPLACE "${" (alnum+ as s) "}" -> Unix.getenv s) s
+  let s = (REPLACE "${" (alnum+ as s) "}" -> Unix.getenv s) s in
+  (REPLACE alpha ":\\" -> "") s
 
 let quote_and_expand x =
   Filename.quote (expand_environment_variables x)
 
 let reduce_path path =
-  FilePath.reduce path
+  FilePath.DefaultPath.reduce path
 
 let dir_sep =
   match Sys.os_type with
@@ -98,7 +99,7 @@ let expand pkg i p =
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   try
-    FileUtil.rm ~force:FileUtil.Force ~recurse:true [ path ];
+    FileUtil.StrUtil.rm ~force:FileUtil.Force ~recurse:true [ path ];
     Printf.printf "Removed: %s\n" path
   with
     | FileUtil.RmDirNotEmpty s ->

@@ -9,7 +9,7 @@
   (packager_name "ME")
  )
  (
-  ("t" (Expand "x/z/omega" "${PREFIX}/prefix/t"))
+  ("t" (Expand "x/z/omega" "t"))
  )
  (
   (Reverse "t")

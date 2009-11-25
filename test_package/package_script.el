@@ -9,9 +9,9 @@
   (packager_name "ME")
  )
  (
-  ("prefix" (Expand "a" "${PREFIX}/prefix"))
-  ("prefix" (Expand "x/y" "${PREFIX}/prefix"))
-  ("t" (Expand "x/z/omega" "${PREFIX}/prefix/t"))
+  ("prefix" (Expand "a" "."))
+  ("prefix" (Expand "x/y" "."))
+  ("t" (Expand "x/z/omega" "t"))
  )
  (
   (Reverse "t")
