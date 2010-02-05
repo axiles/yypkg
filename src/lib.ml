@@ -89,7 +89,7 @@ let expand pkg i p =
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in
   (* XXX let p2 :: _ = split_path p in *)
-  let cmd = sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
+  let cmd = sprintf "xz -d -c %s | tar xv --wildcards -C %s --strip-component %d %s" pkg pq l iq in
   let lines = command cmd in
   let actual_path path =
     filename_concat (p :: (chop_list (split_path path) (l - 1)))
@@ -106,7 +106,7 @@ let rm path_unexpanded =
         Printf.printf "Not removed: non-empty directory %s\n" s
 
 let open_package package =
-  let script_cmd = sprintf "tar xf %s -O ./package_script.el" package in
+  let script_cmd = sprintf "xz -d -c %s | tar x -O ./package_script.el" package in
   let script_input = Unix.open_process_in script_cmd in
   let script_sexp = Sexp.input_sexp script_input in
   script_of_sexp script_sexp
