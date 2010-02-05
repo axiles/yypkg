@@ -89,7 +89,7 @@ let expand pkg i p =
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in
   (* XXX let p2 :: _ = split_path p in *)
-  let cmd = sprintf "xz -d -c %s | tar xv --wildcards -C %s --strip-component %d %s" pkg pq l iq in
+  let cmd = sprintf "tar xJv %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
   let lines = command cmd in
   let actual_path path =
     filename_concat (p :: (chop_list (split_path path) (l - 1)))
