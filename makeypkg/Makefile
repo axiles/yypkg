@@ -1,2 +1,2 @@
 all:
-	ocamlopt.opt -o makeypkg makeypkg.ml
+	ocamlfind opt -o makeypkg -linkpkg -package fileutils makeypkg.ml
