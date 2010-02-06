@@ -26,7 +26,7 @@ let package_script_el f_list ~pkg_size =
 
 let () =
   let output = Sys.argv.(1) in
-  assert (Filename.check_suffix output ".txz");
+  assert (Filename.check_suffix output ".tgz");
   let f_list = Array.to_list (Sys.readdir ".") in
   let pkg_size, _ = FileUtil.StrUtil.du [ "." ] in
   let pkg_size = FileUtil.string_of_size pkg_size in
@@ -34,4 +34,4 @@ let () =
   let oc = open_out_bin "package_script.el" in
   let () = output_string oc package_script_el in
   let () = close_out oc in
-  ignore (Sys.command (sprintf "tar cJf %s --exclude \"install\" ." output))
+  ignore (Sys.command (sprintf "tar czf %s --exclude \"install\" ." output))
