@@ -1,5 +1,32 @@
 open Printf
 
+type cmd_line = {
+  output : string;
+  folder : string;
+}
+
+let parse_command_line () = 
+  let output = ref "" in
+  let folder = ref "" in
+  let lst = [
+    "-o", Arg.Set_string output, "specify output file (mandatory)"
+  ]
+  in
+  let set_folder s = 
+    folder := s
+  in
+  let usage_msg = "makeypkg -o /path/to/package.txz /folder/to/package" in
+  let () = Arg.parse lst set_folder usage_msg in
+  if "" = !output || "" = !folder then
+    let () = prerr_endline "Error: incorrect usage of makeypkg" in
+    let () = prerr_endline usage_msg in
+    exit 0
+  else
+    {
+      output = !output;
+      folder = !folder;
+    }
+
 let meta ~pkg_name ~pkg_size =
   String.concat "\n" [
     "((credits \"me\")";
@@ -24,14 +51,24 @@ let package_script_el f_list ~pkg_size =
   let uninstall = String.concat "\n" (List.map g f_list) in
   sprintf "(\n%s\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
-let () =
-  let output = Sys.argv.(1) in
-  assert (Filename.check_suffix output ".tgz");
-  let f_list = Array.to_list (Sys.readdir ".") in
-  let pkg_size, _ = FileUtil.StrUtil.du [ "." ] in
-  let pkg_size = FileUtil.string_of_size pkg_size in
-  let package_script_el = package_script_el ~pkg_size f_list in
-  let oc = open_out_bin "package_script.el" in
-  let () = output_string oc package_script_el in
+let write_temp_file base_name contents =
+  let path, oc = Filename.open_temp_file base_name "" in
+  let () = output_string oc contents in
   let () = close_out oc in
-  ignore (Sys.command (sprintf "tar czf %s --exclude \"install\" ." output))
+  path
+
+let () =
+  let cmd_line = parse_command_line () in
+  assert (Filename.check_suffix cmd_line.output ".tgz");
+  let f_list = Array.to_list (Sys.readdir cmd_line.folder) in
+  let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
+  let package_script_el = package_script_el ~pkg_size f_list in
+  let path = write_temp_file "package_script.el" package_script_el in
+  let basename = FilePath.DefaultPath.basename path in
+  let transform = sprintf "--transform=s/%s/package_script.el/" basename in
+  let command = sprintf
+    "tar czf %s --exclude \"install\" %s %s %s"
+    cmd_line.output cmd_line.folder transform path
+  in
+  print_endline command;
+  ignore (Sys.command command)
