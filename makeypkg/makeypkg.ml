@@ -38,17 +38,10 @@ let meta ~pkg_name ~pkg_size =
     "(packager_name \"ME\"))";
   ]
 
-let package_script_el f_list ~pkg_size =
-  let f_list = List.filter ((<>) "install") f_list in
-  let f file =
-    sprintf "(\"%s\" (Expand \"%s\" \"%s\"))" file file "."
-  in
-  let g file =
-    sprintf "(Reverse \"%s\")" file
-  in
+let package_script_el folder_name ~pkg_size =
   let meta = meta ~pkg_name:"juju" ~pkg_size in
-  let install = String.concat "\n" (List.map f f_list) in
-  let uninstall = String.concat "\n" (List.map g f_list) in
+  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder_name folder_name "." in
+  let uninstall = sprintf "(Reverse \"%s\")" folder_name in
   sprintf "(\n%s\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
 let write_temp_file base_name contents =
@@ -60,15 +53,12 @@ let write_temp_file base_name contents =
 let () =
   let cmd_line = parse_command_line () in
   assert (Filename.check_suffix cmd_line.output ".tgz");
-  let f_list = Array.to_list (Sys.readdir cmd_line.folder) in
   let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
-  let package_script_el = package_script_el ~pkg_size f_list in
+  let package_script_el = package_script_el ~pkg_size cmd_line.folder in
   let path = write_temp_file "package_script.el" package_script_el in
-  let basename = FilePath.DefaultPath.basename path in
-  let transform = sprintf "--transform=s/%s/package_script.el/" basename in
+  let transform = sprintf "--transform=s#%s#package_script.el#" path in
   let command = sprintf
-    "tar czf %s --exclude \"install\" %s %s %s"
+    "tar czf %s --absolute-names --exclude \"install\" %s %s %s"
     cmd_line.output cmd_line.folder transform path
   in
-  print_endline command;
   ignore (Sys.command command)
