@@ -55,11 +55,11 @@ let () =
   assert (Filename.check_suffix cmd_line.output ".tar");
   let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
   let package_script_el = package_script_el ~pkg_size cmd_line.folder in
-  let path = write_temp_file "package_script.el" package_script_el in
-  let transform = sprintf "--transform=s#%s#package_script.el#" path in
+  let script_path = write_temp_file "package_script.el" package_script_el in
+  let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
   let command = sprintf
     "tar cvf %s --absolute-names --exclude \"install\" %s %s %s"
-    cmd_line.output cmd_line.folder transform path
+    cmd_line.output script_path cmd_line.folder transform
   in
   print_endline command;
   ignore (Sys.command command)
