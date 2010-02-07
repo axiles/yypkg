@@ -27,8 +27,8 @@ let reduce_path path =
 let dir_sep =
   match Sys.os_type with
     | "Unix"
-    | "Cygwin" -> '/'
-    | "Win32" -> '\\'
+    | "Cygwin" -> "/"
+    | "Win32" -> "\\"
     | _ -> assert false
 
 let command cmd =
@@ -60,7 +60,7 @@ let command cmd =
 
 let split_path path =
   (* FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME *)
-  (COLLECT [ ^ '/' ]+ as s -> s) path
+  (SPLIT @dir_sep) path
 
 let filename_concat = function
   | t :: q -> List.fold_left Filename.concat t q
@@ -77,20 +77,23 @@ let chop_list list i =
   in
   chop_list_rc i list
 
+let strip_component n path =
+  filename_concat (chop_list (split_path path) n)
+
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   let () = FileUtil.StrUtil.mkdir ~parent:true ~mode:0o755 path in
   [ path_unexpanded ]
 
 let expand pkg i p =
-  let l = List.length (split_path i) in
+  let l = List.length (split_path i) - 1 in
   let pkg = quote_and_expand pkg in
-  let iq = quote_and_expand ("./" ^ i) in
+  let iq = quote_and_expand i in
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in
   (* XXX let p2 :: _ = split_path p in *)
-  let cmd = sprintf "tar xv %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
-  let lines = command cmd in
+  let cmd = sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
+  let lines = List.map (strip_component l) (command cmd) in
   let actual_path path =
     filename_concat (p :: (chop_list (split_path path) (l - 1)))
   in
@@ -106,7 +109,7 @@ let rm path_unexpanded =
         Printf.printf "Not removed: non-empty directory %s\n" s
 
 let open_package package =
-  let script_cmd = sprintf "tar xf %s -O ./package_script.el" package in
+  let script_cmd = sprintf "tar xf %s -O package_script.el" package in
   let script_input = Unix.open_process_in script_cmd in
   let script_sexp = Sexp.input_sexp script_input in
   script_of_sexp script_sexp

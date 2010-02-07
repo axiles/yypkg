@@ -52,13 +52,14 @@ let write_temp_file base_name contents =
 
 let () =
   let cmd_line = parse_command_line () in
-  assert (Filename.check_suffix cmd_line.output ".tgz");
+  assert (Filename.check_suffix cmd_line.output ".tar");
   let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
   let package_script_el = package_script_el ~pkg_size cmd_line.folder in
   let path = write_temp_file "package_script.el" package_script_el in
   let transform = sprintf "--transform=s#%s#package_script.el#" path in
   let command = sprintf
-    "tar czf %s --absolute-names --exclude \"install\" %s %s %s"
+    "tar cvf %s --absolute-names --exclude \"install\" %s %s %s"
     cmd_line.output cmd_line.folder transform path
   in
+  print_endline command;
   ignore (Sys.command command)
