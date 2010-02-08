@@ -13,6 +13,7 @@ let execute_install_action package (id, action) =
 let install_package db package =
   let (metadata, install_actions, _ as script) = open_package package in
   let () = print_endline "package opened" in
+  let install_actions = cluster_extract_actions install_actions in
   let results = List.map (execute_install_action package) install_actions in
   let updated_db = Db.install_package db (script, List.rev results) in
   updated_db

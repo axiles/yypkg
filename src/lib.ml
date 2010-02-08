@@ -134,3 +134,33 @@ let files_from_package (_, results) =
     | Filelist l -> List.map reduce_path l
   in
   List.concat (List.map f results)
+
+let cluster_extract_actions install_actions =
+  let cluster l = 
+    let f = function
+      | (s, Expand (i, _)) -> s, i
+      | _ -> assert false
+    in
+    let (_, Expand (_, o)) :: _ = l in
+    let l = List.rev_map f l in
+    let i = String.concat " " (List.map snd l) in
+    let s = String.concat " " (List.map fst l) in
+    s, Expand (i, o)
+  in
+  let rec f accu cur_accu = function
+    | [] -> begin
+        match cur_accu with
+          | [] -> accu
+          | l -> (cluster cur_accu) :: accu
+      end
+    | ( s, Expand (i, o) as t ) :: q -> begin
+        match cur_accu with
+          | (_, Expand (_, cur_o)) :: _ when cur_o = o -> f accu (t :: cur_accu) q
+          | [] -> f accu [ t ] q
+          | (_, Expand _) :: _ -> f ((cluster cur_accu) :: accu) [ t ] q
+          | _ -> assert false
+      end
+    | t :: q -> f (t :: (cluster cur_accu) :: accu) [] q
+  in
+  List.rev (f [] [] install_actions)
+
