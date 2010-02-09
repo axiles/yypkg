@@ -2,6 +2,8 @@ open Printf
 open Sexplib
 open Types
 
+exception ChopList_ChopingTooMuch of (int * int)
+
 let install_path =
   Sys.getcwd ()
 
@@ -67,18 +69,21 @@ let filename_concat = function
   | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
 
 let chop_list list i =
-  let rec chop_list_rc i = function
-    | l when i = 0 -> l
-    | t :: q -> chop_list_rc  (i-1) q
-    | [] -> raise (Invalid_argument "chop_list, choping more than possible")
+  let rec chop_list_rc j = function
+    | l when j = 0 -> l
+    | t :: q -> chop_list_rc  (j-1) q
+    | [] ->
+        raise (ChopList_ChopingTooMuch (List.length list, i))
     (* this means we're trying to chop more than possible, 'l when i = 0'
      * handles the case when we're trying to chop as much as we have so we
      * can simply always yell here *)
   in
   chop_list_rc i list
 
-let strip_component n path =
-  filename_concat (chop_list (split_path path) n)
+let strip_component ?(prefix="") n path =
+  match prefix with
+    | "" -> filename_concat (chop_list (split_path path) n)
+    | prefix -> filename_concat (prefix :: (chop_list (split_path path) n))
 
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
@@ -86,18 +91,17 @@ let mkdir path_unexpanded =
   [ path_unexpanded ]
 
 let expand pkg i p =
-  let l = List.length (split_path i) - 1 in
+  let l = List.length (split_path i) in
+  let () = Printf.printf "%d : %s\n%!" l i in
   let pkg = quote_and_expand pkg in
   let iq = quote_and_expand i in
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in
   (* XXX let p2 :: _ = split_path p in *)
-  let cmd = sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg pq l iq in
-  let lines = List.map (strip_component l) (command cmd) in
-  let actual_path path =
-    filename_concat (p :: (chop_list (split_path path) (l - 1)))
-  in
-  List.map actual_path lines
+  let cmd = sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg
+  pq (l-1) iq in
+  let () = print_endline cmd in
+  List.map (strip_component ~prefix:p (l-1)) (command cmd)
 
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
