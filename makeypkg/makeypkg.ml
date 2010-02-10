@@ -3,21 +3,21 @@ open Printf
 type cmd_line = {
   output : string;
   folder : string;
+  pkg_name : string;
 }
 
 let parse_command_line () = 
   let output = ref "" in
   let folder = ref "" in
+  let pkg_name = ref "" in
   let lst = [
-    "-o", Arg.Set_string output, "specify output file (mandatory)"
+    "-o", Arg.Set_string output, "set output file (mandatory)";
+    "-name", Arg.Set_string pkg_name, "set the package name (mandatory)";
   ]
   in
-  let set_folder s = 
-    folder := s
-  in
-  let usage_msg = "makeypkg -o /path/to/package.txz /folder/to/package" in
-  let () = Arg.parse lst set_folder usage_msg in
-  if "" = !output || "" = !folder then
+  let usage_msg = "makeypkg -name foo -o /path/to/package.txz /folder/to/package" in
+  let () = Arg.parse lst ((:=) folder) usage_msg in
+  if "" = !output || "" = !folder || "" = !pkg_name then
     let () = prerr_endline "Error: incorrect usage of makeypkg" in
     let () = prerr_endline usage_msg in
     exit 0
@@ -25,6 +25,7 @@ let parse_command_line () =
     {
       output = !output;
       folder = !folder;
+      pkg_name = !pkg_name;
     }
 
 let meta ~pkg_name ~pkg_size =
@@ -38,10 +39,10 @@ let meta ~pkg_name ~pkg_size =
     "(packager_name \"ME\"))";
   ]
 
-let package_script_el folder_name ~pkg_size =
-  let meta = meta ~pkg_name:"juju" ~pkg_size in
-  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder_name folder_name "." in
-  let uninstall = sprintf "(Reverse \"%s\")" folder_name in
+let package_script_el c ~pkg_size =
+  let meta = meta ~pkg_name:c.pkg_name ~pkg_size in
+  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" c.folder c.folder "." in
+  let uninstall = sprintf "(Reverse \"%s\")" c.folder in
   sprintf "(\n%s\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
 let write_temp_file base_name contents =
@@ -54,7 +55,7 @@ let () =
   let cmd_line = parse_command_line () in
   assert (Filename.check_suffix cmd_line.output ".tar");
   let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
-  let package_script_el = package_script_el ~pkg_size cmd_line.folder in
+  let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
   let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
   let command = sprintf
