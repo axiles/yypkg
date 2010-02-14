@@ -1,10 +1,19 @@
 open Printf
 
+exception Package_name_must_end_in_txz_tgz_or_tbz2
+
 type cmd_line = {
   output : string;
   folder : string;
   pkg_name : string;
 }
+
+let tar, xz, gzip, bzip2 =
+  match Sys.os_type with
+    | "Unix"
+    | "Cygwin" -> "tar", "xz -9", "gzip -9", "bzip2 -9"
+    | "Win32" -> "tar.exe", "xz.exe -9", "gzip.exe -9", "bzip2.exe -9"
+    | _ -> assert false
 
 let parse_command_line () = 
   let output = ref "" in
@@ -51,16 +60,33 @@ let write_temp_file base_name contents =
   let () = close_out oc in
   path
 
+let compressor_of_ext s =
+  (* this function may raise a bunch of exceptions which should be caught with a
+   * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
+   * means the user gave a wrong filename *)
+  let ext_of_filename s =
+    let l = String.length s in
+    let i = String.rindex s '.' in
+    String.sub s (i+1) (l-i-1)
+  in
+  match ext_of_filename s with
+    | "tgz" -> gzip
+    | "txz" -> xz
+    | "tbz2" -> bzip2
+    | _ -> assert false
+
 let () =
   let cmd_line = parse_command_line () in
-  assert (Filename.check_suffix cmd_line.output ".tar");
+  let compressor = try compressor_of_ext cmd_line.output with 
+    | _ -> raise Package_name_must_end_in_txz_tgz_or_tbz2
+  in
   let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
   let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
   let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
   let command = sprintf
-    "tar cvf %s --absolute-names --exclude \"install\" %s %s %s"
-    cmd_line.output script_path cmd_line.folder transform
+    "%s cv --absolute-names --exclude \"install\" %s %s %s | %s -9 > %s "
+    tar script_path cmd_line.folder transform compressor cmd_line.output
   in
   print_endline command;
   ignore (Sys.command command)
