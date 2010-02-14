@@ -11,7 +11,7 @@ let ahk_bin =
   Filename.concat install_path "ahk.exe"
 
 let db_path =
-  Filename.concat install_path "db"
+  "yaxmpkg_db"
 
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
