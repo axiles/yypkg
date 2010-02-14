@@ -106,11 +106,15 @@ let expand pkg i p =
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   try
-    FileUtil.StrUtil.rm ~force:FileUtil.Force ~recurse:true [ path ];
-    Printf.printf "Removed: %s\n" path
+    if FileUtil.StrUtil.test FileUtil.Exists path then
+      let () = FileUtil.StrUtil.rm ~force:FileUtil.Force ~recurse:true [path] in
+      Printf.printf "Removed: %s\n" path
+    else
+      Printf.printf "Not removed (doesn't exist): %s\n" path
   with
     | FileUtil.RmDirNotEmpty s ->
         Printf.printf "Not removed: non-empty directory %s\n" s
+    | e -> print_endline "pouet"; raise e
 
 let open_package package =
   let script_cmd = sprintf "tar xf %s -O --occurrence=1 package_script.el" package in
