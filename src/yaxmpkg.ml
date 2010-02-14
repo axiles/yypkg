@@ -31,9 +31,11 @@ let main () =
   in
   let usage_msg = "pouet" in
   let () = Arg.parse lst (fun _ -> ()) usage_msg in
-  assert ("" <> !prefix );
-  let () = ignore (mkdir !prefix) in
-  let () = Sys.chdir !prefix in
-  !f ()
+  if "" = !prefix then
+    invalid_arg "Missing mandatory argument: -prefix"
+  else
+    let () = ignore (mkdir !prefix) in
+    let () = Sys.chdir !prefix in
+    !f ()
 
 let () = main ()
