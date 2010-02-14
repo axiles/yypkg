@@ -1,26 +1,25 @@
 open Types
 open Lib
 
-let install db p () =
+let install p db =
   let p = FilePath.DefaultPath.make_absolute install_path p in
   assert (Sys.file_exists p);
   let updated_db = Install.install_package db p in
   Db.write db_path updated_db
 
-let uninstall db p () =
+let uninstall p db =
   assert (List.exists (fun ((m, _, _), _) -> m.package_name = p) db);
   let updated_db = Uninstall.uninstall_package db p in
   Db.write db_path updated_db
 
-let list db _ () =
+let list _ db =
   List.iter (function (m, _, _), _ -> print_endline m.package_name) db
 
 let main () =
-  let db = Db.read db_path in
-  let f = ref (fun () -> ()) in
+  let f = ref (fun _ -> ()) in
   let prefix = ref "" in
   let set_f g s =
-    f := g db s
+    f := g s
   in
   let lst = [
     "-prefix", Arg.Set_string prefix, "prefix for the package management (mandatory)";
@@ -36,6 +35,7 @@ let main () =
   else
     let () = ignore (mkdir !prefix) in
     let () = Sys.chdir !prefix in
-    !f ()
+    let db = Db.read db_path in
+    !f db 
 
 let () = main ()
