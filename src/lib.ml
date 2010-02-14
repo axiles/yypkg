@@ -105,15 +105,18 @@ let expand pkg i p =
 
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
+  let exists path =
+    try let () = ignore (Unix.lstat path) in true with _ -> false
+  in
   try
-    if FileUtil.StrUtil.test FileUtil.Exists path then
-      let () = FileUtil.StrUtil.rm ~force:FileUtil.Force ~recurse:true [path] in
+    if exists path then
+      let () = FileUtil.StrUtil.rm ~force:FileUtil.Force [path] in
       Printf.printf "Removed: %s\n" path
     else
       Printf.printf "Not removed (doesn't exist): %s\n" path
   with
     | FileUtil.RmDirNotEmpty s ->
-        Printf.printf "Not removed: non-empty directory %s\n" s
+        Printf.printf "Not removed: directory not-empty %s\n" s
     | e -> print_endline "pouet"; raise e
 
 let open_package package =
