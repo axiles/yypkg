@@ -146,6 +146,7 @@ let files_from_package (_, results) =
   in
   List.concat (List.map f results)
 
+(*
 let cluster_extract_actions install_actions =
   let cluster l = 
     let f = function
@@ -174,4 +175,7 @@ let cluster_extract_actions install_actions =
     | t :: q -> f (t :: (cluster cur_accu) :: accu) [] q
   in
   List.rev (f [] [] install_actions)
+*)
 
+let package_is_named name ((m, _, _), _) =
+  name = m.package_name

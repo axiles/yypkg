@@ -1,11 +1,12 @@
 open Sexplib
 open Types
+open Lib
 
 let install_package db script = 
   script::db
   
-let uninstall_package db (metadata, _, _ as script) =
-  List.filter (fun ((m, _, _), _) -> m.package_name <> metadata.package_name) db
+let uninstall_package db name =
+  List.filter (fun s -> not (package_is_named name s)) db
 
 let read db_path =
   try 
