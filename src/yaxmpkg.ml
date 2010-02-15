@@ -20,7 +20,11 @@ let uninstall p db =
     raise Package_does_not_exist
 
 let list _ db =
-  List.iter (function (m, _, _), _ -> print_endline m.package_name) db
+  let compare ((ma, _, _), _) ((mb, _, _), _) =
+    compare ma mb
+  in
+  let l = List.sort compare db in
+  List.iter (function (m, _, _), _ -> Printf.printf "%s\n" m.package_name) l
 
 let main () =
   let f = ref (fun _ -> ()) in
