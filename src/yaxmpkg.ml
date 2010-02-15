@@ -13,7 +13,7 @@ let install p db =
     raise File_not_found
 
 let uninstall p db =
-  if List.exists (fun ((m, _, _), _) -> m.package_name = p) db then
+  if List.exists (package_is_named p) db then
     let updated_db = Uninstall.uninstall_package db p in
     Db.write db_path updated_db
   else
