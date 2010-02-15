@@ -4,7 +4,7 @@ open Lib
 let file_can_be_removed file other_packages =
   (* not (List.exists (file_exists_in_package file) other_packages) *)
   if List.exists (file_exists_in_package file) other_packages then
-    let () = Printf.printf "Not removed: file %s exists in another package" file
+    let () = Printf.printf "Not removed (exists in another package): %s\n" file
     in
     false
   else

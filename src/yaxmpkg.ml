@@ -25,7 +25,7 @@ let main () =
     "-prefix", Arg.Set_string prefix, "prefix for the package management (mandatory)";
     "-install", Arg.String (set_f install), "install a package";
     "-uninstall", Arg.String (set_f uninstall), "uninstall a package";
-    "-list", Arg.String (set_f list), "list packages";
+    "-list", Arg.Unit (fun () -> set_f list "dummy"), "list packages";
   ]
   in
   let usage_msg = "pouet" in
