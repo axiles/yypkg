@@ -1,16 +1,23 @@
 open Types
 open Lib
 
+exception Package_does_not_exist
+exception File_not_found
+
 let install p db =
   let p = FilePath.DefaultPath.make_absolute install_path p in
-  assert (Sys.file_exists p);
-  let updated_db = Install.install_package db p in
-  Db.write db_path updated_db
+  if Sys.file_exists p then
+    let updated_db = Install.install_package db p in
+    Db.write db_path updated_db
+  else
+    raise File_not_found
 
 let uninstall p db =
-  assert (List.exists (fun ((m, _, _), _) -> m.package_name = p) db);
-  let updated_db = Uninstall.uninstall_package db p in
-  Db.write db_path updated_db
+  if List.exists (fun ((m, _, _), _) -> m.package_name = p) db then
+    let updated_db = Uninstall.uninstall_package db p in
+    Db.write db_path updated_db
+  else
+    raise Package_does_not_exist
 
 let list _ db =
   List.iter (function (m, _, _), _ -> print_endline m.package_name) db
