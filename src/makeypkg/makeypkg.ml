@@ -67,7 +67,7 @@ let package_script_el cmd_line ~pkg_size =
   let meta = meta ~cmd_line ~pkg_size in
   let install= sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
-  sprintf "(\n%s\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
+  sprintf "(\n(\n%s\n)\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
 let write_temp_file base_name contents =
   let path, oc = Filename.open_temp_file base_name "" in
