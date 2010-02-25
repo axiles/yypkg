@@ -103,12 +103,12 @@ type package_type =
 with sexp
 
 type metadata = {
-  credits : string;
   package_name : string;
   package_size_expanded : string;
   package_version : string;
   packager_email : string;
   packager_name : string;
+  description : string;
 } with sexp
 
 type script =

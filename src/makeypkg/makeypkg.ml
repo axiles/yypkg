@@ -9,6 +9,9 @@ type cmd_line = {
   folder : string;
   pkg_name : string;
   version : version;
+  pkger_name : string;
+  pkger_email : string;
+  descr : string;
 }
 
 let tar, xz, gzip, bzip2 =
@@ -19,20 +22,23 @@ let tar, xz, gzip, bzip2 =
     | _ -> assert false
 
 let parse_command_line () = 
-  let output = ref "" in
-  let folder = ref "" in
-  let pkg_name = ref "" in
-  let version = ref "" in
+  let output,folder,pkg_name,version,packager_email,packager_name,description =
+    ref "", ref "", ref "", ref "", ref "", ref "", ref ""
+  in
   let lst = [
     "-o", Arg.Set_string output, "set output file";
     "-name", Arg.Set_string pkg_name, "set the package name";
     "-version", Arg.Set_string version, "set the package version";
+    "-email", Arg.Set_string packager_email, "packager's email";
+    "-packager_name", Arg.Set_string packager_name, "packager's name";
+    "-description", Arg.Set_string description, "description";
   ]
   in
   let usage_msg = "makeypkg -name foo -o /path/to/package.txz /folder/to/package" in
   let () = Arg.parse lst ((:=) folder) usage_msg in
-  if "" = !output || "" = !folder || "" = !pkg_name || "" = !version then
-    let () = prerr_endline "Error: incorrect usage of makeypkg" in
+  if List.exists ((=) "") [!output; !folder; !pkg_name; !version;
+  !packager_name; !packager_email; !description] then
+    let () = prerr_endline "Error: all arguments to makeypkg are mandatory" in
     let () = prerr_endline usage_msg in
     exit 0
   else
@@ -41,23 +47,26 @@ let parse_command_line () =
       folder = !folder;
       pkg_name = !pkg_name;
       version = version_of_string !version;
+      pkger_name = !packager_name;
+      pkger_email = !packager_email;
+      descr = !description;
     }
 
-let meta ~pkg_name ~pkg_size ~version =
+let meta ~cmd_line ~pkg_size =
   String.concat "\n" [
-    "((credits \"me\")";
-    sprintf "(package_name \"%s\")" pkg_name;
+    sprintf "(description \"%s\")" cmd_line.descr;
+    sprintf "(package_name \"%s\")" cmd_line.pkg_name;
+    sprintf "(package_version %s)" (string_of_version cmd_line.version);
     sprintf "(package_size_expanded \"%s\")" pkg_size;
-    "(package_type Other)";
-    sprintf "(package_version %s)" (string_of_version version);
-    "(packager_email \"a@a.com\")";
-    "(packager_name \"ME\"))";
+    sprintf "(packager_name \"%s\"))" cmd_line.pkger_name;
+    sprintf "(packager_email \"%s\")" cmd_line.pkger_email;
   ]
 
-let package_script_el c ~pkg_size =
-  let meta = meta ~pkg_name:c.pkg_name ~pkg_size ~version:c.version in
-  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" c.folder c.folder "." in
-  let uninstall = sprintf "(Reverse \"%s\")" c.folder in
+let package_script_el cmd_line ~pkg_size =
+  let folder = cmd_line.folder in
+  let meta = meta ~cmd_line ~pkg_size in
+  let install= sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
+  let uninstall = sprintf "(Reverse \"%s\")" folder in
   sprintf "(\n%s\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
 let write_temp_file base_name contents =
