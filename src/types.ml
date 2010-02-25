@@ -32,11 +32,6 @@ type argv = string list with sexp
 
 type action_id = string with sexp
 
-type arg1 =
-  | Install of string
-  | Uninstall of string
-  | List
-
 type install_action =
   | AHK of params
   | Exec of argv
@@ -53,53 +48,6 @@ with sexp
 type results = 
   | Filelist of string list
   | NA
-with sexp
-
-type multimedia =
-  | General
-  | Image
-  | Video
-  | Music
-with sexp
-
-type file_transfer =
-  | Download_manager
-  | FTP
-  | HTTP
-  | P2P
-with sexp
-
-type development =
-  | Compiler
-  | Library_and_headers
-with sexp
-
-type runtime =
-  | Image
-  | Library
-with sexp
-
-type customization =
-  | Cursor_theme
-  | Shell
-  | Sound_theme
-  | Visual_theme
-  | Wallpaper
-with sexp
-
-type package_type = 
-  | Archiving
-  | Browser
-  | Customization of customization
-  | Development of development
-  | File_transfer of file_transfer
-  | Game
-  | Maintenance
-  | Misc
-  | Multimedia of multimedia
-  | Office
-  | Other
-  | Tool
 with sexp
 
 type metadata = {
