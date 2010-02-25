@@ -14,6 +14,13 @@ type cmd_line = {
   descr : string;
 }
 
+let strip_trailing_slash s =
+  (* dir_sep's length is 1 *)
+  if s.[String.length s - 1] = dir_sep.[0] then
+    String.sub s 0 (String.length s - 1)
+  else
+    s
+
 let tar, xz, gzip, bzip2 =
   match Sys.os_type with
     | "Unix"
@@ -34,17 +41,16 @@ let parse_command_line () =
     "-description", Arg.Set_string description, "description";
   ]
   in
-  let usage_msg = "makeypkg -name foo -o /path/to/package.txz /folder/to/package" in
+  let usage_msg = "All arguments mention in --help are mandatory." in
   let () = Arg.parse lst ((:=) folder) usage_msg in
   if List.exists ((=) "") [!output; !folder; !pkg_name; !version;
   !packager_name; !packager_email; !description] then
-    let () = prerr_endline "Error: all arguments to makeypkg are mandatory" in
     let () = prerr_endline usage_msg in
     exit 0
   else
     {
       output = !output;
-      folder = !folder;
+      folder = strip_trailing_slash !folder;
       pkg_name = !pkg_name;
       version = version_of_string !version;
       pkger_name = !packager_name;

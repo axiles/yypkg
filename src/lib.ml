@@ -31,4 +31,9 @@ let string_of_version v =
   in
   sprintf "%d.%d.%d-%s-%d" v.major v.minor v.release status v.package_iteration
 
-
+let dir_sep =
+  match Sys.os_type with
+    | "Unix"
+    | "Cygwin" -> "/"
+    | "Win32" -> "\\"
+    | _ -> assert false

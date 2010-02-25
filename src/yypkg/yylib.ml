@@ -26,13 +26,6 @@ let quote_and_expand x =
 let reduce_path path =
   FilePath.DefaultPath.reduce path
 
-let dir_sep =
-  match Sys.os_type with
-    | "Unix"
-    | "Cygwin" -> "/"
-    | "Win32" -> "\\"
-    | _ -> assert false
-
 let command cmd =
   let read_stdout s =
     let queue = Queue.create () in
@@ -62,7 +55,7 @@ let command cmd =
 
 let split_path path =
   (* FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME *)
-  (SPLIT @dir_sep) path
+  (SPLIT @Lib.dir_sep) path
 
 let filename_concat = function
   | t :: q -> List.fold_left Filename.concat t q
