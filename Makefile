@@ -1,5 +1,5 @@
 all:
-	ocamlbuild yypkg.native makeypkg.native
+	cd src && ocamlbuild yypkg.native makeypkg.native
 
 install:
 	cp yypkg.native /opt/mgw64/bin/yypkg
