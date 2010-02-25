@@ -1,21 +1,7 @@
 open Printf
+open Types
 
 exception Package_name_must_end_in_txz_tgz_or_tbz2
-
-(* this has to be kept ordered !!! *)
-type status = 
-  | Alpha of int
-  | Beta of int
-  | RC of int
-  | Stable
-
-type version = {
-  major : int;
-  minor : int;
-  release : int;
-  status : status;
-  package_iteration : int;
-}
 
 type cmd_line = {
   output : string;
