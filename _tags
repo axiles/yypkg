@@ -1,5 +1,5 @@
 <src> or <makeypkg>: include
 <src/*>: pkg_mikmatch_pcre, syntax_camlp4o, pkg_sexplib, pkg_sexplib.syntax, pkg_fileutils, debug
-<makeypkg/*>: pkg_fileutils
-<mgw> or <prefix>: not_hygienic
+<makeypkg/*>: pkg_fileutils, pkg_mikmatch_pcre, syntax_camlp4o
+<mgw> or <prefix> or <attic>: not_hygienic
 
