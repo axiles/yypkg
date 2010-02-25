@@ -28,7 +28,7 @@ let list _ db =
 
 let main () =
   let f = ref (fun _ -> ()) in
-  let prefix = ref "" in
+  let prefix = ref (try Sys.getenv "PREFIX" with Not_found -> "") in
   let set_f g s =
     f := g s
   in
