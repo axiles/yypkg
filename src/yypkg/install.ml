@@ -1,5 +1,5 @@
 open Types
-open Lib
+open Yylib
 
 let execute_install_action package (id, action) =
   match action with

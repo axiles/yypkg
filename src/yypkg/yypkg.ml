@@ -1,5 +1,5 @@
 open Types
-open Lib
+open Yylib
 
 exception Package_does_not_exist
 exception File_not_found

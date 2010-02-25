@@ -1,5 +1,5 @@
 open Types
-open Lib
+open Yylib
 
 let file_can_be_removed file other_packages =
   (* not (List.exists (file_exists_in_package file) other_packages) *)

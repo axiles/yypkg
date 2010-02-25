@@ -1,6 +1,6 @@
 open Sexplib
 open Types
-open Lib
+open Yylib
 
 let install_package db script = 
   script::db
