@@ -36,7 +36,6 @@ type install_action =
   | AHK of params
   | Exec of argv
   | Expand of inside_path * outside_path
-  | Shortcut of outside_path * outside_path
   | MKdir of outside_path
 with sexp
 
