@@ -7,6 +7,8 @@ exception Package_name_must_end_in_txz_tgz_or_tbz2
 type cmd_line = {
   output : string;
   folder : string;
+  folder_dirname : string;
+  folder_basename : string;
   pkg_name : string;
   version : version;
   pkger_name : string;
@@ -48,9 +50,12 @@ let parse_command_line () =
     let () = prerr_endline usage_msg in
     exit 0
   else
+    let folder = strip_trailing_slash !folder in
     {
       output = !output;
-      folder = strip_trailing_slash !folder;
+      folder = folder;
+      folder_dirname = FilePath.DefaultPath.dirname folder;
+      folder_basename = FilePath.DefaultPath.basename folder;
       pkg_name = !pkg_name;
       version = version_of_string !version;
       pkger_name = !packager_name;
@@ -69,7 +74,7 @@ let meta ~cmd_line ~pkg_size =
   ]
 
 let package_script_el cmd_line ~pkg_size =
-  let folder = cmd_line.folder in
+  let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
   let install= sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
@@ -106,8 +111,9 @@ let () =
   let script_path = write_temp_file "package_script.el" package_script_el in
   let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
   let command = sprintf
-    "%s cv --absolute-names --exclude \"install\" %s %s %s | %s -9 > %s "
-    tar script_path cmd_line.folder transform compressor cmd_line.output
+    "%s cv --absolute-names %s -C %s %s %s | %s -9 > %s "
+    tar script_path cmd_line.folder_dirname cmd_line.folder_basename transform
+    compressor cmd_line.output
   in
   print_endline command;
   ignore (Sys.command command)
