@@ -67,7 +67,7 @@ let meta ~cmd_line ~pkg_size =
   String.concat "\n" [
     sprintf "(description \"%s\")" cmd_line.descr;
     sprintf "(package_name \"%s\")" cmd_line.pkg_name;
-    sprintf "(package_version %s)" (string_of_version cmd_line.version);
+    sprintf "(package_version \"%s\")" (string_of_version cmd_line.version);
     sprintf "(package_size_expanded \"%s\")" pkg_size;
     sprintf "(packager_name \"%s\")" cmd_line.pkger_name;
     sprintf "(packager_email \"%s\")" cmd_line.pkger_email;
