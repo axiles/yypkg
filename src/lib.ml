@@ -1,22 +1,21 @@
 open Printf
 open Types
 
-RE int = digit+
-RE major_minor_release = 
-  (int as maj : int) "." (int as min : int) "." (int as rel : int)
-
 let version_of_string s =
-  let /(major_minor_release "-" (_+ as s) "-" (int as iter : int))/ = s in
-  let status = match s with
-    | RE "alpha-" (int as x : int) -> Alpha x
-    | RE "beta-" (int as x : int) -> Beta x
-    | RE "rc-" (int as x : int) -> RC x
-    | RE "stable" -> Stable
+  let major, minor, release, remaining, iter =
+    Scanf.sscanf s "%d.%d.%d-%s-%d" (fun a b c d e -> a, b, c, d, e)
+  in
+  let status = match Str.split (Str.regexp "-") remaining with
+    | [ "alpha"; x ] -> Alpha (int_of_string x)
+    | [ "beta"; x ] -> Beta (int_of_string x) 
+    | [ "rc"; x ] -> RC (int_of_string x) 
+    | [ "stable" ] -> Stable
+    | _ -> assert false
   in
   {
-    major = maj;
-    minor = min;
-    release = rel;
+    major = major;
+    minor = minor;
+    release = release;
     status = status;
     package_iteration = iter;
   }
