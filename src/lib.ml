@@ -2,14 +2,14 @@ open Printf
 open Types
 
 let version_of_string s =
-  let major, minor, release, remaining, iter =
-    Scanf.sscanf s "%d.%d.%d-%s-%d" (fun a b c d e -> a, b, c, d, e)
+  let major, minor, release, remaining =
+    Scanf.sscanf s "%d.%d.%d-%s" (fun a b c d -> a, b, c, d)
   in
-  let status = match Str.split (Str.regexp "-") remaining with
-    | [ "alpha"; x ] -> Alpha (int_of_string x)
-    | [ "beta"; x ] -> Beta (int_of_string x) 
-    | [ "rc"; x ] -> RC (int_of_string x) 
-    | [ "stable" ] -> Stable
+  let status, iter = match Str.split (Str.regexp "-") remaining with
+    | [ "alpha"; x; y ] -> Alpha (int_of_string x), (int_of_string y)
+    | [ "beta"; x ; y] -> Beta (int_of_string x), (int_of_string y)
+    | [ "rc"; x ; y] -> RC (int_of_string x), (int_of_string y)
+    | [ "stable" ; y] -> Stable, (int_of_string y)
     | _ -> assert false
   in
   {
