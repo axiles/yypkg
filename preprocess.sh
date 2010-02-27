@@ -16,5 +16,5 @@ A_FLAGS='ocamlfind query -a-format -predicates syntax,preprocessor -r -separator
 I_PARAMS=$(eval "$I_FLAGS $PKGS")
 A_PARAMS=$(eval "$A_FLAGS $PKGS")
 
-find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -name "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $I_PARAMS $A_PARAMS $A -o ${A/src/preprocessed_src}; done
+find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -path "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $I_PARAMS $A_PARAMS $A -o ${A/src/preprocessed_src}; done
 
