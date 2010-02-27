@@ -66,7 +66,7 @@ let strip_component ?(prefix="") n path =
 
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
-  let () = FileUtil.StrUtil.mkdir ~parent:true ~mode:0o755 path in
+  let () = FileUtil.mkdir ~parent:true ~mode:0o755 path in
   [ path_unexpanded ]
 
 let expand pkg i p =
@@ -89,7 +89,7 @@ let rm path_unexpanded =
   in
   try
     if exists path then
-      let () = FileUtil.StrUtil.rm ~force:FileUtil.Force [path] in
+      let () = FileUtil.rm ~force:FileUtil.Force [path] in
       Printf.printf "Removed: %s\n" path
     else
       Printf.printf "Not removed (doesn't exist): %s\n" path

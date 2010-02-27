@@ -106,7 +106,7 @@ let () =
   let compressor = try compressor_of_ext cmd_line.output with 
     | _ -> raise Package_name_must_end_in_txz_tgz_or_tbz2
   in
-  let pkg_size = FileUtil.string_of_size (fst (FileUtil.StrUtil.du [
+  let pkg_size = FileUtil.string_of_size (fst (FileUtil.du [
     cmd_line.folder ])) in
   let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
