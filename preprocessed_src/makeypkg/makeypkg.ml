@@ -34,7 +34,7 @@ let parse_command_line () =
       ("-email", (Arg.Set_string packager_email), "packager's email");
       ("-packager_name", (Arg.Set_string packager_name), "packager's name");
       ("-description", (Arg.Set_string description), "description") ] in
-  let usage_msg = "All arguments mention in --help are mandatory." in
+  let usage_msg = "All arguments mentionned in --help are mandatory." in
   let () = Arg.parse lst (( := ) folder) usage_msg
   in
     if
@@ -98,7 +98,7 @@ let () =
     try compressor_of_ext cmd_line.output
     with | _ -> raise Package_name_must_end_in_txz_tgz_or_tbz2 in
   let pkg_size =
-    FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ "." ])) in
+    FileUtil.string_of_size (fst (FileUtil.StrUtil.du [ cmd_line.folder ])) in
   let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
   let transform =
