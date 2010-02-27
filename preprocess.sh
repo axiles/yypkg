@@ -11,8 +11,10 @@ mkdir -p $O/{makeypkg,yypkg}
 cp src/{_tags,myocamlbuild.ml} $O
 
 PKGS='mikmatch_str sexplib.syntax'
-CMD='ocamlfind query -format "-I %d %a" -predicates syntax,preprocessor -r -separator " "'
-PARAMS=$(eval "$CMD $PKGS")
+I_FLAGS='ocamlfind query -i-format -predicates syntax,preprocessor -r -separator " "'
+A_FLAGS='ocamlfind query -a-format -predicates syntax,preprocessor -r -separator " "'
+I_PARAMS=$(eval "$I_FLAGS $PKGS")
+A_PARAMS=$(eval "$A_FLAGS $PKGS")
 
-find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -name "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $PARAMS $A -o ${A/src/preprocessed_src}; done
+find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -name "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $I_PARAMS $A_PARAMS $A -o ${A/src/preprocessed_src}; done
 
