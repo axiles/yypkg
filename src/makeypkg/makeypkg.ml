@@ -43,7 +43,7 @@ let parse_command_line () =
     "-description", Arg.Set_string description, "description";
   ]
   in
-  let usage_msg = "All arguments mention in --help are mandatory." in
+  let usage_msg = "All arguments mentionned in --help are mandatory." in
   let () = Arg.parse lst ((:=) folder) usage_msg in
   if List.exists ((=) "") [!output; !folder; !pkg_name; !version;
   !packager_name; !packager_email; !description] then
