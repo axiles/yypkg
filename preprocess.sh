@@ -14,5 +14,5 @@ PKGS='mikmatch_str sexplib.syntax'
 CMD='ocamlfind query -format "-I %d %a" -predicates syntax,preprocessor -r -separator " "'
 PARAMS=$(eval "$CMD $PKGS")
 
-find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -name "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $PARAMS $A > ${A/src/preprocessed_src}; done
+find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -name "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $PARAMS $A -o ${A/src/preprocessed_src}; done
 
