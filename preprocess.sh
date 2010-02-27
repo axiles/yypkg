@@ -8,7 +8,6 @@
 
 O=preprocessed_src
 mkdir -p $O/{makeypkg,yypkg}
-cp src/{_tags,myocamlbuild.ml} $O
 
 PKGS='mikmatch_str sexplib.syntax'
 I_FLAGS='ocamlfind query -i-format -predicates syntax,preprocessor -r -separator " "'

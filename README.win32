@@ -1,0 +1,1 @@
+(cd preprocessed_src && ocamlbuild -Is makeypkg,yypkg -libs unix,bigarray,nums,str,sexplib,fileutils yypkg.native makeypkg.native
