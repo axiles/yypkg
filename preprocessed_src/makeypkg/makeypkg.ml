@@ -103,10 +103,11 @@ let () =
       compressor cmd_line.output
   in
     (print_endline command;
-     let fst =
-       [| tar; "cv"; script_path; "-C"; cmd_line.folder_dirname;
+     let tar_args =
+       [| script_path; "-C"; cmd_line.folder_dirname;
          cmd_line.folder_basename; transform
        |] in
-     let snd = [| compressor; "-9" |] in run fst snd cmd_line.output)
+     let snd = [| compressor; "-9" |]
+     in tar_compress tar_args snd cmd_line.output)
   
 

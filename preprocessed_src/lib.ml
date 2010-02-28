@@ -44,16 +44,39 @@ let (tar, xz, gzip, bzip2) =
   | "Win32" -> ("tar.exe", "xz.exe", "gzip.exe", "bzip2.exe")
   | _ -> assert false
   
-let run fst snd out =
-  let s = String.concat " " (Array.to_list fst) in
-  let fst_out = Unix.open_process_in s in
+let unix_tar_compress tar_args compress out =
+  let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
+  let fst_out_channel = Unix.open_process_in s in
+  let fst_out = Unix.descr_of_in_channel fst_out_channel in
   let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
-  let fst_out_descr = Unix.descr_of_in_channel fst_out in
   let pid =
-    Unix.create_process snd.(0) snd fst_out_descr second_out Unix.stderr
+    Unix.create_process compress.(0) compress fst_out second_out Unix.stderr
   in
-    (ignore (Unix.waitpid [] pid);
-     Unix.close fst_out_descr;
+    (ignore (Unix.waitpid [] pid); Unix.close fst_out; Unix.close second_out)
+  
+let win_tar_compress tar_args compress out =
+  let tar_args = Array.to_list tar_args in
+  let s =
+    String.concat " "
+      ([ tar; "cvf \\\\.pipe\\makeypkg_compress" ] @ tar_args) in
+  let named_pipe_a1 =
+    [| "NamedPipe.exe"; "\\\\.pipe\\makeypkg_compress" |] in
+  let named_pipe_a2 = Array.append compress [| "-c" |] in
+  let named_pipe = Array.append named_pipe_a1 named_pipe_a2 in
+  let tar_oc = Unix.open_process_out s in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
+  let pid =
+    Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out Unix.
+      stderr
+  in
+    (ignore (Unix.close_process_out tar_oc);
+     ignore (Unix.waitpid [] pid);
      Unix.close second_out)
+  
+let tar_compress tar_args compress out =
+  match Sys.os_type with
+  | "Cygwin" | "Unix" -> unix_tar_compress tar_args compress out
+  | "Win32" -> win_tar_compress tar_args compress out
+  | _ -> assert false
   
 
