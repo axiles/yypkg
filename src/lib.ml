@@ -56,9 +56,9 @@ let unix_tar_compress tar_args compress out =
 
 let win_tar_compress tar_args compress out =
   let tar_args = Array.to_list tar_args in
-  let s = String.concat " " ([ tar; "cvf \\\\.pipe\\makeypkg_compress" ] @
+  let s = String.concat " " ([ tar; "cvf \\\\.\\pipe\\makeypkg_compress" ] @
   tar_args) in
-  let named_pipe_a1 = [| "NamedPipe.exe"; "\\\\.pipe\\makeypkg_compress" |] in
+  let named_pipe_a1 = [| "NamedPipe.exe"; "\\\\.\\pipe\\makeypkg_compress" |] in
   let named_pipe_a2 = Array.append compress [| "-c" |] in
   let named_pipe = Array.append named_pipe_a1 named_pipe_a2 in
   let tar_oc = Unix.open_process_out s in
