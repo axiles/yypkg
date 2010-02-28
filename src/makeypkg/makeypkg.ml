@@ -23,13 +23,6 @@ let strip_trailing_slash s =
   else
     s
 
-let tar, xz, gzip, bzip2 =
-  match Sys.os_type with
-    | "Unix"
-    | "Cygwin" -> "tar", "xz -9", "gzip -9", "bzip2 -9"
-    | "Win32" -> "tar.exe", "xz.exe -9", "gzip.exe -9", "bzip2.exe -9"
-    | _ -> assert false
-
 let parse_command_line () = 
   let output,folder,pkg_name,version,packager_email,packager_name,description =
     ref "", ref "", ref "", ref "", ref "", ref "", ref ""
@@ -117,4 +110,8 @@ let () =
     compressor cmd_line.output
   in
   print_endline command;
-  ignore (Sys.command command)
+  let fst = [| tar; "cv"; script_path; "-C"; cmd_line.folder_dirname;
+    cmd_line.folder_basename; transform |]
+  in
+  let snd = [| compressor; "-9" |] in
+  run fst snd cmd_line.output

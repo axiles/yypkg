@@ -69,8 +69,8 @@ let expand pkg i p =
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in (* XXX let p2 :: _ = split_path p in *)
   let cmd =
-    sprintf "tar xvf %s --wildcards -C %s --strip-component %d %s" pkg pq
-      (l - 1) iq in
+    sprintf "%s xvf %s --wildcards -C %s --strip-component %d %s" Lib.tar pkg
+      pq (l - 1) iq in
   let () = print_endline cmd
   in List.map (strip_component ~prefix: p (l - 1)) (command cmd)
   

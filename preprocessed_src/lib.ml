@@ -38,4 +38,22 @@ let dir_sep =
   | "Win32" -> "\\"
   | _ -> assert false
   
+let (tar, xz, gzip, bzip2) =
+  match Sys.os_type with
+  | "Unix" | "Cygwin" -> ("tar", "xz", "gzip", "bzip2")
+  | "Win32" -> ("tar.exe", "xz.exe", "gzip.exe", "bzip2.exe")
+  | _ -> assert false
+  
+let run fst snd out =
+  let s = String.concat " " (Array.to_list fst) in
+  let fst_out = Unix.open_process_in s in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
+  let fst_out_descr = Unix.descr_of_in_channel fst_out in
+  let pid =
+    Unix.create_process snd.(0) snd fst_out_descr second_out Unix.stderr
+  in
+    (ignore (Unix.waitpid [] pid);
+     Unix.close fst_out_descr;
+     Unix.close second_out)
+  
 
