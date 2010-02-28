@@ -104,7 +104,7 @@ let () =
   let transform =
     sprintf "--transform=s#%s#package_script.el#" script_path in
   let command =
-    sprintf "%s cv --absolute-names %s -C %s %s %s | %s -9 > %s " tar
+    sprintf "%s cv --absolute-names %s -C %s . %s %s | %s -9 > %s " tar
       script_path cmd_line.folder_dirname cmd_line.folder_basename transform
       compressor cmd_line.output
   in (print_endline command; ignore (Sys.command command))
