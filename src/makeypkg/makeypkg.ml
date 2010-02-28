@@ -112,7 +112,7 @@ let () =
   let script_path = write_temp_file "package_script.el" package_script_el in
   let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
   let command = sprintf
-    "%s cv --absolute-names %s -C %s . %s %s | %s -9 > %s "
+    "%s cv --absolute-names %s -C %s %s %s | %s -9 > %s "
     tar script_path cmd_line.folder_dirname cmd_line.folder_basename transform
     compressor cmd_line.output
   in
