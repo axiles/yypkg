@@ -44,6 +44,21 @@ let tar, xz, gzip, bzip2 =
     | "Win32" -> "bsdtar.exe", "xz.exe", "gzip.exe", "bzip2.exe"
     | _ -> assert false
 
+let compressor_of_ext s =
+  (* this function may raise a bunch of exceptions which should be caught with a
+   * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
+   * means the user gave a wrong filename *)
+  let ext_of_filename s =
+    let l = String.length s in
+    let i = String.rindex s '.' in
+    String.sub s (i+1) (l-i-1)
+  in
+  match ext_of_filename s with
+    | "tgz" -> gzip
+    | "txz" -> xz
+    | "tbz2" -> bzip2
+    | _ -> assert false
+
 let unix_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
   let fst_out_channel = Unix.open_process_in s in
@@ -77,3 +92,4 @@ let tar_compress tar_args compress out =
     | "Unix" -> unix_tar_compress tar_args compress out
     | "Win32" -> win_tar_compress tar_args compress out
     | _ -> assert false
+

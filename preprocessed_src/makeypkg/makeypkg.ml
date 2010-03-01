@@ -73,20 +73,6 @@ let write_temp_file base_name contents =
   let oc = open_out_bin path in
   let () = output_string oc contents in let () = close_out oc in path
   
-let compressor_of_ext s =
-  (* this function may raise a bunch of exceptions which should be caught with a
-   * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
-   * means the user gave a wrong filename *)
-  let ext_of_filename s =
-    let l = String.length s in
-    let i = String.rindex s '.' in String.sub s (i + 1) ((l - i) - 1)
-  in
-    match ext_of_filename s with
-    | "tgz" -> gzip
-    | "txz" -> xz
-    | "tbz2" -> bzip2
-    | _ -> assert false
-  
 let () =
   let cmd_line = parse_command_line () in
   let compressor =
