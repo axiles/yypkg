@@ -69,7 +69,8 @@ let package_script_el cmd_line ~pkg_size =
   in sprintf "(\n(\n%s\n)\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
   
 let write_temp_file base_name contents =
-  let (path, oc) = Filename.open_temp_file base_name "" in
+  let path = Filename.concat Filename.temp_dir_name base_name in
+  let oc = open_out_bin path in
   let () = output_string oc contents in let () = close_out oc in path
   
 let compressor_of_ext s =
