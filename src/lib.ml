@@ -1,6 +1,8 @@
 open Printf
 open Types
 
+let install_dir = Unix.getcwd ()
+
 let version_of_string s =
   let major, minor, release, remaining =
     Scanf.sscanf s "%d.%d.%d-%s" (fun a b c d -> a, b, c, d)
@@ -41,7 +43,12 @@ let tar, xz, gzip, bzip2 =
   match Sys.os_type with
     | "Unix"
     | "Cygwin" -> "tar", "xz", "gzip", "bzip2"
-    | "Win32" -> "bsdtar.exe", "xz.exe", "gzip.exe", "bzip2.exe"
+    | "Win32" ->
+        let bsdtar = Filename.concat install_dir "bsdtar.exe" in
+        let xz = Filename.concat install_dir "xz.exe" in
+        let gzip = Filename.concat install_dir "gzip.exe" in
+        let bzip2 = Filename.concat install_dir "bzip2.exe" in
+        bsdtar, xz, gzip, bzip2
     | _ -> assert false
 
 let compressor_of_ext s =
