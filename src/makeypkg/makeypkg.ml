@@ -85,19 +85,12 @@ let () =
   let compressor = try compressor_of_ext cmd_line.output with 
     | _ -> raise Package_name_must_end_in_txz_tgz_or_tbz2
   in
-  let pkg_size = FileUtil.string_of_size (fst (FileUtil.du [
-    cmd_line.folder ])) in
+  let pkg_size= FileUtil.string_of_size (fst (FileUtil.du [cmd_line.folder])) in
   let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
-  let transform = sprintf "--transform=s#%s#package_script.el#" script_path in
-  let command = sprintf
-    "%s cv --absolute-names %s -C %s %s %s | %s -9 > %s "
-    tar script_path cmd_line.folder_dirname cmd_line.folder_basename transform
-    compressor cmd_line.output
-  in
-  print_endline command;
-  let tar_args = [| script_path; "-C"; cmd_line.folder_dirname;
-    cmd_line.folder_basename; transform |]
+  let script_path_dirname = FilePath.DefaultPath.dirname script_path in
+  let script_path_basename = FilePath.DefaultPath.basename script_path in
+  let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |]
   in
   let snd = [| compressor; "-9" |] in
   tar_compress tar_args snd cmd_line.output
