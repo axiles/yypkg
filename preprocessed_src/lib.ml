@@ -41,7 +41,7 @@ let dir_sep =
 let (tar, xz, gzip, bzip2) =
   match Sys.os_type with
   | "Unix" | "Cygwin" -> ("tar", "xz", "gzip", "bzip2")
-  | "Win32" -> ("tar.exe", "xz.exe", "gzip.exe", "bzip2.exe")
+  | "Win32" -> ("bsdtar.exe", "xz.exe", "gzip.exe", "bzip2.exe")
   | _ -> assert false
   
 let unix_tar_compress tar_args compress out =
@@ -60,16 +60,20 @@ let win_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cvf"; fifo_path ] @ tar_args) in
   let named_pipe_a1 = [| "NamedPipe.exe"; fifo_path |] in
   let named_pipe_a2 = Array.append compress [| "-c" |] in
-  let named_pipe = Array.append named_pipe_a1 named_pipe_a2 in
-  let tar_oc = Unix.open_process_out s in
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
-  let pid =
-    Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out Unix.
-      stderr
+  let named_pipe = Array.append named_pipe_a1 named_pipe_a2
   in
-    (ignore (Unix.close_process_out tar_oc);
-     ignore (Unix.waitpid [] pid);
-     Unix.close second_out)
+    (print_endline s;
+     print_endline (String.concat " " (Array.to_list named_pipe));
+     let tar_oc = Unix.open_process_out s in
+     let second_out =
+       Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
+     let pid =
+       Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
+         Unix.stderr
+     in
+       (ignore (Unix.close_process_out tar_oc);
+        ignore (Unix.waitpid [] pid);
+        Unix.close second_out))
   
 let tar_compress tar_args compress out =
   match Sys.os_type with
