@@ -91,7 +91,7 @@ let rm path_unexpanded =
   
 let open_package package =
   let script_cmd =
-    sprintf "tar xf %s -O --occurrence=1 package_script.el" package in
+    sprintf "%s xf %s -O --occurrence=1 package_script.el" Lib.tar package in
   let script_input = Unix.open_process_in script_cmd in
   let script_sexp = Sexp.input_sexp script_input
   in script_of_sexp script_sexp
