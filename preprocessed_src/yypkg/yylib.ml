@@ -80,17 +80,18 @@ let expand pkg i p =
   let () = Printf.printf "%d : %s\n%!" l i in
   let pkg = quote_and_expand pkg in
   let iq = quote_and_expand i in
-  let pq = quote_and_expand p in
-  let () = ignore (mkdir p) in
-  let tar_args =
-    if Lib.tar = "tar"
-    then
-      [| "--wildcards"; "-C"; pq; "--strip-components";
-        string_of_int (l - 1); iq
-      |]
-    else [| "-C"; pq; "--strip-components"; string_of_int (l - 1); iq |] in
-  let x = Lib.decompress_untar read_ic tar_args pkg
-  in List.map (strip_component ~prefix: p (l - 1)) x
+  let pq = quote_and_expand p
+  in
+    (if not (Sys.file_exists p) then ignore mkdir p else ();
+     let tar_args =
+       if Lib.tar = "tar"
+       then
+         [| "--wildcards"; "-C"; pq; "--strip-components";
+           string_of_int (l - 1); iq
+         |]
+       else [| "-C"; pq; "--strip-components"; string_of_int (l - 1); iq |] in
+     let x = Lib.decompress_untar read_ic tar_args pkg
+     in List.map (strip_component ~prefix: p (l - 1)) x)
   
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in

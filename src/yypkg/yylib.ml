@@ -89,7 +89,7 @@ let expand pkg i p =
   let pkg = quote_and_expand pkg in
   let iq = quote_and_expand i in
   let pq = quote_and_expand p in
-  let () = ignore (mkdir p) in
+  if not (Sys.file_exists p) then ignore mkdir p else ();
   let tar_args =
     if Lib.tar = "tar" then
       [| "--wildcards"; "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
