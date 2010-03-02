@@ -23,7 +23,7 @@ let quote_and_expand x =
   expand_environment_variables x
 
 let filter_bsdtar_output x =
-  if x.[0] = 'x' && x.[0] = ' ' then
+  if x.[0] = 'x' && x.[1] = ' ' then
     String.sub x 2 (String.length x - 2)
   else
     x
