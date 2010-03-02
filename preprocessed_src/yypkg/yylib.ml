@@ -17,7 +17,7 @@ let rev_list_of_queue q = Queue.fold (fun l e -> e :: l) [] q
 let expand_environment_variables s =
   Str.global_substitute (Str.regexp "\\${[0-9a-zA-Z]}") Unix.getenv s
   
-let quote_and_expand x = Filename.quote (expand_environment_variables x)
+let quote_and_expand x = expand_environment_variables x
   
 let reduce_path path = FilePath.DefaultPath.reduce path
   
