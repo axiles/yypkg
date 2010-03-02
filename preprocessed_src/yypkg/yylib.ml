@@ -19,6 +19,11 @@ let expand_environment_variables s =
   
 let quote_and_expand x = expand_environment_variables x
   
+let filter_bsdtar_output x =
+  if (x.[0] = 'x') && (x.[0] = ' ')
+  then String.sub x 2 ((String.length x) - 2)
+  else x
+  
 let reduce_path path = FilePath.DefaultPath.reduce path
   
 let command cmd =
@@ -34,7 +39,10 @@ let command cmd =
 let read_ic ic =
   let queue = Queue.create () in
   let () =
-    try while true do Queue.add (reduce_path (input_line ic)) queue done
+    try
+      while true do
+        Queue.add (reduce_path (filter_bsdtar_output (input_line ic))) queue
+        done
     with | End_of_file -> ()
   in rev_list_of_queue queue
   
