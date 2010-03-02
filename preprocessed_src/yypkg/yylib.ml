@@ -31,6 +31,13 @@ let command cmd =
     let () = ignore (Unix.close_process_in ic) in rev_list_of_queue queue
   in read_stdout cmd
   
+let read_ic ic =
+  let queue = Queue.create () in
+  let () =
+    try while true do Queue.add (reduce_path (input_line ic)) queue done
+    with | End_of_file -> ()
+  in rev_list_of_queue queue
+  
 let split_path path = Str.split (Str.regexp Lib.dir_sep) path
   
 let filename_concat =
@@ -67,12 +74,15 @@ let expand pkg i p =
   let iq = quote_and_expand i in
   let pq = quote_and_expand p in
   let () = ignore (mkdir p) in
-  let wildcards = if Lib.tar = "tar" then "--wildcards" else "" in
-  let cmd =
-    sprintf "%s xvf %s %s -C %s --strip-component %d %s" Lib.tar pkg
-      wildcards pq (l - 1) iq in
-  let () = print_endline cmd
-  in List.map (strip_component ~prefix: p (l - 1)) (command cmd)
+  let tar_args =
+    if Lib.tar = "tar"
+    then
+      [| "--wildcards"; "-C"; pq; "--strip-components";
+        string_of_int (l - 1); iq
+      |]
+    else [| "-C"; "--strip-components"; string_of_int (l - 1); iq |] in
+  let x = Lib.decompress_untar read_ic tar_args pkg
+  in List.map (strip_component ~prefix: p (l - 1)) x
   
 let rm path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
@@ -91,10 +101,7 @@ let rm path_unexpanded =
     | e -> (print_endline "pouet"; raise e)
   
 let open_package package =
-  let script_cmd =
-    sprintf "%s xf %s -O --occurrence=1 package_script.el" Lib.tar package in
-  let script_input = Unix.open_process_in script_cmd in
-  let script_sexp = Sexp.input_sexp script_input
+  let script_sexp = Lib.decompress_untar Sexp.input_sexp [| "-O" |] package
   in script_of_sexp script_sexp
   
 let list_map_bis f l =

@@ -85,10 +85,10 @@ let win_tar_compress tar_args compress out =
   let named_pipe = Array.append named_pipe_a1 named_pipe_a2 in
   print_endline s;
   print_endline (String.concat " " (Array.to_list named_pipe));
-  let tar_oc = Unix.open_process_out s in
   let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
   let pid = Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
   Unix.stderr in
+  let tar_oc = Unix.open_process_out s in
   ignore (Unix.close_process_out tar_oc);
   ignore (Unix.waitpid [] pid);
   Unix.close second_out
@@ -98,5 +98,44 @@ let tar_compress tar_args compress out =
     | "Cygwin"
     | "Unix" -> unix_tar_compress tar_args compress out
     | "Win32" -> win_tar_compress tar_args compress out
+    | _ -> assert false
+
+let unix_decompress_untar f tar_args input =
+  let compressor = compressor_of_ext input in
+  let s = String.concat " " [ compressor; "-d"; "-c"; input ] in
+  let tar = Array.append [| tar; "xvf"; "-" |] tar_args in
+  let fst_out_channel = Unix.open_process_in s in
+  let fst_out = Unix.descr_of_in_channel fst_out_channel in
+  let second_out, second_in = Unix.pipe () in
+  let pid = Unix.create_process tar.(0) tar fst_out second_in Unix.stderr in
+  let sexp = f (Unix.in_channel_of_descr second_out) in
+  ignore (Unix.waitpid [] pid);
+  ignore (Unix.close second_out, Unix.close second_in);
+  Unix.close fst_out;
+  sexp
+
+let win_decompress_untar f tar_args input =
+  let fifo_path = "\\\\.\\pipe\\makeypkg_decompress" in
+  let compressor = [| compressor_of_ext input; "-d"; "-c"; input |] in
+  let tar_args = Array.to_list tar_args in
+  let named_pipe = [ "NamedPipe.exe"; fifo_path; tar; "xvf"; "-" ] @ tar_args in
+  let named_pipe = String.concat " " named_pipe in
+  print_endline (String.concat " " (Array.to_list compressor));
+  print_endline named_pipe;
+  let second_out = Unix.open_process_in named_pipe in
+  let compressor_out = Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
+  let pid = Unix.create_process compressor.(0) compressor Unix.stdin
+  compressor_out Unix.stderr in
+  let sexp = f second_out in
+  ignore (Unix.close_process_in second_out);
+  ignore (Unix.waitpid [] pid);
+  Unix.close compressor_out;
+  sexp
+
+let decompress_untar f tar_args input =
+  match Sys.os_type with
+    | "Cygwin"
+    | "Unix" -> unix_decompress_untar f tar_args input
+    | "Win32" -> win_decompress_untar f tar_args input
     | _ -> assert false
 
