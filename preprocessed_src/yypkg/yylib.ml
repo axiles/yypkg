@@ -80,7 +80,7 @@ let expand pkg i p =
       [| "--wildcards"; "-C"; pq; "--strip-components";
         string_of_int (l - 1); iq
       |]
-    else [| "-C"; "--strip-components"; string_of_int (l - 1); iq |] in
+    else [| "-C"; pq; "--strip-components"; string_of_int (l - 1); iq |] in
   let x = Lib.decompress_untar read_ic tar_args pkg
   in List.map (strip_component ~prefix: p (l - 1)) x
   
