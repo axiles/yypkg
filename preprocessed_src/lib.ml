@@ -51,6 +51,11 @@ let (tar, xz, gzip, bzip2) =
       in (bsdtar, xz, gzip, bzip2)
   | _ -> assert false
   
+let named_pipe () =
+  match Sys.os_type with
+  | "Win32" -> Filename.concat install_dir "NamedPipe.exe"
+  | "Unix" | "Cygwin" | _ -> assert false
+  
 let compressor_of_ext s =
   (* this function may raise a bunch of exceptions which should be caught with a
    * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
@@ -79,8 +84,8 @@ let win_tar_compress tar_args compress out =
   let tar_args = Array.to_list tar_args in
   let fifo_path = "\\\\.\\pipe\\makeypkg_compress" in
   let s = String.concat " " ([ tar; "cvf"; fifo_path ] @ tar_args) in
-  let named_pipe_a1 = [| "NamedPipe.exe"; fifo_path |] in
-  let named_pipe_a2 = Array.append compress [| "-c" |] in
+  let named_pipe_a1 = [| named_pipe (); fifo_path |] in
+  let named_pipe_a2 = Array.append compress [| " -c" |] in
   let named_pipe = Array.append named_pipe_a1 named_pipe_a2
   in
     (print_endline s;
@@ -122,7 +127,7 @@ let win_decompress_untar f tar_args input =
   let compressor = [| compressor_of_ext input; "-d"; "-c"; input |] in
   let tar_args = Array.to_list tar_args in
   let named_pipe =
-    [ "NamedPipe.exe"; fifo_path; tar; "xvf"; "-" ] @ tar_args in
+    [ named_pipe (); fifo_path; tar; " xvf"; "-" ] @ tar_args in
   let named_pipe = String.concat " " named_pipe
   in
     (print_endline (String.concat " " (Array.to_list compressor));

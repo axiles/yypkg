@@ -86,7 +86,7 @@ let win_tar_compress tar_args compress out =
   let fifo_path = "\\\\.\\pipe\\makeypkg_compress" in
   let s = String.concat " " ([ tar; "cvf";  fifo_path ] @ tar_args) in
   let named_pipe_a1 = [| named_pipe (); fifo_path |] in
-  let named_pipe_a2 = Array.append compress [| "-c" |] in
+  let named_pipe_a2 = Array.append compress [| " -c" |] in
   let named_pipe = Array.append named_pipe_a1 named_pipe_a2 in
   print_endline s;
   print_endline (String.concat " " (Array.to_list named_pipe));
@@ -123,7 +123,7 @@ let win_decompress_untar f tar_args input =
   let fifo_path = "\\\\.\\pipe\\makeypkg_decompress" in
   let compressor = [| compressor_of_ext input; "-d"; "-c"; input |] in
   let tar_args = Array.to_list tar_args in
-  let named_pipe = [ named_pipe (); fifo_path; tar; "xvf"; "-" ] @ tar_args in
+  let named_pipe = [ named_pipe (); fifo_path; tar; " xvf"; "-" ] @ tar_args in
   let named_pipe = String.concat " " named_pipe in
   print_endline (String.concat " " (Array.to_list compressor));
   print_endline named_pipe;
