@@ -127,13 +127,15 @@ let win_decompress_untar f tar_args input =
   let named_pipe = String.concat " " named_pipe in
   print_endline (String.concat " " (Array.to_list compressor));
   print_endline named_pipe;
-  let second_out = Unix.open_process_in named_pipe in
+  let (second_out, _, second_err) as second =
+    Unix.open_process_full named_pipe (Unix.environment ())
+  in
   Unix.sleep 1;
   let compressor_out = Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
   let pid = Unix.create_process compressor.(0) compressor Unix.stdin
   compressor_out Unix.stderr in
-  let sexp = f second_out in
-  ignore (Unix.close_process_in second_out);
+  let sexp = if List.mem "-O" tar_args then f second_out else f second_err in
+  ignore (Unix.close_process_full second);
   ignore (Unix.waitpid [] pid);
   Unix.close compressor_out;
   sexp
