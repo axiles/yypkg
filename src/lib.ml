@@ -128,6 +128,7 @@ let win_decompress_untar f tar_args input =
   print_endline (String.concat " " (Array.to_list compressor));
   print_endline named_pipe;
   let second_out = Unix.open_process_in named_pipe in
+  Unix.sleep 1;
   let compressor_out = Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
   let pid = Unix.create_process compressor.(0) compressor Unix.stdin
   compressor_out Unix.stderr in
