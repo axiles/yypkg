@@ -100,20 +100,18 @@ let expand pkg i p =
   List.map (strip_component ~prefix:p (l-1)) x
 
 let rm path_unexpanded =
-  let path = expand_environment_variables path_unexpanded in
   let exists path =
     try let () = ignore (Unix.lstat path) in true with _ -> false
   in
-  try
-    if exists path then
-      let () = FileUtil.rm ~force:FileUtil.Force [path] in
+  let path = expand_environement_variables path_unexpanded in
+  if exists path then
+    try
+      FileUtil.rm ~recurse:true [ path ];
       Printf.printf "Removed: %s\n" path
-    else
-      Printf.printf "Not removed (doesn't exist): %s\n" path
-  with
-    | FileUtil.RmDirNotEmpty s ->
-        Printf.printf "Not removed: directory not-empty %s\n" s
-    | e -> print_endline "pouet"; raise e
+    with FileUtil.RmDirNotEmpty _ ->
+      Printf.printf "Not removed (directory not-empty): %s\n" path
+  else
+    Printf.printf "Not removed (doesn't exist): %s\n" path
 
 let open_package package =
   let script_sexp = Lib.decompress_untar Sexp.input_sexp [| "-O" |] package in
