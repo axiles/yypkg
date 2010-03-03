@@ -100,12 +100,15 @@ let rm path_unexpanded =
   in
     if exists path
     then
-      (try
-         (FileUtil.rm ~recurse: true [ path ];
-          Printf.printf "Removed: %s\n" path)
-       with
-       | FileUtil.RmDirNotEmpty _ ->
-           Printf.printf "Not removed (directory not-empty): %s\n" path)
+      if Sys.is_directory path
+      then
+        if [|  |] = (Sys.readdir path)
+        then
+          (let () = FileUtil.rm ~recurse: true [ path ]
+           in Printf.printf "Removed: %s\n" path)
+        else Printf.printf "Not removed (directory not empty): %s\n" path
+      else
+        (let () = FileUtil.rm [ path ] in Printf.printf "Removed: %s\n" path)
     else Printf.printf "Not removed (doesn't exist): %s\n" path
   
 let open_package package =
