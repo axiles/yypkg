@@ -89,7 +89,7 @@ let expand pkg i p =
   let pkg = quote_and_expand pkg in
   let iq = quote_and_expand i in
   let pq = quote_and_expand p in
-  if not (Sys.file_exists p) then ignore mkdir p else ();
+  if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let tar_args =
     if Lib.tar = "tar" then
       [| "--wildcards"; "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
@@ -103,7 +103,7 @@ let rm path_unexpanded =
   let exists path =
     try let () = ignore (Unix.lstat path) in true with _ -> false
   in
-  let path = expand_environement_variables path_unexpanded in
+  let path = expand_environment_variables path_unexpanded in
   if exists path then
     try
       FileUtil.rm ~recurse:true [ path ];

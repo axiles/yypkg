@@ -82,7 +82,7 @@ let expand pkg i p =
   let iq = quote_and_expand i in
   let pq = quote_and_expand p
   in
-    (if not (Sys.file_exists p) then ignore mkdir p else ();
+    (if not (Sys.file_exists p) then ignore (mkdir p) else ();
      let tar_args =
        if Lib.tar = "tar"
        then
@@ -96,7 +96,7 @@ let expand pkg i p =
 let rm path_unexpanded =
   let exists path =
     try let () = ignore (Unix.lstat path) in true with | _ -> false in
-  let path = expand_environement_variables path_unexpanded
+  let path = expand_environment_variables path_unexpanded
   in
     if exists path
     then

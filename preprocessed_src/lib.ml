@@ -135,7 +135,7 @@ let win_decompress_untar f tar_args input =
      let (((second_out, _, second_err) as second)) =
        Unix.open_process_full named_pipe (Unix.environment ())
      in
-       (set_binary_mode second_err false;
+       (set_binary_mode_in second_err false;
         Unix.sleep 1;
         let compressor_out =
           Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
