@@ -5,7 +5,7 @@ open Types
 exception ChopList_ChopingTooMuch of (int * int)
 
 let ahk_bin =
-  Filename.concat install_dir "ahk.exe"
+  Filename.concat Lib.install_dir "ahk.exe"
 
 let db_path =
   "yypkg_db"
@@ -13,12 +13,11 @@ let db_path =
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
 
+(* replace env var of the form ${windir} *)
 let expand_environment_variables s =
   Str.global_substitute (Str.regexp "\\${[0-9a-zA-Z]}") Unix.getenv s
 
-let quote_and_expand x =
-  expand_environment_variables x
-
+(* bsdtar writes 'x some/path/foo' during extraction *)
 let filter_bsdtar_output x =
   if x.[0] = 'x' && x.[1] = ' ' then
     String.sub x 2 (String.length x - 2)
@@ -27,29 +26,26 @@ let filter_bsdtar_output x =
 
 let reduce_path path =
   FilePath.DefaultPath.reduce path
-  
-let command cmd =
-  let read_stdout s =
-    let queue = Queue.create () in
-    let ic = Unix.open_process_in s in
-    let () = try
-      while true do
-        Queue.add (reduce_path (input_line ic)) queue
-      done
-    with End_of_file -> () in
-    let () = ignore (Unix.close_process_in ic) in
-    rev_list_of_queue queue
-  in
-  read_stdout cmd
 
-let read_ic ic =
+(* returns the list of lines in the in_channel ic *)
+let read_ic ?(tar=false) ic =
+  let read ic =
+    if tar then
+      reduce_path (filter_bsdtar_output (input_line ic))
+    else
+      reduce_path (input_line ic)
+  in
   let queue = Queue.create () in
   let () = try
     while true do
-      Queue.add (reduce_path (filter_bsdtar_output (input_line ic))) queue
+      Queue.add (read ic) queue
     done
   with End_of_file -> () in
   rev_list_of_queue queue
+  
+(* run the command cmd and return a list of lines of the output *)
+let command cmd =
+  read_ic (Unix.open_process_in cmd)
 
 let split_path path =
   Str.split (Str.regexp Lib.dir_sep) path
@@ -83,9 +79,9 @@ let mkdir path_unexpanded =
 let expand pkg i p =
   let l = List.length (split_path i) in
   let () = Printf.printf "%d : %s\n%!" l i in
-  let pkg = quote_and_expand pkg in
-  let iq = quote_and_expand i in
-  let pq = quote_and_expand p in
+  let pkg = expand_environment_variables pkg in
+  let iq = expand_environment_variables i in
+  let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let tar_args =
     if Lib.tar = "tar" then
@@ -93,7 +89,7 @@ let expand pkg i p =
     else
       [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
   in
-  let x = Lib.decompress_untar read_ic tar_args pkg in
+  let x = Lib.decompress_untar (read_ic ~tar:true) tar_args pkg in
   List.map (strip_component ~prefix:p (l-1)) x
 
 let rm path_unexpanded =

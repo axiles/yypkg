@@ -7,7 +7,7 @@ exception Package_does_not_exist
 exception File_not_found
   
 let install p db =
-  let p = FilePath.DefaultPath.make_absolute install_path p
+  let p = FilePath.DefaultPath.make_absolute Lib.install_dir p
   in
     if Sys.file_exists p
     then
