@@ -4,11 +4,8 @@ open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
 
-let install_path =
-  Sys.getcwd ()
-
 let ahk_bin =
-  Filename.concat install_path "ahk.exe"
+  Filename.concat install_dir "ahk.exe"
 
 let db_path =
   "yypkg_db"

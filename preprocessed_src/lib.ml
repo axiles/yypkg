@@ -2,6 +2,7 @@ open Printf
   
 open Types
   
+(* Install directory: current folder when the program is started... *)
 let install_dir = Unix.getcwd ()
   
 let version_of_string s =
@@ -40,6 +41,9 @@ let dir_sep =
   | "Win32" -> "\\"
   | _ -> assert false
   
+(* We expect tools in the installation directory *)
+(* absolute paths to tar, xz, gzip and bzip2 *)
+(* on windows, we use bsdtar and gnu tar on others *)
 let (tar, xz, gzip, bzip2) =
   match Sys.os_type with
   | "Unix" | "Cygwin" -> ("tar", "xz", "gzip", "bzip2")
@@ -51,6 +55,7 @@ let (tar, xz, gzip, bzip2) =
       in (bsdtar, xz, gzip, bzip2)
   | _ -> assert false
   
+(* absolute path to the NamedPipe.exe executable, only makes sense on windows *)
 let named_pipe () =
   match Sys.os_type with
   | "Win32" -> Filename.concat install_dir "NamedPipe.exe"
@@ -70,6 +75,7 @@ let compressor_of_ext s =
     | "tbz2" -> bzip2
     | _ -> assert false
   
+(* tar + compress on unix *)
 let unix_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
   let fst_out_channel = Unix.open_process_in s in
@@ -80,33 +86,41 @@ let unix_tar_compress tar_args compress out =
   in
     (ignore (Unix.waitpid [] pid); Unix.close fst_out; Unix.close second_out)
   
+(* tar + compress on windows, less trivial than its unix counterpart... *)
 let win_tar_compress tar_args compress out =
-  let tar_args = Array.to_list tar_args in
+  (* we have to rely on a named pipe (aka fifo) since pipes are unreliable *)
   let fifo_path = "\\\\.\\pipe\\makeypkg_compress" in
+  let tar_args = Array.to_list tar_args in
+  (* we tell tar to use the fifo as input *)
   let s = String.concat " " ([ tar; "cvf"; fifo_path ] @ tar_args) in
-  let named_pipe_a1 = [| named_pipe (); fifo_path |] in
-  let named_pipe_a2 = Array.append compress [| " -c" |] in
-  let named_pipe = Array.append named_pipe_a1 named_pipe_a2
+  (* NamedPipe.exe will redirect the named pipe to the compressor's input *)
+  let named_pipe =
+    [ [| named_pipe (); fifo_path |]; compress; [| "-c" |] ] in
+  let named_pipe = Array.concat named_pipe in
+  (* this is the output of the compressor *)
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
+  (* we start the compressor which waits from input on the named pipe *)
+  let pid =
+    Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out Unix.
+      stderr in
+  (* now we start tar which write to the named pipe *)
+  let tar_oc = Unix.open_process_out s
   in
-    (print_endline s;
-     print_endline (String.concat " " (Array.to_list named_pipe));
-     let second_out =
-       Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
-     let pid =
-       Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
-         Unix.stderr in
-     let tar_oc = Unix.open_process_out s
-     in
-       (ignore (Unix.close_process_out tar_oc);
-        ignore (Unix.waitpid [] pid);
-        Unix.close second_out))
+    (ignore (Unix.close_process_out tar_oc);
+     ignore (Unix.waitpid [] pid);
+     Unix.close second_out)
   
+(* auto-dispatch between the unix and windows versions of *_tar_compress *)
 let tar_compress tar_args compress out =
   match Sys.os_type with
   | "Cygwin" | "Unix" -> unix_tar_compress tar_args compress out
   | "Win32" -> win_tar_compress tar_args compress out
   | _ -> assert false
   
+(* decompress + untar, "f" will read the output from tar:
+  *   'tar xv -O' will output the content of files to stdout
+  *   'tar xv' will output the list of files expanded to stdout *)
+(* NOTE: THIS DEPENDS ON *GNU* TAR *)
 let unix_decompress_untar f tar_args input =
   let compressor = compressor_of_ext input in
   let s = String.concat " " [ compressor; "-d"; "-c"; input ] in
@@ -115,41 +129,45 @@ let unix_decompress_untar f tar_args input =
   let fst_out = Unix.descr_of_in_channel fst_out_channel in
   let (second_out, second_in) = Unix.pipe () in
   let pid = Unix.create_process tar.(0) tar fst_out second_in Unix.stderr in
-  let sexp = f (Unix.in_channel_of_descr second_out)
+  let s = f (Unix.in_channel_of_descr second_out)
   in
     (ignore (Unix.waitpid [] pid);
      ignore ((Unix.close second_out), (Unix.close second_in));
      Unix.close fst_out;
-     sexp)
+     s)
   
+(* decompress + untar, "f" will read the output from tar:
+  *   'bsdtar xv -O' will output the content of files to stdout
+  *   'bsdtar xv' will output the list of files expanded to stderr *)
+(* NOTE: THIS DEPENDS ON *BSDTAR* *)
 let win_decompress_untar f tar_args input =
-  let fifo_path = "\\\\.\\pipe\\makeypkg_decompress" in
+  let fifo_path = "\\\\.\\pipe\\yypkg_decompress" in
   let compressor = [| compressor_of_ext input; "-d"; "-c"; input |] in
   let tar_args = Array.to_list tar_args in
   let named_pipe =
-    [ named_pipe (); fifo_path; tar; " xvf"; "-" ] @ tar_args in
-  let named_pipe = String.concat " " named_pipe
+    String.concat " "
+      ([ named_pipe (); fifo_path; tar; " xvf"; "-" ] @ tar_args) in
+  let (((second_out, _, second_err) as second)) =
+    Unix.open_process_full named_pipe (Unix.environment ())
   in
-    (print_endline (String.concat " " (Array.to_list compressor));
-     print_endline named_pipe;
-     let (((second_out, _, second_err) as second)) =
-       Unix.open_process_full named_pipe (Unix.environment ())
+    (set_binary_mode_in second_err false;
+     (* this is required because NamedPipe.exe takes some time to start and create
+   * the named pipe, polling until the file is created should work too *)
+     Unix.sleep 1;
+     let compressor_out = Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
+     let pid =
+       Unix.create_process compressor.(0) compressor Unix.stdin
+         compressor_out Unix.stderr in
+     (* bsdtar always outputs the file list on stderr so we sometimes want stdout
+   * and sometimes want stderr *)
+     let s = if List.mem "-O" tar_args then f second_out else f second_err
      in
-       (set_binary_mode_in second_err false;
-        Unix.sleep 1;
-        let compressor_out =
-          Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
-        let pid =
-          Unix.create_process compressor.(0) compressor Unix.stdin
-            compressor_out Unix.stderr in
-        let sexp =
-          if List.mem "-O" tar_args then f second_out else f second_err
-        in
-          (ignore (Unix.close_process_full second);
-           ignore (Unix.waitpid [] pid);
-           Unix.close compressor_out;
-           sexp)))
+       (ignore (Unix.close_process_full second);
+        ignore (Unix.waitpid [] pid);
+        Unix.close compressor_out;
+        s))
   
+(* dispatch between the unix and windows versions of *_decompress_untar *)
 let decompress_untar f tar_args input =
   match Sys.os_type with
   | "Cygwin" | "Unix" -> unix_decompress_untar f tar_args input
