@@ -118,8 +118,8 @@ let tar_compress tar_args compress out =
   | _ -> assert false
   
 (* decompress + untar, "f" will read the output from tar:
-  *   'tar xv -O' will output the content of files to stdout
-  *   'tar xv' will output the list of files expanded to stdout *)
+ *   'tar xv -O' will output the content of files to stdout
+ *   'tar xv' will output the list of files expanded to stdout *)
 (* NOTE: THIS DEPENDS ON *GNU* TAR *)
 let unix_decompress_untar f tar_args input =
   let compressor = compressor_of_ext input in

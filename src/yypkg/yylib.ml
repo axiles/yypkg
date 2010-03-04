@@ -50,10 +50,13 @@ let command cmd =
 let split_path path =
   Str.split (Str.regexp Lib.dir_sep) path
 
+(* List.fold_left Filename.concat *)
 let filename_concat = function
   | t :: q -> List.fold_left Filename.concat t q
   | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
 
+(* chop_list list i removes the first i elements of list and raises
+ * ChopList_ChopingTooMuch if the list is shorter than i *)
 let chop_list list i =
   let rec chop_list_rc j = function
     | l when j = 0 -> l
@@ -66,33 +69,47 @@ let chop_list list i =
   in
   chop_list_rc i list
 
-let strip_component ?(prefix="") n path =
+(* Remove the first 'n' components of a path (string list) and optionaly
+ * prepends a prefix
+ * That sounds a bit weird because I started changing how yypkg handled this but
+ * never finished *)
+let strip_component ?prefix n path =
   match prefix with
-    | "" -> filename_concat (chop_list (split_path path) n)
-    | prefix -> filename_concat (prefix :: (chop_list (split_path path) n))
+    | None -> filename_concat (chop_list (split_path path) n)
+    | Some prefix -> filename_concat (prefix :: (chop_list (split_path path) n))
 
+(* mkdir for use in installation scripts: it returns the path that got created
+ * so it can be registered and reversed upon uninstallation *)
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   let () = FileUtil.mkdir ~parent:true ~mode:0o755 path in
   [ path_unexpanded ]
 
+(* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
 let expand pkg i p =
   let l = List.length (split_path i) in
-  let () = Printf.printf "%d : %s\n%!" l i in
   let pkg = expand_environment_variables pkg in
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let tar_args =
     if Lib.tar = "tar" then
+      (* gnu tar doesn't default to --wildcards *)
       [| "--wildcards"; "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
     else
+      (* bsdtar defaults to wildcards and doesn't recognize the option *)
       [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
   in
   let x = Lib.decompress_untar (read_ic ~tar:true) tar_args pkg in
   List.map (strip_component ~prefix:p (l-1)) x
 
+(* rm with verbose output
+ *   doesn't fail if a file doesn't exist
+ *   removes directories only if empty *)
 let rm path_unexpanded =
+  (* Sys.file_exists and most others will follow symlinks
+   * This means that if 'y' points to 'x' but 'x' doesn't exist, Sys.file_exists
+   * will return false even though 'y' exists *)
   let exists path =
     try let () = ignore (Unix.lstat path) in true with _ -> false
   in
@@ -110,17 +127,12 @@ let rm path_unexpanded =
   else
     Printf.printf "Not removed (doesn't exist): %s\n" path
 
+(* reads 'package_script.el' from a package *)
 let open_package package =
   let script_sexp = Lib.decompress_untar Sexp.input_sexp [| "-O" |] package in
   script_of_sexp script_sexp
 
-let list_map_bis f l =
-  let rec list_map_bis_rc f accu = function
-    | t :: q -> list_map_bis_rc f ((f q t)::accu) q
-    | [] -> List.rev accu
-  in
-  list_map_bis_rc f [] l
-
+(* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =
   let f = function
     | _, NA -> false
@@ -128,12 +140,6 @@ let file_exists_in_package file (_, result_list) =
   in
   List.exists f result_list
 
-let files_from_package (_, results) =
-  let f = function
-    | NA -> []
-    | Filelist l -> List.map reduce_path l
-  in
-  List.concat (List.map f results)
-
+(* a predicate to check a package has some name, used with List.find *)
 let package_is_named name ((m, _, _), _) =
   name = m.package_name
