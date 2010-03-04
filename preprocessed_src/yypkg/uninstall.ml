@@ -15,6 +15,7 @@ let execute_uninstall_action (_, install_results) other_pkgs =
   function
   | RM p -> assert false
   | (* id, "" *) Reverse id ->
+      (* rm the files that have been added by 'id' *)
       let f (action_id, results) = action_id = id in
       let rm s = if file_can_be_removed s other_pkgs then rm s else () in
       let results = List.find_all f install_results in
