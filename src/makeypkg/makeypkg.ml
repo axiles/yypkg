@@ -44,10 +44,15 @@ let parse_command_line () =
     exit 0
   else
     let folder = strip_trailing_slash !folder in
+    let dirname = FilePath.DefaultPath.dirname (
+      if not (FilePath.DefaultPath.is_relative folder) then folder
+      else FilePath.DefaultPath.make_absolute install_dir folder )
+    in
+    print_endline dirname;
     {
       output = !output;
       folder = folder;
-      folder_dirname = FilePath.DefaultPath.dirname folder;
+      folder_dirname = dirname;
       folder_basename = FilePath.DefaultPath.basename folder;
       pkg_name = !pkg_name;
       version = version_of_string !version;
