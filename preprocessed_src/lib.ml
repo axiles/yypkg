@@ -13,6 +13,7 @@ let version_of_string s =
     | [ "alpha"; x; y ] -> ((Alpha (int_of_string x)), (int_of_string y))
     | [ "beta"; x; y ] -> ((Beta (int_of_string x)), (int_of_string y))
     | [ "rc"; x; y ] -> ((RC (int_of_string x)), (int_of_string y))
+    | [ "snapshot"; x; y ] -> ((Snapshot x), (int_of_string y))
     | [ "stable"; y ] -> (Stable, (int_of_string y))
     | _ -> assert false
   in
@@ -30,6 +31,7 @@ let string_of_version v =
     | Alpha x -> sprintf "alpha-%d" x
     | Beta x -> sprintf "beta-%d" x
     | RC x -> sprintf "rc-%d" x
+    | Snapshot s -> sprintf "snapshot-%s" s
     | Stable -> "stable"
   in
     sprintf "%d.%d.%d-%s-%d" v.major v.minor v.release status

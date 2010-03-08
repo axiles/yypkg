@@ -7,6 +7,7 @@ type status =
   | Alpha of int
   | Beta of int
   | RC of int
+  | Snapshot of string
   | Stable
 
 type version = {
