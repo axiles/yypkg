@@ -5,9 +5,12 @@ open Types
 (* Install directory: current folder when the program is started... *)
 let install_dir = Unix.getcwd ()
   
+(* Simply make a version out of a string *)
 let version_of_string s =
+  (* we can factor this part, 'remaining' is handled later on *)
   let (major, minor, release, remaining) =
     Scanf.sscanf s "%d.%d.%d-%s" (fun a b c d -> (a, b, c, d)) in
+  (* handle 'remaining' now *)
   let (status, iter) =
     match Str.split (Str.regexp "-") remaining with
     | [ "alpha"; x; y ] -> ((Alpha (int_of_string x)), (int_of_string y))
@@ -25,6 +28,7 @@ let version_of_string s =
       package_iteration = iter;
     }
   
+(* create a string from a version *)
 let string_of_version v =
   let status =
     match v.status with
@@ -37,6 +41,7 @@ let string_of_version v =
     sprintf "%d.%d.%d-%s-%d" v.major v.minor v.release status
       v.package_iteration
   
+(* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
   match Sys.os_type with
   | "Unix" | "Cygwin" -> "/"
@@ -63,10 +68,12 @@ let named_pipe () =
   | "Win32" -> Filename.concat install_dir "NamedPipe.exe"
   | "Unix" | "Cygwin" | _ -> assert false
   
+(* guess the compressor (xz, gzip, bzip2) from the extension of a string *)
+(* this function may raise a bunch of exceptions which should be caught with a
+ * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
+ * means the user gave a wrong filename *)
 let compressor_of_ext s =
-  (* this function may raise a bunch of exceptions which should be caught with a
-   * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
-   * means the user gave a wrong filename *)
+  (* the extension is everything after the last dot in the string *)
   let ext_of_filename s =
     let l = String.length s in
     let i = String.rindex s '.' in String.sub s (i + 1) ((l - i) - 1)
@@ -77,7 +84,7 @@ let compressor_of_ext s =
     | "tbz2" -> bzip2
     | _ -> assert false
   
-(* tar + compress on unix *)
+(* tar + compress on unix, piping the output of tar to the compressor *)
 let unix_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
   let fst_out_channel = Unix.open_process_in s in
