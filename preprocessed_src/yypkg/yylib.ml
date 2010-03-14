@@ -123,7 +123,9 @@ let rm path_unexpanded =
   
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let script_sexp = Lib.decompress_untar Sexp.input_sexp [| "-O" |] package
+  let script_sexp =
+    Lib.decompress_untar Sexp.input_sexp [| "-O"; "package_script.el" |]
+      package
   in script_of_sexp script_sexp
   
 (* checks if a file exists in any package in a given database *)
