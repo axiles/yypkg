@@ -92,13 +92,11 @@ let expand pkg i p =
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
-  let tar_args =
-    if Lib.tar = "tar" then
-      (* gnu tar doesn't default to --wildcards *)
-      [| "--wildcards"; "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
-    else
-      (* bsdtar defaults to wildcards and doesn't recognize the option *)
-      [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
+  let tar_args = Array.append 
+    (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards
+     * and doesn't recognize the option *)
+    ( if Lib.tar = "tar" then [| "--wildcards" |] else [| |] )
+    [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
   in
   let x = Lib.decompress_untar (read_ic ~tar:true) tar_args pkg in
   List.map (strip_component ~prefix:p (l-1)) x
