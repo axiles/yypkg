@@ -53,13 +53,13 @@ let dir_sep =
 (* on windows, we use bsdtar and gnu tar on others *)
 let (tar, tar_kind, xz, gzip, bzip2) =
   match Sys.os_type with
-  | "Unix" | "Cygwin" -> ("tar", GNUTAR, "xz", "gzip", "bzip2")
+  | "Unix" | "Cygwin" -> ("tar", GNU, "xz", "gzip", "bzip2")
   | "Win32" ->
       let bsdtar = Filename.concat install_dir "bsdtar.exe" in
       let xz = Filename.concat install_dir "xz.exe" in
       let gzip = Filename.concat install_dir "gzip.exe" in
       let bzip2 = Filename.concat install_dir "bzip2.exe"
-      in (bsdtar, BSDTAR, xz, gzip, bzip2)
+      in (bsdtar, BSD, xz, gzip, bzip2)
   | _ -> assert false
   
 (* absolute path to the NamedPipe.exe executable, only makes sense on windows *)
@@ -142,7 +142,7 @@ let decompress_untar f tar_args input =
   (* if we're using bsdtar and want the filelist, we have to read from stderr
    * see the comment right before the function for more details *)
   let pid_t =
-    if (BSDTAR = tar_kind) && (not (List.mem "-O" (Array.to_list tar_args)))
+    if (BSD = tar_kind) && (not (List.mem "-O" (Array.to_list tar_args)))
     then Unix.create_process t.(0) t c_out Unix.stdout t_in
     else Unix.create_process t.(0) t c_out t_in Unix.stderr in
   let t_out_chan = Unix.in_channel_of_descr t_out
@@ -155,7 +155,7 @@ let decompress_untar f tar_args input =
        ((* f should return after the program pid_t has exited so no need to wait more
    * we're waiting for pid_c however even if it's probably not needed *)
         ignore (Unix.waitpid [] pid_c);
-        ignore (List.iter Unix.close [ c_out; c_in; t_out; t_in ]);
+        List.iter Unix.close [ c_out; c_in; t_out; t_in ];
         s))
   
 

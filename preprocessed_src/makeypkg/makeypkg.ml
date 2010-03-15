@@ -94,6 +94,7 @@ let () =
     [| "-C"; script_path_dirname; script_path_basename; "-C";
       cmd_line.folder_dirname; cmd_line.folder_basename
     |] in
+  (* XXX: this won't work on windows as compressor will be an absolute path *)
   let snd =
     if (compressor = "xz") || (compressor = "xz.exe")
     then

@@ -19,7 +19,7 @@ type version = {
 }
 
 (* both don't behave the same way of course *)
-type tar_kind = BSDTAR | GNUTAR
+type tar_kind = BSD | GNU
 
 type absolute_path = string with sexp
 type relative_path = string with sexp
