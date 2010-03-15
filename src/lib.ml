@@ -131,17 +131,13 @@ let tar_compress tar_args compress out =
  *   'tar xv' will output the list of files expanded to stdout *)
 (* NOTE: THIS DEPENDS ON *GNU* TAR *)
 let unix_decompress_untar f tar_args input =
-  let compressor = compressor_of_ext input in
-  let s = String.concat " " [ compressor; "-d"; "-c"; input ] in
-  let tar = Array.append [| tar; "xvf"; "-" |] tar_args in
-  let fst_out_channel = Unix.open_process_in s in
-  let fst_out = Unix.descr_of_in_channel fst_out_channel in
-  let second_out, second_in = Unix.pipe () in
-  let pid = Unix.create_process tar.(0) tar fst_out second_in Unix.stderr in
-  let s = f (Unix.in_channel_of_descr second_out) in
-  ignore (Unix.waitpid [] pid);
-  ignore (Unix.close second_out, Unix.close second_in);
-  Unix.close fst_out;
+  let c = [| compressor_of_ext input; "-d"; "-c"; input |] in
+  let t = Array.append [| tar; "xvf"; "-" |] tar_args in
+  let c_out, c_in = Unix.pipe () in
+  let t_out, t_in = Unix.pipe () in
+  let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
+  let pid_t = Unix.create_process t.(0) t c_out t_in Unix.stderr in
+  let s = f pid_t (Unix.in_channel_of_descr t_out) in
   s
 
 (* decompress + untar, "f" will read the output from tar:
@@ -165,7 +161,8 @@ let win_decompress_untar f tar_args input =
   compressor_out Unix.stderr in
   (* bsdtar always outputs the file list on stderr so we sometimes want stdout
    * and sometimes want stderr *)
-  let s = if List.mem "-O" tar_args then f second_out else f second_err in
+  (* XXX: pid! *)
+  let s = if List.mem "-O" tar_args then f 0 second_out else f 0 second_err in
   ignore (Unix.close_process_full second);
   ignore (Unix.waitpid [] pid);
   Unix.close compressor_out;

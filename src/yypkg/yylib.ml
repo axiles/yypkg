@@ -28,24 +28,25 @@ let reduce_path path =
   FilePath.DefaultPath.reduce path
 
 (* returns the list of lines in the in_channel ic *)
-let read_ic ?(tar=false) ic =
-  let read ic =
-    if tar then
-      reduce_path (filter_bsdtar_output (input_line ic))
-    else
-      reduce_path (input_line ic)
+let read_ic ?(tar=false) pid ic =
+  let descr = Unix.descr_of_in_channel ic in
+  let read ic = if tar
+    then reduce_path (filter_bsdtar_output (input_line ic))
+    else reduce_path (input_line ic)
   in
-  let queue = Queue.create () in
-  let () = try
-    while true do
-      Queue.add (read ic) queue
-    done
-  with End_of_file -> () in
-  rev_list_of_queue queue
-  
+  let rec f accu =
+    match Unix.select [ descr ] [] [] 0.1 with
+      | [ _ ], _, _ -> f ((read ic) :: accu)
+      | _, _, _ -> if pid = fst (Unix.waitpid [ Unix.WNOHANG ] pid)
+          then accu
+          else f accu
+  in
+  f []
+
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
-  read_ic (Unix.open_process_in cmd)
+  (* XXX: pid! *)
+  read_ic 0 (Unix.open_process_in cmd)
 
 let split_path path =
   Str.split (Str.regexp Lib.dir_sep) path
@@ -127,7 +128,8 @@ let rm path_unexpanded =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let script_sexp = Lib.decompress_untar Sexp.input_sexp [| "-O"; "package_script.el" |] package in
+  (* XXX: first arg to decompress_untar *)
+  let script_sexp = Lib.decompress_untar (fun _ ic -> Sexp.input_sexp ic) [| "-O"; "package_script.el" |] package in
   script_of_sexp script_sexp
 
 (* checks if a file exists in any package in a given database *)
