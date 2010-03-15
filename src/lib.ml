@@ -128,51 +128,31 @@ let tar_compress tar_args compress out =
 
 (* decompress + untar, "f" will read the output from tar:
  *   'tar xv -O' will output the content of files to stdout
- *   'tar xv' will output the list of files expanded to stdout *)
-(* NOTE: THIS DEPENDS ON *GNU* TAR *)
-let unix_decompress_untar f tar_args input =
+ *   'tar xv' will output the list of files expanded to stdout
+ *   'bsdtar xv -O' will output the content of files to stdout
+ *   'bsdtar xv' will output the list of files expanded to stderr *)
+let decompress_untar f tar_args input =
   let c = [| compressor_of_ext input; "-d"; "-c"; input |] in
+  (* 'tar -f -' ensures we're reading from stdin with both gnu tar and bsd tar
+   * bsdtar would default to /dev/tape0 otherwise *)
   let t = Array.append [| tar; "xvf"; "-" |] tar_args in
   let c_out, c_in = Unix.pipe () in
   let t_out, t_in = Unix.pipe () in
   let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
-  let pid_t = Unix.create_process t.(0) t c_out t_in Unix.stderr in
-  let s = f pid_t (Unix.in_channel_of_descr t_out) in
+  (* if we're using bsdtar and want the filelist, we have to read from stderr
+   * see the comment right before the function for more details *)
+  let pid_t = if "bsdtar.exe" = tar && List.mem "-O" (Array.to_list tar_args)
+    then Unix.create_process t.(0) t c_out Unix.stdout t_in
+    else Unix.create_process t.(0) t c_out t_in Unix.stderr
+  in
+  let t_out_chan = Unix.in_channel_of_descr t_out in
+  (* bsdtar uses \r\n for end of lines, this will translate to \n only =) 
+   * It has no effect on systems which already use \n *)
+  set_binary_mode_in t_out_chan false;
+  let s = f pid_t t_out_chan in
+  (* f should return after the program pid_t has exited so no need to wait more
+   * we're waiting for pid_c however even if it's probably not needed *)
+  ignore (Unix.waitpid [] pid_c);
+  ignore (List.iter Unix.close [ c_out; c_in; t_out; t_in ]);
   s
-
-(* decompress + untar, "f" will read the output from tar:
-  *   'bsdtar xv -O' will output the content of files to stdout
-  *   'bsdtar xv' will output the list of files expanded to stderr *)
-(* NOTE: THIS DEPENDS ON *BSDTAR* *)
-let win_decompress_untar f tar_args input =
-  let fifo_path = "\\\\.\\pipe\\yypkg_decompress" in
-  let compressor = [| compressor_of_ext input; "-d"; "-c"; input |] in
-  let tar_args = Array.to_list tar_args in
-  let named_pipe = String.concat " " (
-    [ named_pipe (); fifo_path; tar; " xvf"; "-" ] @ tar_args) in
-  let (second_out, _, second_err) as second =
-    Unix.open_process_full named_pipe (Unix.environment ()) in
-  set_binary_mode_in second_err false;
-  (* this is required because NamedPipe.exe takes some time to start and create
-   * the named pipe, polling until the file is created should work too *)
-  Unix.sleep 1;
-  let compressor_out = Unix.openfile fifo_path [ Unix.O_WRONLY ] 0o640 in
-  let pid = Unix.create_process compressor.(0) compressor Unix.stdin
-  compressor_out Unix.stderr in
-  (* bsdtar always outputs the file list on stderr so we sometimes want stdout
-   * and sometimes want stderr *)
-  (* XXX: pid! *)
-  let s = if List.mem "-O" tar_args then f 0 second_out else f 0 second_err in
-  ignore (Unix.close_process_full second);
-  ignore (Unix.waitpid [] pid);
-  Unix.close compressor_out;
-  s
-
-(* dispatch between the unix and windows versions of *_decompress_untar *)
-let decompress_untar f tar_args input =
-  match Sys.os_type with
-    | "Cygwin"
-    | "Unix" -> unix_decompress_untar f tar_args input
-    | "Win32" -> win_decompress_untar f tar_args input
-    | _ -> assert false
 
