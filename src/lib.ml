@@ -51,16 +51,16 @@ let dir_sep =
 
 (* absolute paths to tar, xz, gzip and bzip2 *)
 (* on windows, we use bsdtar and gnu tar on others *)
-let tar, xz, gzip, bzip2 =
+let tar, tar_kind, xz, gzip, bzip2 =
   match Sys.os_type with
     | "Unix"
-    | "Cygwin" -> "tar", "xz", "gzip", "bzip2"
+    | "Cygwin" -> "tar", GNUTAR, "xz", "gzip", "bzip2"
     | "Win32" ->
         let bsdtar = Filename.concat install_dir "bsdtar.exe" in
         let xz = Filename.concat install_dir "xz.exe" in
         let gzip = Filename.concat install_dir "gzip.exe" in
         let bzip2 = Filename.concat install_dir "bzip2.exe" in
-        bsdtar, xz, gzip, bzip2
+        bsdtar, BSDTAR, xz, gzip, bzip2
     | _ -> assert false
 
 (* absolute path to the NamedPipe.exe executable, only makes sense on windows *)
@@ -141,7 +141,7 @@ let decompress_untar f tar_args input =
   let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
   (* if we're using bsdtar and want the filelist, we have to read from stderr
    * see the comment right before the function for more details *)
-  let pid_t = if "bsdtar.exe" = tar && List.mem "-O" (Array.to_list tar_args)
+  let pid_t = if BSDTAR = tar_kind && List.mem "-O" (Array.to_list tar_args)
     then Unix.create_process t.(0) t c_out Unix.stdout t_in
     else Unix.create_process t.(0) t c_out t_in Unix.stderr
   in

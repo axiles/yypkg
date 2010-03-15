@@ -9,6 +9,9 @@ type version =
     package_iteration : int
   }
 
+(* both don't behave the same way of course *)
+type tar_kind = | BSDTAR | GNUTAR
+
 type absolute_path = string
 
 let absolute_path_of_sexp__ =
