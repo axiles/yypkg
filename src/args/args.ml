@@ -53,7 +53,7 @@ type arg = {
   *   help_text = "configures yypkg" (* will say which args are mandatory *) }
   * in
   * let l = [ w; x; y; z; o ] in
-  * match parse_args Sys.argv l with
+  * match parse_args l with
   *   | [ "-reconfigure", None, args ] -> ()
   *   | [ "-list", None, [] ] -> ()
   *   | l -> 
@@ -61,3 +61,10 @@ type arg = {
     *   assert (not (List.mem_assoc "-list"));
     *   ()
   *)
+
+(* Basically, we're calling Arg.parse and translating its output to a nicer
+ * format *)
+
+(* parse_args is the main (only?) entry point to this module
+ * takes an args spec and returns a list of the arguments *)
+
