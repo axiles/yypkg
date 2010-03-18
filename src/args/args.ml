@@ -56,5 +56,8 @@ type arg = {
   * match parse_args Sys.argv l with
   *   | [ "-reconfigure", None, args ] -> ()
   *   | [ "-list", None, [] ] -> ()
-  *   | _ -> ()
+  *   | l -> 
+    *   assert (not (List.mem_assoc "-reconfigure"));
+    *   assert (not (List.mem_assoc "-list"));
+    *   ()
   *)
