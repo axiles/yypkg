@@ -112,6 +112,8 @@ let rm path_unexpanded =
   let exists path =
     try let () = ignore (Unix.lstat path) in true with _ -> false
   in
+  (* FIXME: env var souldn't be kept in the database, they have to be expanded
+   * before *)
   let path = expand_environment_variables path_unexpanded in
   if exists path then
     if Sys.is_directory path then
