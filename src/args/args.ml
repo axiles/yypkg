@@ -17,6 +17,13 @@ type arg = {
 }
 
 (* planned API:
+  * Parsing 'yypkg -prefix /some/path -install package.txz
+  *         'yypkg -prefix /some/path -list'
+  *         'yypkg -prefix /some/path -configure -regen'
+  * '-prefix' is always required
+  * only one of the other arguments may be specified
+  * some args are only valid if '-configure' has been given
+  *
   * let w = {
   *   name = "-prefix";
   *   t = String;
