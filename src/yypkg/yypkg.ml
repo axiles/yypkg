@@ -76,7 +76,10 @@ let parse_cmd_line cmd_line =
   f, prefix
 
 let main () =
-  let f, prefix = parse_cmd_line Sys.argv in
+  let usage_msg = "bad usage, will make better error message tomorrow" in
+  let f, prefix =
+    try parse_cmd_line Sys.argv with e -> prerr_endline usage_msg; raise e
+  in
   let () = ignore (mkdir prefix) in
   let () = Sys.chdir prefix in
   let db = Db.read db_path in
