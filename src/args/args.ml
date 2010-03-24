@@ -19,7 +19,7 @@ type opt =
 
 exception Option_specification_is_ambiguous
 
-exception Incomplete_parsing of (opt * string list)
+exception Incomplete_parsing of (opt list * string list)
 
 (* at any point, we read the argument, if it starts with a '-' and is among the
  * options recognized, we store it as an option, if it's not recognized, we
@@ -56,11 +56,11 @@ let rec parse (opts : spec) accu = function
 let parse opts args =
   match parse opts [] (Array.to_list args) with
     | opts, [] -> opts
-    | opts, q -> raise Incomplete_parsing (opts, q)
+    | opts, q -> raise (Incomplete_parsing (opts, q))
   
 (* this is a little test:
   let spec = [ "-install", []; "-uninstall", []]
-  let _ = parse spec [ "-install"; "foo"; "-uninstall" ] *)
+  let _ = parse spec [| "-install"; "foo"; "-uninstall" -] *)
 
 (* another one:
   let spec = [
@@ -72,9 +72,18 @@ let parse opts args =
     "-regen", [];
   ]
   in
-  parse spec [ "-install"; "a"; "b"; "c"; "-config"; "x"; "-preds"; "y"; "-uninstall"; "d"; "e" ]
+  parse spec [| "-install"; "a"; "b"; "c"; "-config"; "x"; "-preds"; "y";
+  "-uninstall"; "d"; "e" |]
+*)
 
 
 (* parse is the main (only?) entry point to this module
  * takes an args spec and returns a list of the arguments *)
 
+let find_opt_pred s = function
+  | Val _ -> false
+  | Opt (s', _) -> s' = s
+
+let find_opts_pred = function
+  | Val _ -> false
+  | Opt _ -> true
