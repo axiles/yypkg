@@ -5,73 +5,76 @@
  * and forbidden combinations of arguments.
  *)
 
-type 'a data = 
-  | String
-  | Nothing
-  | Subargs of ('a list)
+(* '-mainopt1 -opt1subopt1 -opt1subopt2 -mainopt2' will be parsed as:
+  * [ "mainopt1", [ "opt1subopt1"; "opt2subopt2"] ; "mainopt2", [] ] *)
 
-type arg = {
-  name : string;
-  t : arg data;
-  help_text : string;
-}
+(* Option_specification_is_ambiguous means the spec used to parse the params is
+ * bad: a single argument can be matched by several elements of the spec
+ * This isn't a fail of this library, the problem really is the spec *)
+type spec = (string * spec) list
 
-(* planned API:
-  * Parsing 'yypkg -prefix /some/path -install package.txz
-  *         'yypkg -prefix /some/path -list'
-  *         'yypkg -prefix /some/path -configure -regen'
-  * '-prefix' is always required
-  * only one of the other arguments may be specified
-  * some args are only valid if '-configure' has been given
-  *
-  * let w = {
-  *   name = "-prefix";
-  *   t = String;
-  *   help_text = "installation prefix"; }
-  * in
-  * let x = {
-  *   name = "-install";
-  *   t = String;
-  *   help_text = "installs the package"; }
-  * in
-  * let y = {
-  *   name = "-uninstall";
-  *   t = String;
-  *   help_text = "uninstalls the package"; }
-  * in
-  * let z = {
-  *   name = "-list";
-  *   t = Nothing;
-  *   help_text = "lists the installed packages"; }
-  * in
-  * let o =
-  *   let a = {
-  *     name = "-pred";
-  *     t = String;
-  *     help_text = "list of predicates to check when installing a package" }
-  *   in
-  *   let b = {
-  *     name = "-regen";
-  *     t = Nothing;
-  *     help_text = "regenerates the database cache"; }
-  *   in
-  *   { name = "-configure";
-  *   t = Subargs [ a; b ] ;
-  *   help_text = "configures yypkg" (* will say which args are mandatory *) }
-  * in
-  * let l = [ w; x; y; z; o ] in
-  * match parse_args l with
-  *   | [ "-reconfigure", None, args ] -> ()
-  *   | [ "-list", None, [] ] -> ()
-  *   | l -> 
-    *   assert (not (List.mem_assoc "-reconfigure"));
-    *   assert (not (List.mem_assoc "-list"));
-    *   ()
-  *)
+type opt = 
+  | Val of string
+  | Opt of (string * opt list)
 
-(* Basically, we're calling Arg.parse and translating its output to a nicer
- * format *)
+exception Option_specification_is_ambiguous
 
-(* parse_args is the main (only?) entry point to this module
+exception Incomplete_parsing of (opt * string list)
+
+(* at any point, we read the argument, if it starts with a '-' and is among the
+ * options recognized, we store it as an option, if it's not recognized, we
+ * complain. *)
+
+(* is the string 's' one of the options recognized in 'opts'? *)
+let opt_of_string opts s =
+  (* currently, the option on the command-line has to match exactly the spec *)
+  (* we *may* recognize '-foo:x=42:y=43' but '-foo x=42 y=43' does the same and
+   * is already working *)
+  let pred x (y, _) = y = x in
+  (* we return the opt which is matching the string
+   * if several ones match, we fail *)
+  match List.find_all (pred s) opts with
+    (* nothing found, option isn't recognized *)
+    | [] -> raise Not_found
+    (* one and only one element, option is recognized *)
+    | [ o ] -> o
+    (* if several options are matched, this means the option specification given
+     * is bad *)
+    | _ -> raise Option_specification_is_ambiguous
+
+let rec parse (opts : spec) accu = function
+  | ( t :: q ) as l when t.[0] = '-' -> begin
+      try 
+        let _, subopts = opt_of_string opts t in
+        let subs, q' = parse subopts [] q in
+        parse opts (Opt (t, List.rev subs) :: accu) q'
+      with Not_found -> accu, l
+    end
+  | t :: q -> parse opts (Val t :: accu) q
+  | [] -> List.rev accu, []
+
+let parse opts args =
+  match parse opts [] (Array.to_list args) with
+    | opts, [] -> opts
+    | opts, q -> raise Incomplete_parsing (opts, q)
+  
+(* this is a little test:
+  let spec = [ "-install", []; "-uninstall", []]
+  let _ = parse spec [ "-install"; "foo"; "-uninstall" ] *)
+
+(* another one:
+  let spec = [
+  "-install", [];
+  "-uninstall", [];
+  "-list", [];
+  "-config", [
+    "-preds", [];
+    "-regen", [];
+  ]
+  in
+  parse spec [ "-install"; "a"; "b"; "c"; "-config"; "x"; "-preds"; "y"; "-uninstall"; "d"; "e" ]
+
+
+(* parse is the main (only?) entry point to this module
  * takes an args spec and returns a list of the arguments *)
 
