@@ -53,6 +53,7 @@ let parse_cmd_line cmd_line =
   in
   (* all the options we accept *)
   let cmd_line_spec = [
+    "-prefix", [];
     "-install", [];
     "-uninstall", [];
     "-list", [];
