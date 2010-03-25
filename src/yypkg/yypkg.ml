@@ -1,8 +1,6 @@
 open Types
 open Yylib
 
-open Conf
-
 exception Package_does_not_exist
 exception File_not_found
 exception Bad_prefix_specification of Args.opt list

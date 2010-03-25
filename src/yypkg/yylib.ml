@@ -4,14 +4,19 @@ open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
 
+(* List.fold_left Filename.concat *)
+let filename_concat = function
+  | t :: q -> List.fold_left Filename.concat t q
+  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
+
 let ahk_bin =
-  Filename.concat Lib.install_dir "ahk.exe"
+  filename_concat [ Lib.install_dir; "ahk.exe" ]
 
 let db_path =
   "yypkg_db"
 
 let conf_path =
-  "etc/yypkg.conf"
+  filename_concat [ Lib.install_dir; "etc"; "yypkg.conf" ]
 
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
@@ -53,11 +58,6 @@ let command cmd =
 
 let split_path path =
   Str.split (Str.regexp Lib.dir_sep) path
-
-(* List.fold_left Filename.concat *)
-let filename_concat = function
-  | t :: q -> List.fold_left Filename.concat t q
-  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
 
 (* chop_list list i removes the first i elements of list and raises
  * ChopList_ChopingTooMuch if the list is shorter than i *)
