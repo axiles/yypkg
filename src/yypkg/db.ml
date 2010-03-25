@@ -7,10 +7,10 @@ let install_package db script =
 let uninstall_package db name = 
   List.filter (fun s -> not (package_is_named name s)) db
 
-let read db_path =
+let read () =
   db_of_sexp (Disk.read db_path)
 
-let write db_path db =
+let write db =
   (* We sort the db because, err, no reason, it won't even be more readable
    * considering the size of the database but in the case one has to edit the db
    * by hand, it's always nicer to have it sorted.

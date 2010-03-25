@@ -1,6 +1,8 @@
 open Types
 open Yylib
 
+open Conf
+
 exception Package_does_not_exist
 exception File_not_found
 exception Bad_prefix_specification of Args.opt list
@@ -10,14 +12,14 @@ let install p db =
   let p = FilePath.DefaultPath.make_absolute Lib.install_dir p in
   if Sys.file_exists p then
     let updated_db = Install.install_package db p in
-    Db.write db_path updated_db
+    Db.write updated_db
   else
     raise File_not_found
 
 let uninstall p db =
   if List.exists (package_is_named p) db then
     let updated_db = Uninstall.uninstall_package db p in
-    Db.write db_path updated_db
+    Db.write updated_db
   else
     raise Package_does_not_exist
 
@@ -83,7 +85,7 @@ let main () =
   in
   let () = ignore (mkdir prefix) in
   let () = Sys.chdir prefix in
-  let db = Db.read db_path in
+  let db = Db.read () in
   f db
 
 let () = main ()

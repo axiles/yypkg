@@ -8,10 +8,10 @@ let set conf binding value =
 let unset conf binding = 
   List.remove_assoc binding conf
 
-let read conf_path =
+let read () =
   conf_of_sexp (Disk.read conf_path)
 
-let write conf_path conf =
+let write conf =
   (* Let's sort the configuration. Won't be faster but should be nicer to read
    * when editing the file by hand. It'll also avoid requiring to sort the
    * output when listing the configuration on command-line.

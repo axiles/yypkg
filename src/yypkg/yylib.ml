@@ -10,6 +10,9 @@ let ahk_bin =
 let db_path =
   "yypkg_db"
 
+let conf_path =
+  "etc/yypkg.conf"
+
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
 
