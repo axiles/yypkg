@@ -11,4 +11,12 @@ let read db_path =
   db_of_sexp (Disk.read db_path)
 
 let write db_path db =
-  Disk.write db_path (sexp_of_db db)
+  (* We sort the db because, err, no reason, it won't even be more readable
+   * considering the size of the database but in the case one has to edit the db
+   * by hand, it's always nicer to have it sorted.
+   * We want to use stable_sort to keep the (perfectly fine) old behaviour when
+   * there are multiple packages with the same name.
+   * We DO NOT WANT to sort the content of each package as it may (and actually
+   * will) have unexpected consequences upon package removal *)
+  let sorted_db = List.stable_sort compare db in
+  Disk.write db_path (sexp_of_db sorted_db)
