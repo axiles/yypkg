@@ -1,7 +1,7 @@
 open Types
 open Yylib
 
-let set conf binding value =
+let set conf (binding, value) =
   let conf = List.remove_assoc binding conf in
   (binding, value) :: conf
 
@@ -20,3 +20,6 @@ let write conf =
    * so why not stay safe? *)
   let sorted_conf = List.stable_sort compare conf in
   Disk.write conf_path (sexp_of_conf sorted_conf)
+
+let update f =
+  write (f (read ()))

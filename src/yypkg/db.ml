@@ -20,3 +20,7 @@ let write db =
    * will) have unexpected consequences upon package removal *)
   let sorted_db = List.stable_sort compare db in
   Disk.write db_path (sexp_of_db sorted_db)
+
+let update (f : db -> db) =
+  write (f (read ()))
+

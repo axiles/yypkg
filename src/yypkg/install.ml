@@ -18,8 +18,7 @@ let install_package db package =
 let install p db =
   let p = FilePath.DefaultPath.make_absolute Lib.install_dir p in
   if Sys.file_exists p then
-    let updated_db = install_package db p in
-    Db.write updated_db
+    install_package db p
   else
     raise File_not_found
 

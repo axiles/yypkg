@@ -80,10 +80,15 @@ let parse opts args =
 (* parse is the main (only?) entry point to this module
  * takes an args spec and returns a list of the arguments *)
 
-let find_opt_pred s = function
+let is_opt ?s = function
   | Val _ -> false
-  | Opt (s', _) -> s' = s
+  | Opt (s', _) -> begin
+      match s with
+        | Some s -> s = s'
+        | None -> true
+    end
 
-let find_opts_pred = function
-  | Val _ -> false
-  | Opt _ -> true
+let val_of_opts = function
+  | Opt _ -> assert false
+  | Val s -> s
+

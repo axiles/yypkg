@@ -147,6 +147,9 @@ let file_exists_in_package file (_, result_list) =
   in
   List.exists f result_list
 
+let name_of_package ((m, _, _), _) =
+  m.package_name
+
 (* a predicate to check a package has some name, used with List.find *)
-let package_is_named name ((m, _, _), _) =
-  name = m.package_name
+let package_is_named name p =
+  (name_of_package p) = name

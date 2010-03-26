@@ -39,8 +39,7 @@ let uninstall_package db package_name =
 
 let uninstall p db =
   if List.exists (package_is_named p) db then
-    let updated_db = uninstall_package db p in
-    Db.write updated_db
+    uninstall_package db p
   else
     raise Package_does_not_exist
 
