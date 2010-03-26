@@ -1,25 +1,7 @@
 open Types
 open Yylib
 
-exception Package_does_not_exist
-exception File_not_found
 exception Bad_prefix_specification of Args.opt list
-
-
-let install p db =
-  let p = FilePath.DefaultPath.make_absolute Lib.install_dir p in
-  if Sys.file_exists p then
-    let updated_db = Install.install_package db p in
-    Db.write updated_db
-  else
-    raise File_not_found
-
-let uninstall p db =
-  if List.exists (package_is_named p) db then
-    let updated_db = Uninstall.uninstall_package db p in
-    Db.write updated_db
-  else
-    raise Package_does_not_exist
 
 let list _ db =
   let compare ((ma, _, _), _) ((mb, _, _), _) =
@@ -68,8 +50,8 @@ let parse_cmd_line cmd_line =
   let prefix, cmd_line = prefix_of_cmd_line cmd_line in
   let action, actionopts = action_of_cmd_line cmd_line in
   let f = match action, actionopts with
-    | "-install", [ Args.Val s ] -> install s
-    | "-uninstall", [ Args.Val s ] -> uninstall s
+    | "-install", [ Args.Val s ] -> Install.install s
+    | "-uninstall", [ Args.Val s ] -> Uninstall.uninstall s
     | "-list", [] -> list ()
     | "-config", [] -> fun _ -> ()
     | _, _ -> assert false

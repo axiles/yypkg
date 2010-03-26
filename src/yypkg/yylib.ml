@@ -2,6 +2,8 @@ open Printf
 open Sexplib
 open Types
 
+exception Package_does_not_exist
+exception File_not_found
 exception ChopList_ChopingTooMuch of (int * int)
 
 (* List.fold_left Filename.concat *)
