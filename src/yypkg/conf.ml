@@ -21,5 +21,7 @@ let write conf =
   let sorted_conf = List.stable_sort compare conf in
   Disk.write conf_path (sexp_of_conf sorted_conf)
 
+(* read the conf, run the function, write the database to disk
+ * if fail raises an exception, nothing will be written :-) *)
 let update f =
   write (f (read ()))

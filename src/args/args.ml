@@ -13,12 +13,13 @@
  * This isn't a fail of this library, the problem really is the spec *)
 type spec = (string * spec) list
 
+(* Something on the command-line is either an option (starts with a dash), or a
+ * value. Values are free-form, options are checked against the spec. *)
 type opt = 
   | Val of string
   | Opt of (string * opt list)
 
 exception Option_specification_is_ambiguous
-
 exception Incomplete_parsing of (opt list * string list)
 
 (* at any point, we read the argument, if it starts with a '-' and is among the
@@ -76,9 +77,6 @@ let parse opts args =
   "-uninstall"; "d"; "e" |]
 *)
 
-
-(* parse is the main (only?) entry point to this module
- * takes an args spec and returns a list of the arguments *)
 
 let is_opt ?s = function
   | Val _ -> false
