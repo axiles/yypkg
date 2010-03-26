@@ -15,10 +15,10 @@ let ahk_bin =
   filename_concat [ Lib.install_dir; "ahk.exe" ]
 
 let db_path =
-  "yypkg_db"
+  filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
 
 let conf_path =
-  filename_concat [ Lib.install_dir; "etc"; "yypkg.conf" ]
+  filename_concat [ "etc"; "yypkg.conf" ]
 
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q

@@ -13,8 +13,9 @@ let cmd_line_spec = [
     "-setpreds", [];
     "-delpreds", [];
     "-listpreds", [];
-    "-regen", [];
-  ]
+    (* not handled currently: "-regen", []; *)
+  ];
+  "-init", [];
 ]
 
 (* find the prefix from a command-line *)
@@ -82,6 +83,8 @@ let main () =
     (* list the installed packages *)
     | "-list", [] -> 
         List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
+    (* setups a few things for correct operation of yypkg, see yypkg/init.ml *)
+    | "-init", [] -> Init.init ()
     (* config does nothing on its own but has suboptions which are handled in
      * another function *)
     | "-config", subopts -> config subopts

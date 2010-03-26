@@ -8,7 +8,7 @@ let uninstall_package db name =
   List.filter (fun s -> not (package_is_named name s)) db
 
 let read () =
-  db_of_sexp (Disk.read db_path)
+  try db_of_sexp (Disk.read db_path) with _ -> []
 
 let write db =
   (* We sort the db because, err, no reason, it won't even be more readable
