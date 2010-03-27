@@ -9,7 +9,7 @@ let unset conf binding =
   List.remove_assoc binding conf
 
 let read () =
-  try conf_of_sexp (Disk.read conf_path) with _ -> []
+  conf_of_sexp (Disk.read conf_path)
 
 let write conf =
   (* Let's sort the configuration. Won't be faster but should be nicer to read

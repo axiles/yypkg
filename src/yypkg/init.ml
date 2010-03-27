@@ -1,7 +1,7 @@
 (* Init a yypkg installation in the given folder, this means:
-  * create /etc (will hold /etc/yypkg.conf)
+  * create /etc and an empty conf in /etc/yypkg.conf
   * create /sbin
-  * create /var/log/packages (will hold the package database)
+  * create /var/log/packages and an empty db in /var/log/packages/yypkg_db
   * put the required binaries in /sbin (xz, gzip, bzip2, (bsd)tar...) *)
 
 open Types
@@ -17,4 +17,6 @@ let init () =
     [ "var"; "log"; "packages" ];
   ]
   in
-  List.iter (fun l -> mkdir (filename_concat l)) folders
+  List.iter (fun l -> mkdir (filename_concat l)) folders;
+  Disk.write db_path (sexp_of_db []);
+  Disk.write conf_path (sexp_of_conf [])
