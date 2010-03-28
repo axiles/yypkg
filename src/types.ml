@@ -2,7 +2,7 @@ open Printf
 
 TYPE_CONV_PATH "Types"
 
-(* this has to be kept ordered !!! *)
+(* NOTE: this has to be kept ordered !!! *)
 type status = 
   | Alpha of int
   | Beta of int
@@ -21,6 +21,9 @@ type version = {
 (* both don't behave the same way of course *)
 type tar_kind = BSD | GNU
 
+(* not really used right now, might well be dropped in the future
+ * I think I've even forgotten why I wanted to have different types for them
+ * (well, for safety of course, but what exactly ? *)
 type absolute_path = string with sexp
 type relative_path = string with sexp
 
@@ -34,6 +37,7 @@ type param = string with sexp
 type params = string list with sexp
 type argv = string list with sexp
 
+(* this is only a name, an identifier *)
 type action_id = string with sexp
 
 type install_action =
@@ -72,5 +76,8 @@ type package = script * (action_id * results) list with sexp
 
 type db = package list with sexp
 
+(* list of predicates that are checked before installing apackage: for instance:
+  * arch=x86_64,noarch
+  * stability=stable,release_candidate *)
 type conf = (string * string list) list with sexp
 
