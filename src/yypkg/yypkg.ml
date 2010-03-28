@@ -47,7 +47,8 @@ let config opts =
     (* first: if -listpreds has been given, print the configuration predicates
      * -listpreds must not be given together with other arguments *)
     | _, [] ->
-        List.iter (fun (b, v) -> Printf.printf "%s = %s\n" b v) (Conf.read ())
+        List.iter (fun (b, v) -> Printf.printf "%s = %s\n" b (String.concat ","
+        v)) (Conf.read ())
     (* We're *very* nice to the user here: it's possible to add or remove
      * several predicates at once, and to add, remove some, add again predicates
      * in a single call to yypkg *)
