@@ -38,17 +38,16 @@ let parse_command_line () =
   in
   let usage_msg = "All arguments mentionned in --help are mandatory." in
   let () = Arg.parse lst ((:=) folder) usage_msg in
-  if List.exists ((=) "") [!output; !folder; !pkg_name; !version;
-  !packager_name; !packager_email; !description] then
+  (* check if any argument has not been set (missing from the command-line *)
+  if List.exists ((=) "") [!output; !folder; !pkg_name; !version; !packager_name; !packager_email; !description] then
     let () = prerr_endline usage_msg in
     exit 0
   else
     let folder = strip_trailing_slash !folder in
     let dirname = FilePath.DefaultPath.dirname (
       if not (FilePath.DefaultPath.is_relative folder) then folder
-      else FilePath.DefaultPath.make_absolute install_dir folder )
+      else FilePath.DefaultPath.make_absolute install_path folder )
     in
-    print_endline dirname;
     {
       output = !output;
       folder = folder;
@@ -97,8 +96,9 @@ let () =
   let script_path_basename = FilePath.DefaultPath.basename script_path in
   let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |]
   in
-  (* XXX: this won't work on windows as compressor will be an absolute path *)
-  let snd = if compressor = "xz" || compressor = "xz.exe" then
+  (* FIXME: this won't work on windows as compressor will be an absolute path *)
+  (* maybe check if basename(compressor) starts with "xz" *)
+  let snd = if compressor = "xz" then
     [| compressor; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
   else [| compressor; "-9" |]
   in

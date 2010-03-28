@@ -16,7 +16,7 @@ let install_package db package =
   updated_db
 
 let install p db =
-  let p = FilePath.DefaultPath.make_absolute Lib.install_dir p in
+  let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
   if Sys.file_exists p then
     install_package db p
   else

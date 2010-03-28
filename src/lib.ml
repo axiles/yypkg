@@ -1,8 +1,18 @@
 open Printf
 open Types
 
-(* Install directory: current folder when the program is started... *)
-let install_dir = Unix.getcwd ()
+exception ChopList_ChopingTooMuch of (int * int)
+
+(* List.fold_left Filename.concat *)
+let filename_concat = function
+  | t :: q -> List.fold_left Filename.concat t q
+  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
+
+let binary_path =
+  filename_concat [ Sys.getcwd (); Filename.dirname Sys.argv.(0); ".." ]
+
+let install_path =
+  filename_concat [ binary_path; ".." ]
 
 (* Simply make a version out of a string *)
 let version_of_string s =
@@ -49,25 +59,20 @@ let dir_sep =
 
 (* We expect tools in the installation directory *)
 
-(* absolute paths to tar, xz, gzip and bzip2 *)
+(* absolute paths to tar, xz, gzip and bzip2, and NamedPipe if on windows *)
 (* on windows, we use bsdtar and gnu tar on others *)
-let tar, tar_kind, xz, gzip, bzip2 =
+let tar, tar_kind, xz, gzip, bzip2, named_pipe = 
   match Sys.os_type with
+    (* we don't set named_pipe for unix and cygwin because it's not used *)
     | "Unix"
-    | "Cygwin" -> "tar", GNU, "xz", "gzip", "bzip2"
+    | "Cygwin" -> "tar", GNU, "xz", "gzip", "bzip2", ""
     | "Win32" ->
-        let bsdtar = Filename.concat install_dir "bsdtar.exe" in
-        let xz = Filename.concat install_dir "xz.exe" in
-        let gzip = Filename.concat install_dir "gzip.exe" in
-        let bzip2 = Filename.concat install_dir "bzip2.exe" in
-        bsdtar, BSD, xz, gzip, bzip2
+        filename_concat [ binary_path; "bsdtar.exe" ], BSD,
+        filename_concat [ binary_path; "xz.exe" ],
+        filename_concat [ binary_path; "gzip.exe" ],
+        filename_concat [ binary_path; "bzip2.exe" ],
+        filename_concat [ binary_path; "NamedPipe.exe" ]
     | _ -> assert false
-
-(* absolute path to the NamedPipe.exe executable, only makes sense on windows *)
-let named_pipe () = 
-  match Sys.os_type with
-    | "Win32" -> Filename.concat install_dir "NamedPipe.exe"
-    | "Unix" | "Cygwin" | _ -> assert false
 
 (* guess the compressor (xz, gzip, bzip2) from the extension of a string *)
 (* this function may raise a bunch of exceptions which should be caught with a
@@ -105,7 +110,7 @@ let win_tar_compress tar_args compress out =
   (* we tell tar to use the fifo as input *)
   let s = String.concat " " ([ tar; "cvf";  fifo_path ] @ tar_args) in
   (* NamedPipe.exe will redirect the named pipe to the compressor's input *)
-  let named_pipe = [ [| named_pipe (); fifo_path |]; compress; [| "-c" |] ] in
+  let named_pipe = [ [| named_pipe; fifo_path |]; compress; [| "-c" |] ] in
   let named_pipe = Array.concat named_pipe in
   (* this is the output of the compressor *)
   let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT ] 0o640 in
@@ -155,4 +160,30 @@ let decompress_untar f tar_args input =
   ignore (Unix.waitpid [] pid_c);
   List.iter Unix.close [ c_out; c_in; t_out; t_in ];
   s
+
+let split_path path =
+  Str.split (Str.regexp dir_sep) path
+
+(* chop_list list i removes the first i elements of list and raises
+ * ChopList_ChopingTooMuch if the list is shorter than i *)
+let chop_list list i =
+  let rec chop_list_rc j = function
+    | l when j = 0 -> l
+    | t :: q -> chop_list_rc  (j-1) q
+    | [] ->
+        raise (ChopList_ChopingTooMuch (List.length list, i))
+    (* this means we're trying to chop more than possible, 'l when i = 0'
+     * handles the case when we're trying to chop as much as we have so we
+     * can simply always yell here *)
+  in
+  chop_list_rc i list
+
+(* Remove the first 'n' components of a path (string list) and optionaly
+ * prepends a prefix
+ * That sounds a bit weird because I started changing how yypkg handled this but
+ * never finished *)
+let strip_component ?prefix n path =
+  match prefix with
+    | None -> filename_concat (chop_list (split_path path) n)
+    | Some prefix -> filename_concat (prefix :: (chop_list (split_path path) n))
 
