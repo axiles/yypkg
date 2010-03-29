@@ -8,17 +8,20 @@ let execute_install_action package (id, action) =
     | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
     | MKdir p -> id, Filelist (mkdir p)
 
-let install_package db package =
+let install_package package (conf : predicates) db =
   let (metadata, install_actions, _ as script) = open_package package in
-  let () = print_endline "package opened" in
-  let results = List.map (execute_install_action package) install_actions in
-  let updated_db = Db.install_package db (script, List.rev results) in
-  updated_db
+  let _, f_preds = List.partition (predicate_holds conf) metadata.predicates in
+  if 0 = List.length f_preds then
+    let results = List.map (execute_install_action package) install_actions in
+    let updated_db = Db.install_package db (script, List.rev results) in
+    updated_db
+  else
+    raise (Unmatched_predicates f_preds)
 
-let install p db =
+let install p conf db =
   let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
   if Sys.file_exists p then
-    install_package db p
+    install_package p conf db
   else
     raise File_not_found
 

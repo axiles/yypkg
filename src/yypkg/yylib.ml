@@ -106,9 +106,12 @@ let rm path_unexpanded =
   else
     Printf.printf "Not removed (doesn't exist): %s\n" path
 
+let predicate_holds (conf : predicates) (key, value) = 
+  let conf_vals = List.assoc key conf in
+  List.mem value conf_vals
+
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  (* XXX: first arg to decompress_untar *)
   let script_sexp = Lib.decompress_untar (fun _ ic -> Sexp.input_sexp ic) [| "-O"; "package_script.el" |] package in
   script_of_sexp script_sexp
 

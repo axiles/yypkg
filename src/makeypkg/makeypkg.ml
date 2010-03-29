@@ -24,19 +24,23 @@ let strip_trailing_slash s =
     s
 
 let parse_command_line () = 
-  let output,folder,pkg_name,version,packager_email,packager_name,description =
-    ref "", ref "", ref "", ref "", ref "", ref "", ref ""
+  let output,folder,pkg_name,version,packager_email,packager_name,description,arch =
+    ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref ""
   in
   let lst = [
-    "-o", Arg.Set_string output, "set output file";
+    (* the output filename will be made from the other param values *)
+    "-o", Arg.Set_string output, "set output folder";
     "-name", Arg.Set_string pkg_name, "set the package name";
     "-version", Arg.Set_string version, "set the package version";
     "-email", Arg.Set_string packager_email, "packager's email";
     "-packager_name", Arg.Set_string packager_name, "packager's name";
     "-description", Arg.Set_string description, "description";
+    (* the package will only install if arch is matched *)
+    "-arch", Arg.Set_string arch, "arch";
   ]
   in
   let usage_msg = "All arguments mentionned in --help are mandatory." in
+  (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
   if List.exists ((=) "") [!output; !folder; !pkg_name; !version; !packager_name; !packager_email; !description] then

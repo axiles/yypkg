@@ -78,7 +78,7 @@ let main () =
   let () = Sys.chdir prefix in
   match action, actionopts with
     (* install, accepts one package at a time *)
-    | "-install", [ Args.Val s ] -> Db.update (Install.install s)
+    | "-install", [ Args.Val s ] -> Db.update (Install.install s (Conf.read ()))
     (* uninstall, accepts one package at a time *)
     | "-uninstall", [ Args.Val s ] -> Db.update (Uninstall.uninstall s)
     (* list the installed packages *)

@@ -57,6 +57,11 @@ type results =
   | NA
 with sexp
 
+type predicate = string * string list with sexp
+type predicates = predicate list with sexp
+
+exception Unmatched_predicates of ((string * string) list)
+
 type metadata = {
   package_name : string;
   package_size_expanded : string;
@@ -64,6 +69,8 @@ type metadata = {
   packager_email : string;
   packager_name : string;
   description : string;
+  predicates : (string * string) list;
+  comments : string;
 } with sexp
 
 type script =
@@ -79,5 +86,5 @@ type db = package list with sexp
 (* list of predicates that are checked before installing apackage: for instance:
   * arch=x86_64,noarch
   * stability=stable,release_candidate *)
-type conf = (string * string list) list with sexp
+type conf = predicates with sexp
 
