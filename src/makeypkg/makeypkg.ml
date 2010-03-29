@@ -14,6 +14,8 @@ type cmd_line = {
   pkger_name : string;
   pkger_email : string;
   descr : string;
+  arch : string;
+  compressor : string;
 }
 
 let strip_trailing_slash s =
@@ -23,9 +25,12 @@ let strip_trailing_slash s =
   else
     s
 
+let output_of_cmdline c =
+  String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch ]
+
 let parse_command_line () = 
-  let output,folder,pkg_name,version,packager_email,packager_name,description,arch =
-    ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref ""
+  let output,folder,pkg_name,version,packager_email,packager_name,description,arch, compressor =
+    ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref "xz"
   in
   let lst = [
     (* the output filename will be made from the other param values *)
@@ -36,14 +41,15 @@ let parse_command_line () =
     "-packager_name", Arg.Set_string packager_name, "packager's name";
     "-description", Arg.Set_string description, "description";
     (* the package will only install if arch is matched *)
-    "-arch", Arg.Set_string arch, "arch";
+    "-arch", Arg.Set_string arch, "arch triplet";
+    "-compressor", Arg.Set_string compressor, "xz, gzip or bzip2";
   ]
   in
   let usage_msg = "All arguments mentionned in --help are mandatory." in
   (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
-  if List.exists ((=) "") [!output; !folder; !pkg_name; !version; !packager_name; !packager_email; !description] then
+  if List.exists ((=) (ref "")) [output; folder; pkg_name; version; packager_name; packager_email; description; arch; compressor] then
     let () = prerr_endline usage_msg in
     exit 0
   else
@@ -62,6 +68,8 @@ let parse_command_line () =
       pkger_name = !packager_name;
       pkger_email = !packager_email;
       descr = !description;
+      arch = !arch;
+      compressor = !compressor;
     }
 
 let meta ~cmd_line ~pkg_size =
@@ -90,9 +98,6 @@ let write_temp_file base_name contents =
 
 let () =
   let cmd_line = parse_command_line () in
-  let compressor = try compressor_of_ext cmd_line.output with 
-    | _ -> raise Package_name_must_end_in_txz_tgz_or_tbz2
-  in
   let pkg_size= FileUtil.string_of_size (fst (FileUtil.du [cmd_line.folder])) in
   let package_script_el = package_script_el ~pkg_size cmd_line in
   let script_path = write_temp_file "package_script.el" package_script_el in
@@ -100,10 +105,11 @@ let () =
   let script_path_basename = FilePath.DefaultPath.basename script_path in
   let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |]
   in
-  (* FIXME: this won't work on windows as compressor will be an absolute path *)
-  (* maybe check if basename(compressor) starts with "xz" *)
-  let snd = if compressor = "xz" then
-    [| compressor; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
-  else [| compressor; "-9" |]
+  let snd = match cmd_line.compressor with
+    | "xz" -> [| xz; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
+    | "gzip" -> [| gzip; "-9" |]
+    | "bzip2" -> [| bzip2; "-9" |]
+    | _ -> assert false
   in
-  tar_compress tar_args snd cmd_line.output
+  let output = Filename.concat cmd_line.output (output_of_cmdline cmd_line) in
+  tar_compress tar_args snd output
