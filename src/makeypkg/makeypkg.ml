@@ -26,7 +26,13 @@ let strip_trailing_slash s =
     s
 
 let output_of_cmdline c =
-  String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch ]
+  let ext = match c.compressor with
+    | "xz"  -> ".txz"
+    | "gzip" -> ".tgz"
+    | "bzip2" -> ".tbz2"
+    | _ -> assert false
+  in
+  String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch; ext ]
 
 let parse_command_line () = 
   let output,folder,pkg_name,version,packager_email,packager_name,description,arch, compressor =
