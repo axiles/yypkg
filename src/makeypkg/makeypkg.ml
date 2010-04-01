@@ -32,7 +32,8 @@ let output_of_cmdline c =
     | "bzip2" -> ".tbz2"
     | _ -> assert false
   in
-  String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch; ext ]
+  (* if we put 'ext' in concat's call, we'd have an extra separator ("-") *)
+  (String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch ]) ^ ext
 
 let parse_command_line () = 
   let output,folder,pkg_name,version,packager_email,packager_name,description,arch, compressor =
