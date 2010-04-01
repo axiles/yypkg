@@ -1,6 +1,6 @@
 open Printf
   
-(* this has to be kept ordered !!! *)
+(* NOTE: this has to be kept ordered !!! *)
 type status =
   | Alpha of int | Beta of int | RC of int | Snapshot of string | Stable
 
@@ -12,6 +12,9 @@ type version =
 (* both don't behave the same way of course *)
 type tar_kind = | BSD | GNU
 
+(* not really used right now, might well be dropped in the future
+ * I think I've even forgotten why I wanted to have different types for them
+ * (well, for safety of course, but what exactly ? *)
 type absolute_path = string
 
 let absolute_path_of_sexp__ =
@@ -111,6 +114,7 @@ let argv_of_sexp sexp =
   
 let sexp_of_argv v = Sexplib.Conv.sexp_of_list Sexplib.Conv.sexp_of_string v
   
+(* this is only a name, an identifier *)
 type action_id = string
 
 let action_id_of_sexp__ =
@@ -268,10 +272,50 @@ let sexp_of_results =
       in Sexplib.Sexp.List [ Sexplib.Sexp.Atom "Filelist"; v1 ]
   | NA -> Sexplib.Sexp.Atom "NA"
   
+type predicate = (string * (string list))
+
+let predicate_of_sexp__ =
+  let _loc = "Types.predicate"
+  in
+    function
+    | Sexplib.Sexp.List ([ v1; v2 ]) ->
+        let v1 = Sexplib.Conv.string_of_sexp v1
+        and v2 = Sexplib.Conv.list_of_sexp Sexplib.Conv.string_of_sexp v2
+        in (v1, v2)
+    | sexp -> Sexplib.Conv_error.tuple_of_size_n_expected _loc 2 sexp
+  
+let predicate_of_sexp sexp =
+  try predicate_of_sexp__ sexp
+  with
+  | Sexplib.Conv_error.No_variant_match ((msg, sexp)) ->
+      Sexplib.Conv.of_sexp_error msg sexp
+  
+let sexp_of_predicate (v1, v2) =
+  let v1 = Sexplib.Conv.sexp_of_string v1
+  and v2 = Sexplib.Conv.sexp_of_list Sexplib.Conv.sexp_of_string v2
+  in Sexplib.Sexp.List [ v1; v2 ]
+  
+type predicates = predicate list
+
+let predicates_of_sexp__ =
+  let _loc = "Types.predicates"
+  in fun sexp -> Sexplib.Conv.list_of_sexp predicate_of_sexp sexp
+  
+let predicates_of_sexp sexp =
+  try predicates_of_sexp__ sexp
+  with
+  | Sexplib.Conv_error.No_variant_match ((msg, sexp)) ->
+      Sexplib.Conv.of_sexp_error msg sexp
+  
+let sexp_of_predicates v = Sexplib.Conv.sexp_of_list sexp_of_predicate v
+  
+exception Unmatched_predicates of (string * string) list
+  
 type metadata =
   { package_name : string; package_size_expanded : string;
     package_version : string; packager_email : string;
-    packager_name : string; description : string
+    packager_name : string; description : string;
+    predicates : (string * string) list; comments : string
   }
 
 let metadata_of_sexp__ =
@@ -284,6 +328,7 @@ let metadata_of_sexp__ =
         and package_version_field = ref None
         and packager_email_field = ref None
         and packager_name_field = ref None and description_field = ref None
+        and predicates_field = ref None and comments_field = ref None
         and duplicates = ref [] and extra = ref [] in
         let rec iter =
           (function
@@ -326,6 +371,28 @@ let metadata_of_sexp__ =
                           let fvalue = Sexplib.Conv.string_of_sexp field_sexp
                           in description_field := Some fvalue
                       | Some _ -> duplicates := field_name :: !duplicates)
+                 | "predicates" ->
+                     (match !predicates_field with
+                      | None ->
+                          let fvalue =
+                            Sexplib.Conv.list_of_sexp
+                              (function
+                               | Sexplib.Sexp.List ([ v1; v2 ]) ->
+                                   let v1 = Sexplib.Conv.string_of_sexp v1
+                                   and v2 = Sexplib.Conv.string_of_sexp v2
+                                   in (v1, v2)
+                               | sexp ->
+                                   Sexplib.Conv_error.
+                                     tuple_of_size_n_expected _loc 2 sexp)
+                              field_sexp
+                          in predicates_field := Some fvalue
+                      | Some _ -> duplicates := field_name :: !duplicates)
+                 | "comments" ->
+                     (match !comments_field with
+                      | None ->
+                          let fvalue = Sexplib.Conv.string_of_sexp field_sexp
+                          in comments_field := Some fvalue
+                      | Some _ -> duplicates := field_name :: !duplicates)
                  | _ ->
                      if !Sexplib.Conv.record_check_extra_fields
                      then extra := field_name :: !extra
@@ -345,11 +412,13 @@ let metadata_of_sexp__ =
              else
                (match ((!package_name_field), (!package_size_expanded_field),
                        (!package_version_field), (!packager_email_field),
-                       (!packager_name_field), (!description_field))
+                       (!packager_name_field), (!description_field),
+                       (!predicates_field), (!comments_field))
                 with
                 | (Some package_name_value, Some package_size_expanded_value,
                    Some package_version_value, Some packager_email_value,
-                   Some packager_name_value, Some description_value) ->
+                   Some packager_name_value, Some description_value,
+                   Some predicates_value, Some comments_value) ->
                     {
                       package_name = package_name_value;
                       package_size_expanded = package_size_expanded_value;
@@ -357,6 +426,8 @@ let metadata_of_sexp__ =
                       packager_email = packager_email_value;
                       packager_name = packager_name_value;
                       description = description_value;
+                      predicates = predicates_value;
+                      comments = comments_value;
                     }
                 | _ ->
                     Sexplib.Conv_error.record_undefined_elements _loc sexp
@@ -371,7 +442,10 @@ let metadata_of_sexp__ =
                         ((Pervasives.( = ) !packager_name_field None),
                          "packager_name");
                         ((Pervasives.( = ) !description_field None),
-                         "description") ]))
+                         "description");
+                        ((Pervasives.( = ) !predicates_field None),
+                         "predicates");
+                        ((Pervasives.( = ) !comments_field None), "comments") ]))
     | (Sexplib.Sexp.Atom _ as sexp) ->
         Sexplib.Conv_error.record_list_instead_atom _loc sexp
   
@@ -383,9 +457,23 @@ let sexp_of_metadata {
                        package_version = v_package_version;
                        packager_email = v_packager_email;
                        packager_name = v_packager_name;
-                       description = v_description
+                       description = v_description;
+                       predicates = v_predicates;
+                       comments = v_comments
                      } =
   let bnds = [] in
+  let arg = Sexplib.Conv.sexp_of_string v_comments in
+  let bnd = Sexplib.Sexp.List [ Sexplib.Sexp.Atom "comments"; arg ] in
+  let bnds = bnd :: bnds in
+  let arg =
+    Sexplib.Conv.sexp_of_list
+      (fun (v1, v2) ->
+         let v1 = Sexplib.Conv.sexp_of_string v1
+         and v2 = Sexplib.Conv.sexp_of_string v2
+         in Sexplib.Sexp.List [ v1; v2 ])
+      v_predicates in
+  let bnd = Sexplib.Sexp.List [ Sexplib.Sexp.Atom "predicates"; arg ] in
+  let bnds = bnd :: bnds in
   let arg = Sexplib.Conv.sexp_of_string v_description in
   let bnd = Sexplib.Sexp.List [ Sexplib.Sexp.Atom "description"; arg ] in
   let bnds = bnd :: bnds in
@@ -498,5 +586,21 @@ let db_of_sexp sexp =
       Sexplib.Conv.of_sexp_error msg sexp
   
 let sexp_of_db v = Sexplib.Conv.sexp_of_list sexp_of_package v
+  
+(* list of predicates that are checked before installing apackage: for instance:
+  * arch=x86_64,noarch
+  * stability=stable,release_candidate *)
+type conf = predicates
+
+let conf_of_sexp__ =
+  let _loc = "Types.conf" in fun sexp -> predicates_of_sexp sexp
+  
+let conf_of_sexp sexp =
+  try conf_of_sexp__ sexp
+  with
+  | Sexplib.Conv_error.No_variant_match ((msg, sexp)) ->
+      Sexplib.Conv.of_sexp_error msg sexp
+  
+let sexp_of_conf v = sexp_of_predicates v
   
 

@@ -7,7 +7,7 @@
 # -I /ocaml/lib/ocaml/site-lib/mikmatch_str pa_mikmatch_str.cma
 
 O=preprocessed_src
-mkdir -p $O/{makeypkg,yypkg}
+mkdir -p $O/{args,makeypkg,yypkg}
 
 PKGS='mikmatch_str sexplib.syntax'
 I_FLAGS='ocamlfind query -i-format -predicates syntax,preprocessor -r -separator " "'

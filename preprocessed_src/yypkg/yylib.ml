@@ -4,11 +4,21 @@ open Sexplib
   
 open Types
   
-exception ChopList_ChopingTooMuch of (int * int)
+exception Package_does_not_exist
   
-let ahk_bin = Filename.concat Lib.install_dir "ahk.exe"
+exception File_not_found
   
-let db_path = "yypkg_db"
+(* List.fold_left Filename.concat *)
+let filename_concat =
+  function
+  | t :: q -> List.fold_left Filename.concat t q
+  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
+  
+let ahk_bin = filename_concat [ Lib.install_path; "ahk.exe" ]
+  
+let db_path = filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
+  
+let conf_path = filename_concat [ "etc"; "yypkg.conf" ]
   
 let rev_list_of_queue q = Queue.fold (fun l e -> e :: l) [] q
   
@@ -43,38 +53,6 @@ let read_ic ?(tar = false) pid ic =
 (* run the command cmd and return a list of lines of the output *)
 let command cmd = (* XXX: pid! *) read_ic 0 (Unix.open_process_in cmd)
   
-let split_path path = Str.split (Str.regexp Lib.dir_sep) path
-  
-(* List.fold_left Filename.concat *)
-let filename_concat =
-  function
-  | t :: q -> List.fold_left Filename.concat t q
-  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
-  
-(* chop_list list i removes the first i elements of list and raises
- * ChopList_ChopingTooMuch if the list is shorter than i *)
-let chop_list list i =
-  let rec chop_list_rc j =
-    function
-    | l when j = 0 -> l
-    | t :: q -> chop_list_rc (j - 1) q
-    | [] -> raise (ChopList_ChopingTooMuch (List.length list, i))
-  in
-    (* this means we're trying to chop more than possible, 'l when i = 0'
-     * handles the case when we're trying to chop as much as we have so we
-     * can simply always yell here *)
-    chop_list_rc i list
-  
-(* Remove the first 'n' components of a path (string list) and optionaly
- * prepends a prefix
- * That sounds a bit weird because I started changing how yypkg handled this but
- * never finished *)
-let strip_component ?prefix n path =
-  match prefix with
-  | None -> filename_concat (chop_list (split_path path) n)
-  | Some prefix ->
-      filename_concat (prefix :: (chop_list (split_path path) n))
-  
 (* mkdir for use in installation scripts: it returns the path that got created
  * so it can be registered and reversed upon uninstallation *)
 let mkdir path_unexpanded =
@@ -84,7 +62,7 @@ let mkdir path_unexpanded =
   
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
 let expand pkg i p =
-  let l = List.length (split_path i) in
+  let l = List.length (Lib.split_path i) in
   let pkg = expand_environment_variables pkg in
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p
@@ -97,7 +75,7 @@ let expand pkg i p =
          (if Lib.tar = "tar" then [| "--wildcards" |] else [|  |])
          [| "-C"; pq; "--strip-components"; string_of_int (l - 1); iq |] in
      let x = Lib.decompress_untar (read_ic ~tar: true) tar_args pkg
-     in List.map (strip_component ~prefix: p (l - 1)) x)
+     in List.map (Lib.strip_component ~prefix: p (l - 1)) x)
   
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
@@ -108,6 +86,8 @@ let rm path_unexpanded =
    * will return false even though 'y' exists *)
   let exists path =
     try let () = ignore (Unix.lstat path) in true with | _ -> false in
+  (* FIXME: env var souldn't be kept in the database, they have to be expanded
+   * before *)
   let path = expand_environment_variables path_unexpanded
   in
     if exists path
@@ -123,8 +103,11 @@ let rm path_unexpanded =
         (let () = FileUtil.rm [ path ] in Printf.printf "Removed: %s\n" path)
     else Printf.printf "Not removed (doesn't exist): %s\n" path
   
+let predicate_holds (conf : predicates) (key, value) =
+  let conf_vals = List.assoc key conf in List.mem value conf_vals
+  
 (* reads 'package_script.el' from a package *)
-let open_package package = (* XXX: first arg to decompress_untar *)
+let open_package package =
   let script_sexp =
     Lib.decompress_untar (fun _ ic -> Sexp.input_sexp ic)
       [| "-O"; "package_script.el" |] package
@@ -138,7 +121,9 @@ let file_exists_in_package file (_, result_list) =
     | (_, Filelist l) -> List.exists (( = ) file) l
   in List.exists f result_list
   
+let name_of_package ((m, _, _), _) = m.package_name
+  
 (* a predicate to check a package has some name, used with List.find *)
-let package_is_named name ((m, _, _), _) = name = m.package_name
+let package_is_named name p = (name_of_package p) = name
   
 

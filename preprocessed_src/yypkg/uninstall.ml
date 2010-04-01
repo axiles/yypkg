@@ -30,4 +30,9 @@ let uninstall_package db package_name =
     List.iter (execute_uninstall_action pkg other_pkgs) u_acts in
   let () = List.iter f pkgs in Db.uninstall_package db package_name
   
+let uninstall p db =
+  if List.exists (package_is_named p) db
+  then uninstall_package db p
+  else raise Package_does_not_exist
+  
 
