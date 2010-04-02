@@ -112,8 +112,9 @@ let predicate_holds (conf : predicates) (key, value) =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let script_sexp = Lib.decompress_untar (fun _ ic -> Sexp.input_sexp ic) [| "-O"; "package_script.el" |] package in
-  script_of_sexp script_sexp
+  let l =Lib.decompress_untar read_ic [| "-O"; "package_script.el" |] package in
+  let s = String.concat "\n" l in
+  script_of_sexp (Sexp.of_string s)
 
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =
