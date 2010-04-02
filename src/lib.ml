@@ -3,6 +3,33 @@ open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
 
+(* FIXME: explain why this function is needed *)
+let read pid descr =
+  let s = String.make 160 '_' in
+  let rec r pid descr accu =
+    match Unix.waitpid [ Unix.WNOHANG ] pid with
+      (* nothing happened yet, read and start again *)
+      | 0, _ -> begin
+          match Unix.select [ descr ] [] [] 0.1 with
+            (* good, we have something to read *)
+            | [ _ ], _, _ ->
+                let l = Unix.read descr s 0 160 in
+                r pid descr ((String.sub s 0 l) :: accu)
+            (* ok, we timeouted but we're gonna try again *)
+            | _ -> r pid descr accu
+        end
+      (* FIXME: we know there won't be anything added now: we'll be eating the
+       * remaining characters at once and return *)
+      | _, Unix.WEXITED 0 -> accu
+      (* FIXME: hmmmm... *)
+      | _, _ -> assert false
+  in
+  (* FIXME: we need to concat everything and then, split on newlines since
+   * that's how this function is meant to work: string list with each string
+   * being one line
+   * FIXME: we must translate \r\n to \n when appropriate (i.e. on windows *)
+  String.concat "" (List.rev (r pid descr []))
+
 (* List.fold_left Filename.concat *)
 let filename_concat = function
   | t :: q -> List.fold_left Filename.concat t q
@@ -150,16 +177,15 @@ let decompress_untar f tar_args input =
     then Unix.create_process t.(0) t c_out Unix.stdout t_in
     else Unix.create_process t.(0) t c_out t_in Unix.stderr
   in
-  let t_out_chan = Unix.in_channel_of_descr t_out in
-  (* bsdtar uses \r\n for end of lines, this will translate to \n only =) 
-   * It has no effect on systems which already use \n *)
-  set_binary_mode_in t_out_chan false;
-  let s = f pid_t t_out_chan in
+  (* FIXME: bsdtar uses \r\n for end of lines, we must translate to \n only *)
+  let s = read pid_t t_out in
+  print_endline s;
   (* f should return after the program pid_t has exited so no need to wait more
    * we're waiting for pid_c however even if it's probably not needed *)
   ignore (Unix.waitpid [] pid_c);
   List.iter Unix.close [ c_out; c_in; t_out; t_in ];
-  s
+  (* FIXME: obviously, this is wrong *)
+  []
 
 let split_path path =
   Str.split (Str.regexp dir_sep) path
