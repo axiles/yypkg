@@ -13,11 +13,18 @@ let read pid descr =
    * when there's nothing more available (yet) *)
   let read_once descr =
     let rec read_once_rc accu =
-      match Unix.read descr s 0 160 with
-        (* got as much as we asked, there's probably more to read, so try to *)
-        | 160 as l -> read_once_rc ((String.sub s 0 l) :: accu)
-        (* got less than asked, return *)
-        | l -> (String.sub s 0 l) :: accu
+      (* check if there's something to read: a timeout of 0.02 to minimize
+       * latency, shouldn't cost anything *)
+      match Unix.select [ descr ] [] [] 0.02 with
+        | [ _ ],  _, _ -> begin
+            match Unix.read descr s 0 160 with
+              (* got as much as we asked for, there's probably more: try again*)
+              | 160 as l -> read_once_rc ((String.sub s 0 l) :: accu)
+              (* got less than asked, return *)
+              | l -> (String.sub s 0 l) :: accu
+          end
+            (* ok, we got a timeout: return *)
+        | _ -> accu
     in
     read_once_rc []
   in
@@ -27,15 +34,7 @@ let read pid descr =
      * write more and we can read everything available in one big pass *)
     match Unix.waitpid [ Unix.WNOHANG ] pid with
       (* still alive: read and start again *)
-      | 0, _ -> begin
-          (* check if there's something to read: a timeout of 0.02 to minimize
-           * latency, shouldn't cost anything *)
-          match Unix.select [ descr ] [] [] 0.02 with
-            (* good, we have something to read *)
-            | [ _ ], _, _ -> read_rc pid descr ((read_once descr) :: accu)
-            (* ok, we got a timeout but we're gonna try again *)
-            | _ -> read_rc pid descr accu
-        end
+      | 0, _ -> read_rc pid descr ((read_once descr) :: accu)
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
       | _, Unix.WEXITED 0 -> (read_once descr) :: accu
