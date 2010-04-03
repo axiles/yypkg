@@ -5,30 +5,51 @@ exception ChopList_ChopingTooMuch of (int * int)
 
 (* FIXME: explain why this function is needed *)
 let read pid descr =
+  (* We'll be reading at most 160 characters at a time, I don't know if there's
+   * a better way to do it: more, less, adptive. No idea but this should be good
+   * enough *)
   let s = String.make 160 '_' in
-  let rec r pid descr accu =
+  (* We'll use these to convert \r\n end-of-lines to \n ones on windows, and
+   * split the final string on new-lines *)
+  let re_n = Str.regexp "\\n" in
+  let re_r_n = Str.regexp "\\r\\n" in
+  (* This function reads everything available from a descriptor and returns
+   * when there's nothing more available (yet) *)
+  let read_once descr =
+    let rec read_once_rc accu =
+      match Unix.read descr s 0 160 with
+        (* got as much as we asked, there's probably more to read, so try to *)
+        | 160 as l -> read_once_rc ((String.sub s 0 l) :: accu)
+        (* got less than asked, return *)
+        | l -> (String.sub s 0 l) :: accu
+    in
+    read_once_rc []
+  in
+  let rec read_rc pid descr accu =
+    (* As long as the process is alive, we have to wait for it to send more data
+     * even if nothing is available yet, but when it dies, it becomes unable to
+     * write more and we can read everything available in one big pass *)
     match Unix.waitpid [ Unix.WNOHANG ] pid with
-      (* nothing happened yet, read and start again *)
+      (* still alive: read and start again *)
       | 0, _ -> begin
-          match Unix.select [ descr ] [] [] 0.1 with
+          (* check if there's something to read: a timeout of 0.02 to minimize
+           * latency, shouldn't cost anything *)
+          match Unix.select [ descr ] [] [] 0.02 with
             (* good, we have something to read *)
-            | [ _ ], _, _ ->
-                let l = Unix.read descr s 0 160 in
-                r pid descr ((String.sub s 0 l) :: accu)
-            (* ok, we timeouted but we're gonna try again *)
-            | _ -> r pid descr accu
+            | [ _ ], _, _ -> read_rc pid descr ((read_once descr) :: accu)
+            (* ok, we got a timeout but we're gonna try again *)
+            | _ -> read_rc pid descr accu
         end
-      (* FIXME: we know there won't be anything added now: we'll be eating the
-       * remaining characters at once and return *)
-      | _, Unix.WEXITED 0 -> accu
+      (* we know there won't be anything added now: we eat the remaining
+       * characters and return right after that *)
+      | _, Unix.WEXITED 0 -> (read_once descr) :: accu
       (* FIXME: hmmmm... *)
       | _, _ -> assert false
   in
-  (* FIXME: we need to concat everything and then, split on newlines since
-   * that's how this function is meant to work: string list with each string
-   * being one line
-   * FIXME: we must translate \r\n to \n when appropriate (i.e. on windows *)
-  String.concat "" (List.rev (r pid descr []))
+  let l = read_rc pid descr [] in
+  let ll = List.fold_left (fun a b -> List.rev_append a b) [] l in
+  let s = Str.global_replace re_r_n "\\n" (String.concat "" ll) in
+  Str.split re_n s
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
@@ -177,15 +198,11 @@ let decompress_untar f tar_args input =
     then Unix.create_process t.(0) t c_out Unix.stdout t_in
     else Unix.create_process t.(0) t c_out t_in Unix.stderr
   in
-  (* FIXME: bsdtar uses \r\n for end of lines, we must translate to \n only *)
-  let s = read pid_t t_out in
-  print_endline s;
-  (* f should return after the program pid_t has exited so no need to wait more
-   * we're waiting for pid_c however even if it's probably not needed *)
-  ignore (Unix.waitpid [] pid_c);
+  let l = read pid_t t_out in
+  (* let's clean the compressor from the process table *)
+  ignore (Unix.waitpid [ Unix.WNOHANG ] pid_c);
   List.iter Unix.close [ c_out; c_in; t_out; t_in ];
-  (* FIXME: obviously, this is wrong *)
-  []
+  l
 
 let split_path path =
   Str.split (Str.regexp dir_sep) path
