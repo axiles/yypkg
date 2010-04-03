@@ -9,10 +9,6 @@ let read pid descr =
    * a better way to do it: more, less, adptive. No idea but this should be good
    * enough *)
   let s = String.make 160 '_' in
-  (* We'll use these to convert \r\n end-of-lines to \n ones on windows, and
-   * split the final string on new-lines *)
-  let re_n = Str.regexp "\\n" in
-  let re_r_n = Str.regexp "\\r\\n" in
   (* This function reads everything available from a descriptor and returns
    * when there's nothing more available (yet) *)
   let read_once descr =
@@ -48,8 +44,11 @@ let read pid descr =
   in
   let l = read_rc pid descr [] in
   let ll = List.fold_left (fun a b -> List.rev_append a b) [] l in
-  let s = Str.global_replace re_r_n "\\n" (String.concat "" ll) in
-  Str.split re_n s
+  let s = String.concat "" ll in
+  (* Split on \r\n newlines on windows and \n newlines elsewhere *)
+  match Sys.os_type with
+    | "Win32" -> Str.split (Str.regexp "\\r\\n") s
+    | _ (* Uniw | Cygwin *) -> Str.split (Str.regexp "\\n") s
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
