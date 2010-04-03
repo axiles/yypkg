@@ -42,12 +42,12 @@ let read pid descr =
       | _, _ -> assert false
   in
   let l = read_rc pid descr [] in
-  let ll = List.fold_left (fun a b -> List.rev_append a b) [] l in
+  let ll = List.fold_left (fun a b -> List.rev_append b a) [] l in
   let s = String.concat "" ll in
   (* Split on \r\n newlines on windows and \n newlines elsewhere *)
   match Sys.os_type with
-    | "Win32" -> Str.split (Str.regexp "\\r\\n") s
-    | _ (* Uniw | Cygwin *) -> Str.split (Str.regexp "\\n") s
+    | "Win32" -> Str.split (Str.regexp "\r\n") s
+    | _ (* Uniw | Cygwin *) -> Str.split (Str.regexp "\n") s
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
