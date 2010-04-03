@@ -88,7 +88,7 @@ let meta ~cmd_line ~pkg_size =
     sprintf "(packager_name \"%s\")" cmd_line.pkger_name;
     sprintf "(packager_email \"%s\")" cmd_line.pkger_email;
     sprintf "(predicates (\"%s\" \"%s\"))" "arch" cmd_line.arch;
-    sprintf "(comments \"made with makeypkg\"";
+    sprintf "(comments \"made with makeypkg\")";
   ]
 
 let package_script_el cmd_line ~pkg_size =
