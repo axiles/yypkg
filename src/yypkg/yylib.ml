@@ -36,26 +36,11 @@ let filter_bsdtar_output x =
 let reduce_path path =
   FilePath.DefaultPath.reduce path
 
-(* returns the list of lines in the in_channel ic *)
-let read_ic ?(tar=false) pid ic =
-  let descr = Unix.descr_of_in_channel ic in
-  let read ic = if tar
-    then reduce_path (filter_bsdtar_output (input_line ic))
-    else reduce_path (input_line ic)
-  in
-  let rec f accu =
-    match Unix.select [ descr ] [] [] 0.1 with
-      | [ _ ], _, _ -> f ((read ic) :: accu)
-      | _, _, _ -> if pid = fst (Unix.waitpid [ Unix.WNOHANG ] pid)
-          then accu
-          else f accu
-  in
-  f []
-
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
   (* XXX: pid! *)
-  read_ic 0 (Unix.open_process_in cmd)
+  (* FIXME: read_ic 0 (Unix.open_process_in cmd) *)
+  []
 
 (* mkdir for use in installation scripts: it returns the path that got created
  * so it can be registered and reversed upon uninstallation *)
@@ -77,8 +62,12 @@ let expand pkg i p =
     ( if Lib.tar_kind = GNU then [| "--wildcards" |] else [| |] )
     [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
   in
-  let x = Lib.decompress_untar (read_ic ~tar:true) tar_args pkg in
-  List.map (Lib.strip_component ~prefix:p (l-1)) x
+  let x = Lib.decompress_untar  tar_args pkg in
+  let xx =
+    if BSD = Lib.tar_kind then List.rev_map filter_bsdtar_output x
+    else List.rev x
+  in
+  List.rev_map (Lib.strip_component ~prefix:p (l-1)) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
@@ -112,7 +101,7 @@ let predicate_holds (conf : predicates) (key, value) =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let l =Lib.decompress_untar read_ic [| "-O"; "package_script.el" |] package in
+  let l = Lib.decompress_untar [| "-O"; "package_script.el" |] package in
   let s = String.concat "\n" l in
   script_of_sexp (Sexp.of_string s)
 

@@ -183,7 +183,7 @@ let tar_compress tar_args compress out =
  *   'tar xv' will output the list of files expanded to stdout
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar f tar_args input =
+let decompress_untar tar_args input =
   let c = [| compressor_of_ext input; "-d"; "-c"; input |] in
   (* 'tar -f -' ensures we're reading from stdin with both gnu tar and bsd tar
    * bsdtar would default to /dev/tape0 otherwise *)
