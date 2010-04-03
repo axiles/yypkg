@@ -11,7 +11,7 @@
 (* Option_specification_is_ambiguous means the spec used to parse the params is
  * bad: a single argument can be matched by several elements of the spec
  * This isn't a fail of this library, the problem really is the spec *)
-type spec = (string * spec) list
+type spec = (string * spec * string) list
 
 (* Something on the command-line is either an option (starts with a dash), or a
  * value. Values are free-form, options are checked against the spec. *)
@@ -31,7 +31,7 @@ let opt_of_string opts s =
   (* currently, the option on the command-line has to match exactly the spec *)
   (* we *may* recognize '-foo:x=42:y=43' but '-foo x=42 y=43' does the same and
    * is already working *)
-  let pred x (y, _) = y = x in
+  let pred x (y, _, _) = y = x in
   (* we return the opt which is matching the string
    * if several ones match, we fail *)
   match List.find_all (pred s) opts with
@@ -46,7 +46,7 @@ let opt_of_string opts s =
 let rec parse (opts : spec) accu = function
   | ( t :: q ) as l when t.[0] = '-' -> begin
       try 
-        let _, subopts = opt_of_string opts t in
+        let _, subopts, _ = opt_of_string opts t in
         let subs, q' = parse subopts [] q in
         parse opts (Opt (t, List.rev subs) :: accu) q'
       with Not_found -> accu, l

@@ -5,17 +5,17 @@ exception Bad_prefix_specification of Args.opt list
 
 (* all the options we accept *)
 let cmd_line_spec = [
-  "-prefix", [];
-  "-install", [];
-  "-uninstall", [];
-  "-list", [];
+  "-prefix", [], "prefix yypkg will be working in";
+  "-install", [], "install a package (ends in .t{xz,gz,bz2}";
+  "-uninstall", [], "uninstall a package by name";
+  "-list", [], "list the packages installed";
   "-config", [
-    "-setpreds", [];
-    "-delpreds", [];
-    "-listpreds", [];
+    "-setpreds", [], "set a predicate: \"arch=x86_64-w64-mingw32\"";
+    "-delpreds", [], "remove a predicate";
+    "-listpreds", [], "list predicates";
     (* not handled currently: "-regen", []; *)
-  ];
-  "-init", [];
+  ], "parent option for:";
+  "-init", [], "setups a directory tree for yypkg (run once)";
 ]
 
 (* find the prefix from a command-line *)
