@@ -98,10 +98,11 @@ let main () =
       | _ -> assert false
 
 let () =
-  (* FIXME: fix the usage message... *)
-  let usage_msg = "bad usage, will make better error message tomorrow" in
   (* FIXME: if an exception happens, no matter what it is, the error message
    * will always be the same: the command-line is wrong, even if it was
    * perfectly fine (a.g. -list but the database being corrupt *)
-  try main () with e -> prerr_endline usage_msg; raise e
+  try main () with 
+    | Args.Incomplete_parsing (opts, sl) ->
+        Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+    | e -> raise e
 
