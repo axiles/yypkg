@@ -105,6 +105,8 @@ let () =
   try main () with 
     | Args.Incomplete_parsing (opts, sl) ->
         Args.print_spec 0 (Args.usage_msg cmd_line_spec)
-    | Yylib.File_not_found f as e -> raise e
+    | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
+        prerr_endline "You forgot to run -init or something got corrupted."
+    | Yylib.File_not_found p as e -> raise e
     | e -> raise e
 
