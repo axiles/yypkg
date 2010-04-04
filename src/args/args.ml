@@ -8,9 +8,6 @@
 (* '-mainopt1 -opt1subopt1 -opt1subopt2 -mainopt2' will be parsed as:
   * [ "mainopt1", [ "opt1subopt1"; "opt2subopt2"] ; "mainopt2", [] ] *)
 
-(* Option_specification_is_ambiguous means the spec used to parse the params is
- * bad: a single argument can be matched by several elements of the spec
- * This isn't a fail of this library, the problem really is the spec *)
 type spec = (string * spec * string) list
 
 (* Something on the command-line is either an option (starts with a dash), or a
@@ -19,8 +16,18 @@ type opt =
   | Val of string
   | Opt of (string * opt list)
 
+(* Option_specification_is_ambiguous means the spec used to parse the params is
+ * bad: a single argument can be matched by several elements of the spec
+ * This isn't a fail of this library, the problem really is the spec *)
 exception Option_specification_is_ambiguous
 exception Incomplete_parsing of (opt list * string list)
+
+let rec print_spec n (name, subs, text) =
+  Printf.printf "%s%s : %s\n" (String.make n ' ') name text;
+  List.iter (print_spec (n+1)) subs
+
+let usage_msg spec = 
+  "Usage", spec, "command-line arguments to yypkg"
 
 (* at any point, we read the argument, if it starts with a '-' and is among the
  * options recognized, we store it as an option, if it's not recognized, we
@@ -44,18 +51,25 @@ let opt_of_string opts s =
     | _ -> raise Option_specification_is_ambiguous
 
 let rec parse (opts : spec) accu = function
+  (* starts with a dash, it's an option, maybe a valid one *)
   | ( t :: q ) as l when t.[0] = '-' -> begin
       try 
+        (* what are the corresponding suboptions? *)
         let _, subopts, _ = opt_of_string opts t in
+        (* we'll try to parse as much of the *subo*ptions before returning to
+         * the current level *)
         let subs, q' = parse subopts [] q in
         parse opts (Opt (t, List.rev subs) :: accu) q'
+      (* this is raised in case the current option isn't valid: we stop the
+       * current parsing and go up one level where the option might be valid *)
       with Not_found -> accu, l
     end
+  (* does not start with a dash, it's a value *)
   | t :: q -> parse opts (Val t :: accu) q
   | [] -> List.rev accu, []
 
-let parse opts args =
-  match parse opts [] (Array.to_list args) with
+let parse spec args =
+  match parse spec [] (Array.to_list args) with
     | opts, [] -> opts
     | opts, q -> raise (Incomplete_parsing (opts, q))
   
