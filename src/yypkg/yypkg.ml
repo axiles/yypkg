@@ -110,5 +110,8 @@ let () =
     | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
         prerr_endline "You forgot to run -init or something got corrupted."
     | Yylib.File_not_found p as e -> raise e
+    | Unmatched_predicates l ->
+        let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold" b v in
+        List.iter f l
     | e -> raise e
 
