@@ -80,6 +80,7 @@ let main () =
      * relative to it *)
     let () = ignore (mkdir prefix) in
     let () = Sys.chdir prefix in
+    let () = Yylib.sanity_checks () in
     match action, actionopts with
       (* install, accepts one package at a time *)
       | "-install", [Args.Val s] -> Db.update (Install.install s (Conf.read ()))
@@ -104,5 +105,6 @@ let () =
   try main () with 
     | Args.Incomplete_parsing (opts, sl) ->
         Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+    | Yylib.File_not_found f as e -> raise e
     | e -> raise e
 
