@@ -80,7 +80,10 @@ let main () =
      * relative to it *)
     let () = ignore (mkdir prefix) in
     let () = Sys.chdir prefix in
-    let () = Yylib.sanity_checks () in
+    (* if -init is given, we must not run the sanity checks since they are
+     * supposed to fail until -init has succeeded *)
+    let () = if action, actionopts <> "-init", [] then Yylib.sanity_checks ()
+    in
     match action, actionopts with
       (* install, accepts one package at a time *)
       | "-install", [Args.Val s] -> Db.update (Install.install s (Conf.read ()))
