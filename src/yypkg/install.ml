@@ -20,8 +20,8 @@ let install_package package (conf : predicates) db =
 
 let install p conf db =
   let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
-  if Sys.file_exists p then
-    install_package p conf db
-  else
-    raise File_not_found
+  (* check the file exists, may raise 'File_not_found p' : caught in yypkg.ml *)
+  assert_file_exists p;
+  (* if the line above didn't abort, go on and instal the package *)
+  install_package p conf db
 

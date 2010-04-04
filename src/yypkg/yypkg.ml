@@ -78,8 +78,11 @@ let main () =
     let action, actionopts = action_of_cmd_line cmd_line in
     (* We just got the prefix, let's chdir to it since some operations will be
      * relative to it *)
-    let () = ignore (mkdir prefix) in
-    let () = Sys.chdir prefix in
+    ignore (mkdir prefix);
+    Sys.chdir prefix;
+    (* if -init is given, we must not run the sanity checks since they are
+     * supposed to fail until -init has succeeded *)
+    if (action, actionopts) <> ("-init", []) then Yylib.sanity_checks ();
     match action, actionopts with
       (* install, accepts one package at a time *)
       | "-install", [Args.Val s] -> Db.update (Install.install s (Conf.read ()))
@@ -104,5 +107,11 @@ let () =
   try main () with 
     | Args.Incomplete_parsing (opts, sl) ->
         Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+    | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
+        prerr_endline "You forgot to run -init or something got corrupted."
+    | Yylib.File_not_found p as e -> raise e
+    | Unmatched_predicates l ->
+        let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
+        List.iter f l
     | e -> raise e
 
