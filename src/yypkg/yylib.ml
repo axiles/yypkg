@@ -83,7 +83,8 @@ let rm path_unexpanded =
    * before *)
   let path = expand_environment_variables path_unexpanded in
   if exists path then
-    if Sys.is_directory path then
+    (* Sys.file_exists follows symlink and is therefore not usable *)
+    if FileUtil.test FileUtil.Is_dir path then
       if [| |] = Sys.readdir path then
         let () = FileUtil.rm ~recurse:true [ path ] in
         Printf.printf "Removed: %s\n" path
