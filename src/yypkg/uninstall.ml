@@ -15,19 +15,13 @@ let execute_uninstall_action (_, install_results) other_pkgs = function
         (* id, "" *)
     | Reverse id -> 
         (* rm the files that have been added by 'id' *)
-        let f (action_id, results) =
-          action_id = id
+        let pred (action_id, results) = action_id = id in
+        let rm s = if file_can_be_removed s other_pkgs then rm s else () in
+        let g = function
+          | _, Filelist l -> List.iter rm l
+          | _, NA -> ()
         in
-        let rm s =
-          if file_can_be_removed s other_pkgs then rm s else ()
-        in
-        let results = List.find_all f install_results in
-        let g (_, results ) =
-          match results with
-            | Filelist l -> List.iter rm l
-            | NA -> ()
-        in
-        List.iter g results
+        List.iter g (List.find_all pred install_results)
 
 let uninstall_package db package_name =
   let pkgs, other_pkgs = List.partition (package_is_named package_name) db in
