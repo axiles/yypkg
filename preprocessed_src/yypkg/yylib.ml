@@ -6,7 +6,7 @@ open Types
   
 exception Package_does_not_exist
   
-exception File_not_found
+exception File_not_found of string
   
 (* List.fold_left Filename.concat *)
 let filename_concat =
@@ -92,8 +92,12 @@ let rm path_unexpanded =
         (let () = FileUtil.rm [ path ] in Printf.printf "Removed: %s\n" path)
     else Printf.printf "Not removed (doesn't exist): %s\n" path
   
+(* check if the predicate holds against conf *)
 let predicate_holds (conf : predicates) (key, value) =
-  let conf_vals = List.assoc key conf in List.mem value conf_vals
+  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
+   * configuration, equivalent to false *)
+  try let conf_vals = List.assoc key conf in List.mem value conf_vals
+  with | Not_found -> false
   
 (* reads 'package_script.el' from a package *)
 let open_package package =
@@ -112,5 +116,18 @@ let name_of_package ((m, _, _), _) = m.package_name
   
 (* a predicate to check a package has some name, used with List.find *)
 let package_is_named name p = (name_of_package p) = name
+  
+(* check a file exists: raises an exception with the name of the missing file if
+  * it doesn't *)
+let assert_file_exists f =
+  if not (Sys.file_exists f) then raise (File_not_found f) else ()
+  
+(* various sanity checks:
+  * do etc/yypkg.conf and /var/log/packages/yypkg_db exist?
+  * TODO: check the external binaries are available 
+  * ... *)
+let sanity_checks () =
+  let required_files = [ db_path; conf_path ]
+  in List.iter assert_file_exists required_files
   
 

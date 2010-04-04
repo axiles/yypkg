@@ -77,30 +77,35 @@ let main () =
       (let cmd_line = Args.parse cmd_line_spec Sys.argv in
        (* the second cmd_line is the first with occurences of "-prefix" removed *)
        let (prefix, cmd_line) = prefix_of_cmd_line cmd_line in
-       let (action, actionopts) = action_of_cmd_line cmd_line in
-       (* We just got the prefix, let's chdir to it since some operations will be
-     * relative to it *)
-       let () = ignore (mkdir prefix) in
-       let () = Sys.chdir prefix
+       let (action, actionopts) = action_of_cmd_line cmd_line
        in
-         match (action, actionopts) with
-         | (* install, accepts one package at a time *)
-             ("-install", [ Args.Val s ]) ->
-             Db.update (Install.install s (Conf.read ()))
-         | (* uninstall, accepts one package at a time *)
-             ("-uninstall", [ Args.Val s ]) ->
-             Db.update (Uninstall.uninstall s)
-         | (* list the installed packages *) ("-list", []) ->
-             List.iter (fun p -> print_endline (name_of_package p))
-               (Db.read ())
-         | (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
-             ("-init", []) -> Init.init ()
-         | (* config does nothing on its own but has suboptions which are handled in
+         ((* We just got the prefix, let's chdir to it since some operations will be
+     * relative to it *)
+          ignore (mkdir prefix);
+          Sys.chdir prefix;
+          (* if -init is given, we must not run the sanity checks since they are
+     * supposed to fail until -init has succeeded *)
+          if (action, actionopts) <> ("-init", [])
+          then Yylib.sanity_checks ()
+          else ();
+          match (action, actionopts) with
+          | (* install, accepts one package at a time *)
+              ("-install", [ Args.Val s ]) ->
+              Db.update (Install.install s (Conf.read ()))
+          | (* uninstall, accepts one package at a time *)
+              ("-uninstall", [ Args.Val s ]) ->
+              Db.update (Uninstall.uninstall s)
+          | (* list the installed packages *) ("-list", []) ->
+              List.iter (fun p -> print_endline (name_of_package p))
+                (Db.read ())
+          | (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
+              ("-init", []) -> Init.init ()
+          | (* config does nothing on its own but has suboptions which are handled in
        * another function *)
-             ("-config", subopts) -> config subopts
-         | (* if an option were different, Args.parse would already have complained,
+              ("-config", subopts) -> config subopts
+          | (* if an option were different, Args.parse would already have complained,
        * so this final pattern will never be matched *)
-             _ -> assert false)
+              _ -> assert false))
   
 let () =
   (* FIXME: if an exception happens, no matter what it is, the error message
@@ -110,6 +115,12 @@ let () =
   with
   | Args.Incomplete_parsing (opts, sl) ->
       Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+  | Yylib.File_not_found p when (Yylib.db_path = p) || (Yylib.conf_path = p)
+      -> prerr_endline "You forgot to run -init or something got corrupted."
+  | (Yylib.File_not_found p as e) -> raise e
+  | Unmatched_predicates l ->
+      let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v
+      in List.iter f l
   | e -> raise e
   
 
