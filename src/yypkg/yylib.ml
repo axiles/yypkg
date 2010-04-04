@@ -97,8 +97,12 @@ let rm path_unexpanded =
 
 (* check if the predicate holds against conf *)
 let predicate_holds (conf : predicates) (key, value) = 
-  let conf_vals = List.assoc key conf in
-  List.mem value conf_vals
+  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
+   * configuration, equivalent to false *)
+  try 
+    let conf_vals = List.assoc key conf in
+    List.mem value conf_vals
+  with Not_found -> false
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
