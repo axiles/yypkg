@@ -18,7 +18,10 @@ let execute_uninstall_action (_, install_results) other_pkgs = function
         let pred (action_id, results) = action_id = id in
         let rm s = if file_can_be_removed s other_pkgs then rm s else () in
         let g = function
-          | _, Filelist l -> List.iter rm l
+          (* we have to reverse the actions: files are create folder first and
+           * then, contents of the folder. Of course, when removing, we have to
+           * remove in reverse order: contents and then folder *)
+          | _, Filelist l -> List.iter rm (List.rev l)
           | _, NA -> ()
         in
         List.iter g (List.find_all pred install_results)
