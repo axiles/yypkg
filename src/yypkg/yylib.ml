@@ -81,14 +81,17 @@ let expand pkg i p =
     (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards
      * and doesn't recognize the option *)
     ( if Lib.tar_kind = GNU then [| "--wildcards" |] else [| |] )
-    [| "-C"; pq; "--strip-components"; string_of_int (l-1); iq |]
+    [| "-C"; pq; "--strip-components"; string_of_int l; iq |]
   in
   let x = Lib.decompress_untar tar_args pkg in
   let xx =
     if BSD = Lib.tar_kind then List.rev_map filter_bsdtar_output x
     else List.rev x
   in
-  List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" (l-1)) xx
+  match Lib.tar_kind with
+    | Lib.GNU -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) xx
+    (* bsdtar already strips the beginning of the path *)
+    | Lib.BSD -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
