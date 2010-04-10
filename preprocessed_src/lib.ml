@@ -236,10 +236,10 @@ let chop_list list i =
  * prepends a prefix
  * That sounds a bit weird because I started changing how yypkg handled this but
  * never finished *)
-let strip_component ?prefix n path =
+let strip_component ?prefix ?dir_sep n path =
   match prefix with
-  | None -> filename_concat (chop_list (split_path path) n)
+  | None -> filename_concat (chop_list (split_path ?dir_sep path) n)
   | Some prefix ->
-      filename_concat (prefix :: (chop_list (split_path path) n))
+      filename_concat (prefix :: (chop_list (split_path ?dir_sep path) n))
   
 
