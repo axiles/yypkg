@@ -221,7 +221,7 @@ let decompress_untar tar_args input =
   List.iter Unix.close [ c_out; c_in; t_out; t_in ];
   l
 
-let split_path path =
+let split_path ?(dir_sep=dir_sep) path =
   Str.split (Str.regexp dir_sep) path
 
 (* chop_list list i removes the first i elements of list and raises
