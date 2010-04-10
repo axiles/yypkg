@@ -111,7 +111,7 @@ let main () =
       | "-list", [] -> 
           List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
-      | "-init", [] -> Init.init ()
+      | "-init", [] -> Init.init prefix
       (* config does nothing on its own but has suboptions which are handled in
        * another function *)
       | "-config", subopts -> config subopts
@@ -132,5 +132,4 @@ let () =
     | Unmatched_predicates l ->
         let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
         List.iter f l
-    | e -> raise e
 
