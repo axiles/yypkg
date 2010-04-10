@@ -70,7 +70,7 @@ let filename_concat =
   | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
   
 let binary_path =
-  filename_concat [ Sys.getcwd (); Filename.dirname Sys.argv.(0); ".." ]
+  filename_concat [ Sys.getcwd (); Filename.dirname Sys.argv.(0) ]
   
 let install_path = filename_concat [ binary_path; ".." ]
   
@@ -215,7 +215,8 @@ let decompress_untar tar_args input =
      List.iter Unix.close [ c_out; c_in; t_out; t_in ];
      l)
   
-let split_path path = Str.split (Str.regexp dir_sep) path
+let split_path ?(dir_sep = dir_sep) path =
+  Str.split (Str.regexp dir_sep) path
   
 (* chop_list list i removes the first i elements of list and raises
  * ChopList_ChopingTooMuch if the list is shorter than i *)

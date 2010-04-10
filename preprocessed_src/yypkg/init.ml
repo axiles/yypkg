@@ -27,10 +27,13 @@ open Yylib
   
 let mkdir = FileUtil.mkdir ~parent: true ~mode: 0o755
   
-let init () =
-  let folders = [ [ "etc" ]; [ "sbin" ]; [ "var"; "log"; "packages" ] ]
+(* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
+let init prefix =
+  let folders = [ [ "etc" ]; [ "sbin" ]; [ "var"; "log"; "packages" ] ] in
+  let make_absolute p = FilePath.DefaultPath.make_absolute prefix p
   in
-    (List.iter (fun l -> mkdir (filename_concat l)) folders;
+    ((* On windows, we need an absolute filename it seems *)
+     List.iter (fun l -> mkdir (make_absolute (filename_concat l))) folders;
      Disk.write db_path (sexp_of_db []);
      Disk.write conf_path (sexp_of_conf []))
   

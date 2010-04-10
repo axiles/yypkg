@@ -65,7 +65,9 @@ let mkdir path_unexpanded =
   
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
 let expand pkg i p =
-  let l = List.length (Lib.split_path i) in
+  (* XXX: package_script.el should always use "/" separators, otherwise we have
+   * a problem between platforms: maybe add an entry to set the separator *)
+  let l = List.length (Lib.split_path ~dir_sep: "/" i) in
   let pkg = expand_environment_variables pkg in
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p
