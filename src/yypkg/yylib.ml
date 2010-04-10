@@ -88,7 +88,7 @@ let expand pkg i p =
     if BSD = Lib.tar_kind then List.rev_map filter_bsdtar_output x
     else List.rev x
   in
-  List.rev_map (Lib.strip_component ~prefix:p (l-1)) xx
+  List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" (l-1)) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
