@@ -26,6 +26,7 @@ exception Package_name_must_end_in_txz_tgz_or_tbz2
 type cmd_line = {
   output : string;
   folder : string;
+  folder_dirname : string;
   folder_basename : string;
   pkg_name : string;
   version : version;
@@ -79,9 +80,14 @@ let parse_command_line () =
     exit 0
   else
     let folder = strip_trailing_slash !folder in
+    let dirname = FilePath.DefaultPath.dirname (
+      if not (FilePath.DefaultPath.is_relative folder) then folder
+      else FilePath.DefaultPath.make_absolute install_path folder )
+    in
     {
       output = !output;
       folder = folder;
+      folder_dirname = dirname;
       folder_basename = FilePath.DefaultPath.basename folder;
       pkg_name = !pkg_name;
       version = version_of_string !version;
@@ -125,7 +131,7 @@ let () =
   let script_path = write_temp_file "package_script.el" package_script_el in
   let script_path_dirname = FilePath.DefaultPath.dirname script_path in
   let script_path_basename = FilePath.DefaultPath.basename script_path in
-  let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder; "." |]
+  let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |]
   in
   let snd = match cmd_line.compressor with
     | "xz" -> [| xz; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
