@@ -89,9 +89,9 @@ let expand pkg i p =
     else List.rev x
   in
   match Lib.tar_kind with
-    | Lib.GNU -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) xx
+    | GNU -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) xx
     (* bsdtar already strips the beginning of the path *)
-    | Lib.BSD -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
+    | BSD -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
