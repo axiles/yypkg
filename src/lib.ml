@@ -74,7 +74,11 @@ let filename_concat = function
   | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
 
 let binary_path =
-  filename_concat [ Sys.getcwd (); Filename.dirname Sys.argv.(0) ]
+  let dirname = Filename.dirname Sys.argv.(0) in
+  if FilePath.DefaultPath.is_relative dirname then
+    filename_concat [ Sys.getcwd (); dirname ]
+  else
+    dirname
 
 let install_path =
   filename_concat [ binary_path; ".." ]
