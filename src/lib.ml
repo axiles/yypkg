@@ -212,6 +212,8 @@ let decompress_untar tar_args input =
     | "Win32", false -> 
         let t = Array.append [| tar; "xvf"; input |] tar_args in
         let t_out, t_in = Unix.pipe () in
+        (* same as in the other branch : we are always using bsdtar here and if
+          * we want the filelist, we need to read stderr *)
         let pid_t = if not (List.mem "-O" (Array.to_list tar_args)) then
           Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
         else
