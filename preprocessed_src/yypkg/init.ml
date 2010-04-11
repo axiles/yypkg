@@ -29,18 +29,20 @@ let mkdir = FileUtil.mkdir ~parent: true ~mode: 0o755
   
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
+  let make_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
   let (folders, binaries) =
-    ([ "etc"; "sbin"; filename_concat [ "var"; "log"; "packages" ] ],
-     [ "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe";
-       "makeypkg.exe" ]) in
-  let make_absolute p = FilePath.DefaultPath.make_absolute prefix p
+    ((List.map (make_absolute prefix)
+        [ "etc"; "sbin"; filename_concat [ "var"; "log"; "packages" ] ]),
+     (List.map (make_absolute Lib.binary_path)
+        [ "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe";
+          "makeypkg.exe" ]))
   in
     ((* On windows, we need an absolute filename it seems *)
-     List.iter (fun l -> mkdir (make_absolute l)) folders;
+     List.iter mkdir folders;
      (* XXX: FileUtil.cp has some optional arguments but I'm not sure what they
    * default to *)
      if "Win32" = Sys.os_type
-     then FileUtil.cp binaries (make_absolute "sbin")
+     then FileUtil.cp binaries (make_absolute prefix "sbin")
      else ();
      Disk.write db_path (sexp_of_db []);
      Disk.write conf_path (sexp_of_conf []))
