@@ -95,28 +95,29 @@ let main () =
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
     let prefix, cmd_line = prefix_of_cmd_line cmd_line in
     let action, actionopts = action_of_cmd_line cmd_line in
-    (* We just got the prefix, let's chdir to it since some operations will be
-     * relative to it *)
-    Sys.chdir prefix;
-    (* if -init is given, we must not run the sanity checks since they are
-     * supposed to fail until -init has succeeded *)
-    if (action, actionopts) <> ("-init", []) then Yylib.sanity_checks ();
-    match action, actionopts with
-      (* install, accepts one package at a time *)
-      | "-install", [Args.Val s] -> Db.update (Install.install s (Conf.read ()))
-      (* uninstall, accepts one package at a time *)
-      | "-uninstall", [ Args.Val s ] -> Db.update (Uninstall.uninstall s)
-      (* list the installed packages *)
-      | "-list", [] -> 
-          List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
+    if ("-init", []) = (action, actionopts) then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
-      | "-init", [] -> Init.init prefix
-      (* config does nothing on its own but has suboptions which are handled in
-       * another function *)
-      | "-config", subopts -> config subopts
-      (* if an option were different, Args.parse would already have complained,
-       * so this final pattern will never be matched *)
-      | _ -> assert false
+      Init.init prefix
+    else
+      (* Some operations are relative to the prefix so chdir to it *)
+      let old_cwd = Sys.getcwd () in
+      Sys.chdir prefix;
+      Yylib.sanity_checks ();
+      match action, actionopts with
+        (* install, accepts one package at a time *)
+        | "-install", [Args.Val s] ->
+            let s = FilePath.DefaultPath.make_absolute old_cwd s in
+            Db.update (Install.install s (Conf.read ()))
+        (* uninstall, accepts one package at a time *)
+        | "-uninstall", [ Args.Val s ] -> Db.update (Uninstall.uninstall s)
+        (* list the installed packages *)
+        | "-list", [] -> 
+            List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
+        (* config does nothing on its own but has suboptions *)
+        | "-config", subopts -> config subopts
+        (* if an option was different, Args.parse would already have complained,
+         * so this final pattern will never be matched *)
+        | _ -> assert false
 
 let () =
   (* FIXME: if an exception happens, no matter what it is, the error message
