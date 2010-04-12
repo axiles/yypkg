@@ -40,6 +40,7 @@ let init prefix =
   ]
   in
   List.iter mkdir folders;
+  Sys.chdir prefix;
   (* XXX: FileUtil.cp has some optional arguments but I'm not sure what they
    * default to *)
   (if "Win32" = Sys.os_type then FileUtil.cp binaries (make_absolute prefix "sbin"));
