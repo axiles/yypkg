@@ -49,7 +49,7 @@ let prefix_of_cmd_line cmd_line =
     | [ Args.Opt (_, [ Args.Val prefix ]) ] -> prefix, lf
     (* all other combinations are invalid: raise an exception that will be
      * caught later on *)
-    | _ -> assert false
+    | _ -> raise (Args.Parsing_failed "PREFIX environment variable not found and no -prefix specified")
 
 (* find the action from a command-line, only one allowed at a time *)
 let action_of_cmd_line cmd_line = 
@@ -60,7 +60,7 @@ let action_of_cmd_line cmd_line =
     | [ Args.Opt (action, subopts) ] -> action, subopts
     (* zero or several actions is forbidden: raise an exception that will be
      * caught later on *)
-    | _ -> assert false
+    | _ -> raise (Args.Parsing_failed "Only one action is allowed at once.")
 
 let config opts =
   match List.partition (Args.is_opt ~s:"-listpreds") opts with
@@ -78,15 +78,20 @@ let config opts =
           | Args.Opt ("-delpreds", preds) -> 
               let vals = List.map Args.val_of_opts preds in
               List.fold_left Config.delpred conf vals
-          | Args.Opt ("-set-tar-kind", [ kind ]) ->
-              let kind = Args.val_of_opts kind in
-              Config.set_tar_kind conf kind
+          | Args.Opt ("-set-tar-kind", kinds) -> begin
+              match kinds with
+                | [ kind ] -> 
+                    let kind = Args.val_of_opts kind in
+                    Config.set_tar_kind conf kind
+                | _ -> raise (Args.Parsing_failed "Only one tar_kind can be given at once.")
+            end
+          (* Args makes sure this last case can't happen *)
           | _ -> assert false
         in
         Conf.update (fun conf -> List.fold_left f conf opts)
       end
     (* if -listpred has been given together with another argument: *)
-    | _ -> assert false
+    | _ -> raise (Args.Parsing_failed "⁻listpred can't be combined with other arguments.")
 
 let main () =
   let pred x = "-help" = x || "--help" = x || "-h" = x in
@@ -128,6 +133,7 @@ let () =
   try main () with 
     | Args.Incomplete_parsing (opts, sl) ->
         Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+    | Args.Parsing_failed s as e -> raise e
     | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
         prerr_endline "You forgot to run -init or something got corrupted."
     | Yylib.File_not_found p as e -> raise e

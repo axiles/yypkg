@@ -104,3 +104,4 @@ let val_of_opts = function
   | Val s -> s
   | Opt _ -> assert false
 
+exception Parsing_failed of string
