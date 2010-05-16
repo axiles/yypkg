@@ -38,7 +38,7 @@ type version = {
 }
 
 (* both don't behave the same way of course *)
-type tar_kind = BSD | GNU
+type tar_kind = BSD | GNU with sexp
 
 (* not really used right now, might well be dropped in the future
  * I think I've even forgotten why I wanted to have different types for them
@@ -105,5 +105,11 @@ type db = package list with sexp
 (* list of predicates that are checked before installing apackage: for instance:
   * arch=x86_64,noarch
   * stability=stable,release_candidate *)
-type conf = predicates with sexp
+type conf = {
+  preds : predicates;
+  tar_kind : tar_kind;
+} with sexp
 
+type field = 
+  | Predicate of (string * string list)
+  | Tar_kind of tar_kind

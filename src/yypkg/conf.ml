@@ -20,12 +20,15 @@
 open Types
 open Yylib
 
-let set conf (binding, value) =
-  let conf = List.remove_assoc binding conf in
-  (binding, value) :: conf
+let set conf = function
+  | Predicate (binding, value) -> 
+      let preds = List.remove_assoc binding conf.preds in
+      { conf with preds = (binding, value) :: preds }
+  | Tar_kind kind -> 
+      { conf with tar_kind = kind }
 
 let unset conf binding = 
-  List.remove_assoc binding conf
+  { conf with preds = List.remove_assoc binding conf.preds }
 
 let read () =
   conf_of_sexp (Disk.read conf_path)
@@ -37,10 +40,18 @@ let write conf =
    * We use stable_sort so not to change anything if there are several bindings
    * for the same value, it shouldn't happen but Murphy's Law is Murphy's Law,
    * so why not stay safe? *)
-  let sorted_conf = List.stable_sort compare conf in
-  Disk.write conf_path (sexp_of_conf sorted_conf)
+  let sorted_preds = List.stable_sort compare conf.preds in
+  let conf = { conf with preds = sorted_preds } in
+  Disk.write conf_path (sexp_of_conf conf)
 
 (* read the conf, run the function, write the database to disk
  * if fail raises an exception, nothing will be written :-) *)
 let update f =
   write (f (read ()))
+
+let print_preds conf = 
+  let print_single_pred (binding, values) = 
+    Printf.printf "%s = %s\n" binding (String.concat "," values)
+  in
+  List.iter print_single_pred conf.preds
+

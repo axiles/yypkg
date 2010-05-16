@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+open Types
+
 (* splits the string "A=X" into "A","X" and then updates the association list *)
 let setpred conf pred =
   let key_value_pair s =
@@ -26,7 +28,7 @@ let setpred conf pred =
     let value = Str.split (Str.regexp ",") (String.sub s (i+1) (l-i-1)) in
     key, value
   in
-  let pred = key_value_pair pred in
+  let pred = Predicate (key_value_pair pred) in
   Conf.set conf pred
 
 let delpred conf pred =

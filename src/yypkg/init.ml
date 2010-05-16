@@ -45,4 +45,5 @@ let init prefix =
    * default to *)
   (if "Win32" = Sys.os_type then FileUtil.cp binaries (make_absolute prefix "sbin"));
   Disk.write db_path (sexp_of_db []);
-  Disk.write conf_path (sexp_of_conf [])
+  let base_conf = { preds = []; tar_kind = Lib.tar_kind } in
+  Disk.write conf_path (sexp_of_conf base_conf)
