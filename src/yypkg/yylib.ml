@@ -69,7 +69,7 @@ let mkdir path_unexpanded =
   [ path_unexpanded ]
 
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
-let expand pkg i p =
+let expand conf pkg i p =
   (* XXX: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
   let l = (List.length (Lib.split_path ~dir_sep:"/" i)) - 1 in
@@ -78,20 +78,18 @@ let expand pkg i p =
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let tar_args = Array.append 
-    (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards
-     * and doesn't recognize the option *)
-    ( if Lib.tar_kind = GNU then [| "--wildcards" |] else [| |] )
+    (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards * and doesn't recognize the option *)
+    ( if conf.tar_kind = GNU then [| "--wildcards" |] else [| |] )
     [| "-C"; pq; "--strip-components"; string_of_int l; iq |]
   in
-  let x = Lib.decompress_untar tar_args pkg in
-  let xx =
-    if BSD = Lib.tar_kind then List.rev_map filter_bsdtar_output x
-    else List.rev x
-  in
-  match Lib.tar_kind with
-    | GNU -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) xx
+  let x = Lib.decompress_untar conf tar_args pkg in
+  match conf.tar_kind with
+    | GNU ->
+        List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) (List.rev x)
     (* bsdtar already strips the beginning of the path *)
-    | BSD -> List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
+    | BSD -> 
+        let xx = List.rev_map filter_bsdtar_output x in
+        List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
@@ -130,8 +128,8 @@ let predicate_holds (conf : predicates) (key, value) =
   with Not_found -> false
 
 (* reads 'package_script.el' from a package *)
-let open_package package =
-  let l = Lib.decompress_untar [| "-O"; "package_script.el" |] package in
+let open_package conf package =
+  let l = Lib.decompress_untar conf [| "-O"; "package_script.el" |] package in
   let s = String.concat "\n" l in
   script_of_sexp (Sexp.of_string s)
 

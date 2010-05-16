@@ -20,22 +20,23 @@
 open Types
 open Yylib
 
-let execute_install_action package (id, action) =
+let execute_install_action conf package (id, action) =
   match action with
     | AHK p -> id, Filelist (command ((String.concat " " (ahk_bin :: p)))) (* quote *)
-    | Expand (i, p) -> id, Filelist (expand package i p)
+    | Expand (i, p) -> id, Filelist (expand conf package i p)
     | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
     | MKdir p -> id, Filelist (mkdir p)
 
 let install_package package conf db =
-  let (metadata, install_actions, _ as script) = open_package package in
+  let (metadata, install_actions, _ as script) = open_package conf package in
   match List.partition (predicate_holds conf.preds) metadata.predicates with
     | _, [] -> 
-      let results = List.map (execute_install_action package) install_actions in
-      let updated_db = Db.install_package db (script, List.rev results) in
-      updated_db
+        let func = execute_install_action conf package in
+        let results = List.rev_map func install_actions in
+        let updated_db = Db.install_package db (script, results) in
+        updated_db
     | _, f_preds -> 
-      raise (Unmatched_predicates f_preds)
+        raise (Unmatched_predicates f_preds)
 
 let install p conf db =
   let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
