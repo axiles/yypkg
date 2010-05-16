@@ -33,6 +33,7 @@ let cmd_line_spec = [
     "-delpreds", [], "remove a predicate";
     "-listpreds", [], "list predicates";
     (* not handled currently: "-regen", []; *)
+    "-set-tar-kind", [], "choose between \"gnu\" and \"bsd\" tar";
   ], "parent option for:";
   "-init", [], "setups a directory tree for yypkg (run once)";
 ]
@@ -77,6 +78,9 @@ let config opts =
           | Args.Opt ("-delpreds", preds) -> 
               let vals = List.map Args.val_of_opts preds in
               List.fold_left Config.delpred conf vals
+          | Args.Opt ("-set-tar-kind", [ kind ]) ->
+              let kind = Args.val_of_opts kind in
+              Config.set_tar_kind conf kind
           | _ -> assert false
         in
         Conf.update (fun conf -> List.fold_left f conf opts)

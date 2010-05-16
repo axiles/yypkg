@@ -101,6 +101,6 @@ let is_opt ?s = function
     end
 
 let val_of_opts = function
-  | Opt _ -> assert false
   | Val s -> s
+  | Opt _ -> assert false
 

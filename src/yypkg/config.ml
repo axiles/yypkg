@@ -34,5 +34,13 @@ let setpred conf pred =
 let delpred conf pred =
   Conf.unset conf pred
 
+let set_tar_kind conf kind =
+  let kind = match kind with
+    | "gnu" | "GNU" -> GNU
+    | "bsd" | "BSD" -> BSD
+    | _ -> assert false
+  in
+  Conf.set conf (Tar_kind kind)
+
 (* Nothing to do right now *)
 (* let regen _ = () *)
