@@ -82,7 +82,7 @@ let parse_command_line () =
     let folder = strip_trailing_slash !folder in
     let dirname = FilePath.DefaultPath.dirname (
       if not (FilePath.DefaultPath.is_relative folder) then folder
-      else FilePath.DefaultPath.make_absolute install_path folder )
+      else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
     in
     {
       output = !output;
