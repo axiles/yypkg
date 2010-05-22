@@ -118,21 +118,19 @@ let package_script_el cmd_line ~pkg_size =
   sprintf "(\n(\n%s\n)\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
 
 let write_temp_file base_name contents =
-  let path = Filename.concat Filename.temp_dir_name base_name in
+  let dir = Filename.temp_dir_name in
+  let path = Filename.concat dir base_name in
   let oc = open_out_bin path in
   let () = output_string oc contents in
   let () = close_out oc in
-  path
+  dir, base_name
 
 let () =
   let cmd_line = parse_command_line () in
   let pkg_size= FileUtil.string_of_size (fst (FileUtil.du [cmd_line.folder])) in
-  let package_script_el = package_script_el ~pkg_size cmd_line in
-  let script_path = write_temp_file "package_script.el" package_script_el in
-  let script_path_dirname = FilePath.DefaultPath.dirname script_path in
-  let script_path_basename = FilePath.DefaultPath.basename script_path in
-  let tar_args = [| "-C"; script_path_dirname; script_path_basename; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |]
-  in
+  let script = package_script_el ~pkg_size cmd_line in
+  let script_dir, script_name = write_temp_file "package_script.el" script in
+  let tar_args = [| "-C"; script_dir; script_name; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |] in
   let snd = match cmd_line.compressor with
     | "xz" -> [| xz; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
     | "gzip" -> [| gzip; "-9" |]
