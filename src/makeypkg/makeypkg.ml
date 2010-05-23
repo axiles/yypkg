@@ -109,10 +109,46 @@ let meta ~cmd_line ~pkg_size =
     sprintf "(comments \"made with makeypkg\")";
   ]
 
+let prefix_of_arch = function
+  | "i686-w64-mingw32"
+  | "x86_64-w64-mingw32" as s -> s ^ "/mingw"
+  | "i686-pc-mingw32" -> "/mingw"
+  | _ -> assert false
+
+let path_fixups arch fixups =
+  let find_per_ext ext =
+    let pwd = Sys.getcwd () in
+    FileUtil.find (FileUtil.Has_extension ext) pwd (fun x y -> y :: x) []
+  in
+  let pkg_config_fixup () = 
+    let file_fixup file =
+      let prefix_re = Str.regexp "prefix=\\(.*\\)" in
+      let contents = read_file file in
+      let l = Queue.fold (fun l x -> x :: l) [] contents in
+      let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
+      let prefix = Str.replace_first prefix_re "\\1" prefix in
+      let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
+      search_and_replace_in_file file prefix "${prefix}";
+      search_and_replace_in_file file "prefix=${prefix}" ("prefix="^new_prefix)
+    in
+    let dot_pc_files = find_per_ext "pc" in
+    List.iter file_fixup dot_pc_files;
+    dot_pc_files
+  in
+  let pkg_config_search_replace f =
+    sprintf "(SearchReplace %s __YYPREFIX ${YYPREFIX})" f
+  in
+  let dot_pc_files = pkg_config_fixup () in
+  let pc_fixups = List.map pkg_config_search_replace dot_pc_files in
+  pc_fixups
+
+
 let package_script_el cmd_line ~pkg_size =
   let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
-  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
+  let expand = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
+  let path_fixups = path_fixups cmd_line.arch [ `PkgConfig ] in
+  let install = String.concat "\n" (expand :: path_fixups) in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
   let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
   sprintf "(\n%s\n)" (String.concat "\n" l)
