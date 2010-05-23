@@ -115,10 +115,9 @@ let prefix_of_arch = function
   | "i686-pc-mingw32" -> "/mingw"
   | _ -> assert false
 
-let path_fixups arch fixups =
+let path_fixups folder arch fixups =
   let find_per_ext ext =
-    let pwd = Sys.getcwd () in
-    FileUtil.find (FileUtil.Has_extension ext) pwd (fun x y -> y :: x) []
+    FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
   in
   let pkg_config_fixup () = 
     let file_fixup file =
@@ -142,12 +141,11 @@ let path_fixups arch fixups =
   let pc_fixups = List.map pkg_config_search_replace dot_pc_files in
   pc_fixups
 
-
 let package_script_el cmd_line ~pkg_size =
   let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
   let expand = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
-  let path_fixups = path_fixups cmd_line.arch [ `PkgConfig ] in
+  let path_fixups = path_fixups cmd_line.folder cmd_line.arch [ `PkgConfig ] in
   let install = String.concat "\n" (expand :: path_fixups) in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
   let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
