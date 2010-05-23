@@ -46,7 +46,6 @@ let expand_environment_variables s =
   let env_var_re = Str.regexp "\\${\\([0-9A-Za-z_]+\\)}" in
   if Str.string_match env_var_re s 0 then
     let repl = Unix.getenv (Str.matched_group 1 s) in
-    print_endline repl;
     Str.replace_first env_var_re repl s
   else
     s
