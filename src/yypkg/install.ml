@@ -28,6 +28,7 @@ let execute_install_action conf package (id, action) =
     | MKdir p -> id, Filelist (mkdir p)
     | SearchReplace (p, s, r) ->
         let p = Lib.filename_concat p in
+        let r = expand_environment_variables r in
         Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
