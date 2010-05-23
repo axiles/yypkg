@@ -1,7 +1,6 @@
 (*
  * makeypkg - A program to ease the creation of yypkg packages
  * Copyright (C) 2010 Adrien Nader
- * Copyright (C) <year>  <name of author>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,17 +112,10 @@ let meta ~cmd_line ~pkg_size =
 let package_script_el cmd_line ~pkg_size =
   let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
-  let install= sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
+  let install = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
-  sprintf "(\n(\n%s\n)\n(\n%s\n)\n(\n%s\n)\n)" meta install uninstall
-
-let write_temp_file base_name contents =
-  let dir = Filename.temp_dir_name in
-  let path = Filename.concat dir base_name in
-  let oc = open_out_bin path in
-  let () = output_string oc contents in
-  let () = close_out oc in
-  dir, base_name
+  let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
+  sprintf "(\n%s\n)" (String.concat "\n" l)
 
 let () =
   let cmd_line = parse_command_line () in
