@@ -135,7 +135,9 @@ let path_fixups folder arch fixups =
     dot_pc_files
   in
   let pkg_config_search_replace f =
-    sprintf "(\"dummy\" (SearchReplace %s __YYPREFIX ${YYPREFIX}))" f
+    let f = split_path (FilePath.make_relative folder f) in
+    let f = String.concat " " f in
+    sprintf "(\"dummy\" (SearchReplace (%s) __YYPREFIX ${YYPREFIX}))" f
   in
   let dot_pc_files = pkg_config_fixup () in
   let pc_fixups = List.map pkg_config_search_replace dot_pc_files in

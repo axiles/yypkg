@@ -26,7 +26,9 @@ let execute_install_action conf package (id, action) =
     | Expand (i, p) -> id, Filelist (expand conf package i p)
     | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
     | MKdir p -> id, Filelist (mkdir p)
-    | SearchReplace (p, s, r) -> Lib.search_and_replace_in_file p s r; id, NA
+    | SearchReplace (p, s, r) ->
+        let p = Lib.filename_concat p in
+        Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
   let (metadata, install_actions, _ as script) = open_package conf package in
