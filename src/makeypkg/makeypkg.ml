@@ -121,14 +121,14 @@ let path_fixups folder arch fixups =
   in
   let pkg_config_fixup () = 
     let file_fixup file =
-      let prefix_re = Str.regexp "prefix=\\(.*\\)" in
+      let prefix_re = Str.regexp "^prefix=\\(.*\\)" in
       let contents = read_file file in
       let l = Queue.fold (fun l x -> x :: l) [] contents in
       let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
       let prefix = Str.replace_first prefix_re "\\1" prefix in
       let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
       search_and_replace_in_file file prefix "${prefix}";
-      search_and_replace_in_file file "prefix=\\${prefix}" ("prefix="^new_prefix)
+      search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
     in
     let dot_pc_files = find_per_ext "pc" in
     List.iter file_fixup dot_pc_files;
