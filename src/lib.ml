@@ -269,3 +269,36 @@ let strip_component ?prefix ?dir_sep n path =
     | None -> filename_concat (chop_list (split_path ?dir_sep path) n)
     | Some prefix -> filename_concat (prefix :: (chop_list (split_path ?dir_sep path) n))
 
+(* read a file line-by-line and return its contents in a string Queue.t *)
+let read_file file =
+  let in_channel = open_in_bin file in
+  let q : string Queue.t = Queue.create () in
+  (try
+    while true do
+      Queue.push (input_line in_channel) q
+    done
+  with End_of_file -> ());
+  close_in in_channel;
+  q
+
+let overwrite_file file contents =
+  (* TODO: use the right permissions (same as original file) *)
+  let out_channel = open_out_gen [ Open_binary; Open_trunc; Open_wronly ] 0o644
+  file in
+  let output_end_line oc s = output_string oc s; output_char oc '\n' in
+  Queue.iter (output_end_line out_channel) contents;
+  close_out out_channel
+
+(* The sadly non-existant Queue.map *)
+let queue_map f q =
+  let new_queue = Queue.create () in
+  Queue.iter (fun x -> Queue.push (f x) new_queue) q;
+  new_queue
+
+(* Search for a regexp in a file's lines and Str.global_replace *)
+let search_and_replace_in_file file search replace =
+  let contents = read_file file in
+  let f = Str.global_replace (Str.regexp search) replace in
+  let new_contents = queue_map f contents in
+  overwrite_file file new_contents
+

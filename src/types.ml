@@ -64,6 +64,7 @@ type install_action =
   | Exec of argv
   | Expand of inside_path * outside_path
   | MKdir of outside_path
+  | SearchReplace of outside_path * string * string
 with sexp
 
 type uninstall_action =
