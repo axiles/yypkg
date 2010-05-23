@@ -128,7 +128,7 @@ let path_fixups folder arch fixups =
       let prefix = Str.replace_first prefix_re "\\1" prefix in
       let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
       search_and_replace_in_file file prefix "${prefix}";
-      search_and_replace_in_file file "prefix=${prefix}" ("prefix="^new_prefix)
+      search_and_replace_in_file file "prefix=\\${prefix}" ("prefix="^new_prefix)
     in
     let dot_pc_files = find_per_ext "pc" in
     List.iter file_fixup dot_pc_files;
