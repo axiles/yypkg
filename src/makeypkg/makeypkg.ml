@@ -149,8 +149,8 @@ let pkg_config_fixup folder arch =
 let libtool_fixup folder arch =
   let f file prefix new_prefix =
     let libdir_re = prefix ^ "\\(.lib.*\\)" in
-    let new_libdir_re = new_prefix ^ "\\1" in
-    search_and_replace_in_file file libdir_re new_libdir_re
+    let new_libdir_repl = sprintf "'%s\\1'" new_prefix in
+    search_and_replace_in_file file libdir_re new_libdir_repl
   in
   let libdir_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
   PrefixFix.fix_files arch folder "la" libdir_re f
