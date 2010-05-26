@@ -111,7 +111,7 @@ let meta ~cmd_line ~pkg_size =
 
 let prefix_of_arch = function
   | "i686-w64-mingw32"
-  | "x86_64-w64-mingw32" as s -> s ^ "/mingw"
+  | "x86_64-w64-mingw32" as s -> s
   | "i686-pc-mingw32" -> "/mingw"
   | _ -> assert false
 
