@@ -115,33 +115,52 @@ let prefix_of_arch = function
   | "i686-pc-mingw32" -> "/mingw"
   | _ -> assert false
 
-let path_fixups folder arch fixups =
-  let find_per_ext ext =
+module PrefixFix = struct
+  let find_files folder ext =
     FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
+  let install_actions folder file =
+    let file = split_path (FilePath.make_relative folder file) in
+    let file = String.concat " " file in
+    sprintf "(\"dummy\" (SearchReplace (%s) __YYPREFIX ${YYPREFIX}))" file
+  let find_prefix prefix_re file =
+    let contents = read_file file in
+    let l = Queue.fold (fun l x -> x :: l) [] contents in
+    let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
+    (* matched_group will get the match from the List.find line before *)
+    Str.matched_group 1 prefix
+  let fix_file arch ext prefix_re f file =
+    let prefix = find_prefix prefix_re file in
+    let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
+    f file prefix new_prefix
+  let fix_files arch folder ext prefix_re f =
+    let files = find_files folder ext in
+    List.iter (fix_file arch ext prefix_re f) files;
+    List.map (install_actions folder) files
+end
+
+let pkg_config_fixup folder arch = 
+  let f file prefix new_prefix = 
+    search_and_replace_in_file file prefix "${prefix}";
+    search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
   in
-  let pkg_config_fixup () = 
-    let file_fixup file =
-      let prefix_re = Str.regexp "^prefix=\\(.*\\)" in
-      let contents = read_file file in
-      let l = Queue.fold (fun l x -> x :: l) [] contents in
-      let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
-      let prefix = Str.replace_first prefix_re "\\1" prefix in
-      let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
-      search_and_replace_in_file file prefix "${prefix}";
-      search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
-    in
-    let dot_pc_files = find_per_ext "pc" in
-    List.iter file_fixup dot_pc_files;
-    dot_pc_files
+  let prefix_re = Str.regexp "^prefix=\\(.*\\)" in
+  PrefixFix.fix_files arch folder ".pc" prefix_re f
+
+let libtool_fixup folder arch =
+  let f file libdir new_libdir =
+    let libdir_re = libdir ^ "\\(.lib.*\\)" in
+    let new_libdir_re = new_libdir ^ "\\2" in
+    search_and_replace_in_file file libdir_re new_libdir_re
   in
-  let pkg_config_search_replace f =
-    let f = split_path (FilePath.make_relative folder f) in
-    let f = String.concat " " f in
-    sprintf "(\"dummy\" (SearchReplace (%s) __YYPREFIX ${YYPREFIX}))" f
+  let libdir_re = Str.regexp "libdir='\\(.*\\)'" in
+  PrefixFix.fix_files arch folder ".la" libdir_re f
+
+let path_fixups folder arch fixups =
+  let dispatch folder arch = function
+    | `PkgConfig -> pkg_config_fixup folder arch
+    | `Libtool -> libtool_fixup folder arch
   in
-  let dot_pc_files = pkg_config_fixup () in
-  let pc_fixups = List.map pkg_config_search_replace dot_pc_files in
-  pc_fixups
+  List.concat (List.map (dispatch folder arch) fixups)
 
 let package_script_el cmd_line ~pkg_size =
   let folder = cmd_line.folder_basename in
