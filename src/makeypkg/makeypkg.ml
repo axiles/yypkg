@@ -144,16 +144,16 @@ let pkg_config_fixup folder arch =
     search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
   in
   let prefix_re = Str.regexp "^prefix=\\(.*\\)" in
-  PrefixFix.fix_files arch folder ".pc" prefix_re f
+  PrefixFix.fix_files arch folder "pc" prefix_re f
 
 let libtool_fixup folder arch =
-  let f file libdir new_libdir =
-    let libdir_re = libdir ^ "\\(.lib.*\\)" in
-    let new_libdir_re = new_libdir ^ "\\2" in
+  let f file prefix new_prefix =
+    let libdir_re = prefix ^ "\\(.lib.*\\)" in
+    let new_libdir_re = new_prefix ^ "\\1" in
     search_and_replace_in_file file libdir_re new_libdir_re
   in
-  let libdir_re = Str.regexp "libdir='\\(.*\\)'" in
-  PrefixFix.fix_files arch folder ".la" libdir_re f
+  let libdir_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
+  PrefixFix.fix_files arch folder "la" libdir_re f
 
 let path_fixups folder arch fixups =
   let dispatch folder arch = function
@@ -166,7 +166,7 @@ let package_script_el cmd_line ~pkg_size =
   let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
   let expand = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
-  let path_fixups = path_fixups cmd_line.folder cmd_line.arch [ `PkgConfig ] in
+  let path_fixups = path_fixups cmd_line.folder cmd_line.arch [ `PkgConfig; `Libtool ] in
   let install = String.concat "\n" (expand :: path_fixups) in
   let uninstall = sprintf "(Reverse \"%s\")" folder in
   let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
