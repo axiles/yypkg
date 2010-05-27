@@ -130,7 +130,7 @@ module PrefixFix = struct
     Str.matched_group 1 prefix
   let fix_file arch ext prefix_re f file =
     let prefix = find_prefix prefix_re file in
-    let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
+    let new_prefix = "__YYPREFIX" ^ (prefix_of_arch arch) in
     f file prefix new_prefix
   let fix_files arch folder ext prefix_re f =
     let files = find_files folder ext in
@@ -148,9 +148,12 @@ let pkg_config_fixup folder arch =
 
 let libtool_fixup folder arch =
   let f file prefix new_prefix =
-    let libdir_re = prefix ^ "\\(.lib.*\\)" in
-    let new_libdir_repl = sprintf "'%s\\1'" new_prefix in
-    search_and_replace_in_file file libdir_re new_libdir_repl
+    let strip_slashes_re, strip_slashes_repl = "//+", "/" in
+    let simplify_path_re, simplify_path_repl = "\\(|^/]+/../\\)", "" in
+    let prefix_re = "[^'=]*" ^ prefix in
+    search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
+    search_and_replace_in_file file simplify_path_re simplify_path_repl;
+    search_and_replace_in_file file prefix_re new_prefix
   in
   let libdir_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
   PrefixFix.fix_files arch folder "la" libdir_re f
