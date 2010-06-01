@@ -119,7 +119,6 @@ type field =
 
 type pkg = {
   name : string;
-  series : string;
   filename : string;
   signature : string option;
   sha1 : string option;
