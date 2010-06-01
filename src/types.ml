@@ -116,3 +116,15 @@ type conf = {
 type field = 
   | Predicate of (string * string list)
   | Tar_kind of tar_kind
+
+type pkg = {
+  name : string;
+  series : string;
+  filename : string;
+  signature : string option;
+  sha1 : string option;
+  deps : string list;
+} with sexp
+
+type pkglist = pkg list with sexp
+

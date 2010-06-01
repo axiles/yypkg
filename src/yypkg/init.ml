@@ -34,6 +34,7 @@ let init prefix =
   (* On windows, we need an absolute filename it seems *)
   let make_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
   let folders, binaries = List.map (make_absolute prefix) [ 
+    (* we pass "." here to create the prefix if it doesn't already exist *)
     "."; "etc"; "sbin"; filename_concat [ "var"; "log"; "packages" ]
   ], List.map (make_absolute Lib.binary_path) [
     "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe"; "makeypkg.exe"
