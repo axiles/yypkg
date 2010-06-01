@@ -206,7 +206,7 @@ let tar_compress tar_args compress out =
  *   'tar xv' will output the list of files expanded to stdout
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar conf tar_args input =
+let decompress_untar tar_kind tar_args input =
   let compressor = compressor_of_ext input in
   let c = [| compressor; "-d"; "-c"; input |] in
   (* On windows, piping between the decompressor and tar is painfully slow,
@@ -234,7 +234,7 @@ let decompress_untar conf tar_args input =
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
         (* if we're using bsdtar and want the filelist, we have to read from
          * stderr: see the comment right before the function for more details *)
-        let pid_t = if BSD = conf.tar_kind && not (List.mem "-O" (Array.to_list tar_args))
+        let pid_t = if BSD = tar_kind && not (List.mem "-O" (Array.to_list tar_args))
           then Unix.create_process t.(0) t c_out Unix.stdout t_in
           else Unix.create_process t.(0) t c_out t_in Unix.stderr
         in
@@ -310,4 +310,10 @@ let write_temp_file base_name contents =
   let () = output_string oc contents in
   let () = close_out oc in
   dir, base_name
+
+(* reads 'package_script.el' from a package *)
+let open_package tar_kind package =
+  let l = decompress_untar tar_kind [| "-O"; "package_script.el" |] package in
+  let s = String.concat "\n" l in
+  script_of_sexp (Sexplib.Sexp.of_string s)
 

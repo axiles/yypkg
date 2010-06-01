@@ -20,10 +20,10 @@
 open Types
 open Yylib
 
-let execute_install_action conf package (id, action) =
+let execute_install_action tar_kind package (id, action) =
   match action with
     | AHK p -> id, Filelist (command ((String.concat " " (ahk_bin :: p)))) (* quote *)
-    | Expand (i, p) -> id, Filelist (expand conf package i p)
+    | Expand (i, p) -> id, Filelist (expand tar_kind package i p)
     | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
     | MKdir p -> id, Filelist (mkdir p)
     | SearchReplace (p, s, r) ->
@@ -32,10 +32,11 @@ let execute_install_action conf package (id, action) =
         Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
-  let (metadata, install_actions, _ as script) = open_package conf package in
+  let (metadata, install_actions, _ as script) =
+    Lib.open_package conf.tar_kind package in
   match List.partition (predicate_holds conf.preds) metadata.predicates with
     | _, [] -> 
-        let func = execute_install_action conf package in
+        let func = execute_install_action conf.tar_kind package in
         let results = List.rev_map func install_actions in
         let updated_db = Db.install_package db (script, results) in
         updated_db

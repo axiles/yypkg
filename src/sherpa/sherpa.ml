@@ -5,7 +5,7 @@ let get_packages with_deps output_folder package =
   let pkglist = Sherpalib.get_uri_contents Sherpalib.pkg_list_uri in
   let pkglist = pkglist_of_sexp (Sexp.of_string pkglist) in
   let pkglist =
-    let p = List.find (fun p -> p.name = package) pkglist in
+    let p = List.find (fun p -> p.metadata.package_name = package) pkglist in
     if with_deps then
       Sherpalib.get_deps pkglist p
     else

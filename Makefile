@@ -1,5 +1,5 @@
 all:
-	cd src && ocamlbuild -cflag -rectypes {yypkg,makeypkg,sherpa}.native
+	cd src && ocamlbuild -cflag -rectypes {yypkg,makeypkg,sherpa,sherpa_gen}.native
 
 install:
 	cp src/yypkg.native /opt/mgw64/sbin/yypkg

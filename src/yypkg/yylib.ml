@@ -18,7 +18,6 @@
  *)
 
 open Printf
-open Sexplib
 open Types
 
 exception Package_does_not_exist
@@ -74,7 +73,7 @@ let mkdir path_unexpanded =
   [ path_unexpanded ]
 
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
-let expand conf pkg i p =
+let expand tar_kind pkg i p =
   (* XXX: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
   let l = (List.length (Lib.split_path ~dir_sep:"/" i)) - 1 in
@@ -84,11 +83,11 @@ let expand conf pkg i p =
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let tar_args = Array.append 
     (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards * and doesn't recognize the option *)
-    ( if conf.tar_kind = GNU then [| "--wildcards" |] else [| |] )
+    ( if tar_kind = GNU then [| "--wildcards" |] else [| |] )
     [| "-C"; pq; "--strip-components"; string_of_int l; iq |]
   in
-  let x = Lib.decompress_untar conf tar_args pkg in
-  match conf.tar_kind with
+  let x = Lib.decompress_untar tar_kind tar_args pkg in
+  match tar_kind with
     | GNU ->
         List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) (List.rev x)
     (* bsdtar already strips the beginning of the path *)
@@ -131,12 +130,6 @@ let predicate_holds (conf : predicates) (key, value) =
     let conf_vals = List.assoc key conf in
     List.mem value conf_vals
   with Not_found -> false
-
-(* reads 'package_script.el' from a package *)
-let open_package conf package =
-  let l = Lib.decompress_untar conf [| "-O"; "package_script.el" |] package in
-  let s = String.concat "\n" l in
-  script_of_sexp (Sexp.of_string s)
 
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =

@@ -118,7 +118,7 @@ type field =
   | Tar_kind of tar_kind
 
 type pkg = {
-  name : string;
+  metadata : metadata;
   filename : string;
   signature : string option;
   sha1 : string option;
