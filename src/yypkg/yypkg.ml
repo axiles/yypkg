@@ -94,8 +94,8 @@ let config opts =
     | _ -> raise (Args.Parsing_failed "⁻listpred can't be combined with other arguments.")
 
 let main () =
-  let pred x = "-help" = x || "--help" = x || "-h" = x || "" = x in
-  if List.exists pred (Array.to_list Sys.argv) then
+  let pred x = "-help" = x || "--help" = x || "-h" = x in
+  if [||] = Sys.argv || List.exists pred (Array.to_list Sys.argv) then
     Args.print_spec 0 (Args.usage_msg cmd_line_spec)
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
