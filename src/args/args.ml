@@ -72,7 +72,14 @@ let parse spec args =
   match parse spec [] (Array.to_list args) with
     | opts, [] -> opts
     | opts, q -> raise (Incomplete_parsing (opts, q))
-  
+
+let wants_help () = 
+  let argv = Array.to_list Sys.argv in
+  [] = argv || List.exists (fun x -> "-help"=x || "--help"=x || "-h"=x) argv
+
+let print_help cmd_line_spec =
+  print_spec 0 (usage_msg cmd_line_spec)
+
 (* this is a little test:
   let spec = [ "-install", []; "-uninstall", []]
   let _ = parse spec [| "-install"; "foo"; "-uninstall" -] *)

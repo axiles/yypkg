@@ -130,17 +130,18 @@ let dir_sep =
 
 (* absolute paths to tar, xz, gzip and bzip2, and NamedPipe if on windows *)
 (* on windows, we use bsdtar and gnu tar on others *)
-let tar, tar_kind, xz, gzip, bzip2, named_pipe = 
+let tar, tar_kind, xz, gzip, bzip2, named_pipe, wget = 
   match Sys.os_type with
     (* we don't set named_pipe for unix and cygwin because it's not used *)
     | "Unix"
-    | "Cygwin" -> "tar", GNU, "xz", "gzip", "bzip2", ""
+    | "Cygwin" -> "tar", GNU, "xz", "gzip", "bzip2", "", "wget"
     | "Win32" ->
         filename_concat [ binary_path; "bsdtar.exe" ], BSD,
         filename_concat [ binary_path; "xz.exe" ],
         filename_concat [ binary_path; "gzip.exe" ],
         filename_concat [ binary_path; "bzip2.exe" ],
-        filename_concat [ binary_path; "NamedPipe.exe" ]
+        filename_concat [ binary_path; "NamedPipe.exe" ],
+        filename_concat [ binary_path; "wget.exe" ]
     | _ -> assert false
 
 (* guess the compressor (xz, gzip, bzip2) from the extension of a string *)
