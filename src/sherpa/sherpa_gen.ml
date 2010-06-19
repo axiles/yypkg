@@ -24,20 +24,27 @@ let decompress_list tar_kind input =
 let tar_grep filelist expr ext file =
   let tar_args = [| "-O"; "--wildcards"; "*." ^ ext |] in
   let ext_re = Str.regexp (Printf.sprintf ".*%s$" ext) in
+  let quotes_re = Str.regexp "\\(\"\\|'\\)\\(.*\\)\\(\"\\|'\\)" in
   let re = Str.regexp expr in
   if List.exists (fun x -> Str.string_match ext_re x 0) filelist then
     let l = Lib.decompress_untar GNU tar_args file in
     let l = List.filter (fun x -> Str.string_match re x 0) l in
     let l = List.rev_map (Str.replace_first re "") l in
+    let l = List.rev_map (Str.global_replace quotes_re "\\2") l in
     List.concat (List.rev_map (Str.split (Str.regexp " ")) l)
   else
     []
+    
+let pc_split l = 
+  let pred s = match s.[0] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false in
+  List.filter pred l
 
 let pkg_of_file folder file = 
   let file_absolute = Filename.concat folder file in
   let metadata, _, _ = Lib.open_package Lib.tar_kind file_absolute in
   let filelist = decompress_list Lib.tar_kind file_absolute in
   let pc_requires = tar_grep filelist "Requires:" "pc" file_absolute in
+  let pc_requires = pc_split pc_requires in
   let la_requires = tar_grep filelist "dependency_libs=" "la" file_absolute in
   List.iter print_endline pc_requires;
   List.iter print_endline la_requires;
