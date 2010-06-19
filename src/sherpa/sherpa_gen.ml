@@ -1,8 +1,18 @@
 open Types
 
+let tar_grep expr ext file =
+  let tar_args = [| "-O"; "--wilcards"; "*." ^ ext |] in
+  let re = Str.regexp expr in
+  let l = Lib.decompress_untar GNU tar_args file in
+  let l = List.filter (fun x -> Str.string_match re x 0) l in
+  let l = List.rev_map (Str.replace_first re "") l in
+  List.concat (List.rev_map (Str.split (Str.regexp " ")) l)
+
 let pkg_of_file folder file = 
   let file_absolute = Filename.concat folder file in
   let metadata, _, _ = Lib.open_package Lib.tar_kind file_absolute in
+  let pc_requires = tar_grep "Requires:" "pc" file in
+  List.iter print_endline pc_requires;
   {
     metadata = metadata;
     filename = file;
