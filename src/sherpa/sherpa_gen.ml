@@ -7,7 +7,6 @@ let pkg_of_file folder file =
     metadata = metadata;
     filename = file;
     signature = None;
-    sha1 = None;
     deps = [];
   }
 
