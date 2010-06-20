@@ -99,7 +99,6 @@ let add_deps packages folder pkg =
     let l = List.find_all (fun s -> s <> package_name && Hashtbl.mem h s) l in
     List.rev_map (Hashtbl.find h) l
   in
-  print_endline pkg.metadata.package_name;
   let file_absolute = Filename.concat folder pkg.filename in
   let pc_requires = tar_grep pkg.files "Requires:" "pc" file_absolute in
   let pc_requires = pc_split pc_requires in
@@ -108,8 +107,7 @@ let add_deps packages folder pkg =
   let la_requires = List.rev_map filename_of_libtool la_requires in
   let la_requires = list_deps la pkg.metadata.package_name la_requires in
   let requires = List.concat [ pc_requires; la_requires ] in
-  let requires = List.fast_sort compare requires in
-  let requires = rev_uniq requires in
+  let requires = rev_uniq (List.fast_sort compare requires) in
   { pkg with deps = requires }
 
 let () =
