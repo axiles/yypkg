@@ -1,3 +1,4 @@
+open Printf
 open Types
 
 let la : (string, string) Hashtbl.t = Hashtbl.create 20
@@ -8,8 +9,10 @@ let merge_list l h id =
   List.iter (fun x ->
     if Hashtbl.mem h x then
       let e = Hashtbl.find h x in
-      let () = Printf.eprintf "%s can't provide %s: %s already does." id x e in
-      assert false
+      if e <> id then
+        let () = eprintf "%s can't provide %s: %s already does." id x e in
+        assert false
+      else ()
     else
       Hashtbl.add h x id
   ) l
@@ -68,7 +71,7 @@ let pkg_of_file folder file =
   let file_absolute = Filename.concat folder file in
   let metadata, _, _ = Lib.open_package Lib.tar_kind file_absolute in
   let filelist = decompress_list Lib.tar_kind file_absolute in
-  let rels = [ "pc", pc; "la", la; "dll", libs; "so", libs ] in
+  let rels = [ "pc", pc; "la", la; "dll", libs; "so", libs; "a", libs ] in
   List.iter (fun (a, b) -> x_provides metadata.package_name filelist a b) rels;
   {
     metadata = metadata;
@@ -78,19 +81,14 @@ let pkg_of_file folder file =
     deps = [];
   }
 
-let rev_uniq l =
-  let rec rev_uniq_rc accu cur = function
-    | t :: q when t = cur -> rev_uniq_rc accu cur q
-    | t :: q -> rev_uniq_rc (t :: accu) t q
-    | [] -> accu
-  in
-  match l with
-    | t :: q -> rev_uniq_rc [ t ] t q
-    | [] -> []
-
 let filename_of_libtool s =
   if s.[0] = '-' && s.[1] = 'l' then
-    String.sub s 2 (String.length s - 2)
+    (* XXX: this will fail when..., hmmm, when... well, it's pretty brittle
+     * this can fail for several reasons: if we only strip ".0" out of
+     * "libfoo.so.1.2.0" or if something is appended to the library name, some
+     * wildcards/regexps would probably be welcome, but when splitting the
+     * filenames and adding to the hash tables, not here *)
+    sprintf "lib%s" (String.sub s 2 (String.length s - 2))
   else
     Filename.basename (Filename.chop_extension s) 
 
@@ -105,9 +103,10 @@ let add_deps packages folder pkg =
   let pc_requires = list_deps pc pkg.metadata.package_name pc_requires in
   let la_requires = tar_grep pkg.files "dependency_libs=" "la" file_absolute in
   let la_requires = List.rev_map filename_of_libtool la_requires in
+  let la_libs_requires = list_deps libs pkg.metadata.package_name la_requires in
   let la_requires = list_deps la pkg.metadata.package_name la_requires in
-  let requires = List.concat [ pc_requires; la_requires ] in
-  let requires = rev_uniq (List.fast_sort compare requires) in
+  let requires = List.concat [ pc_requires; la_requires; la_libs_requires ] in
+  let requires = Sherpalib.rev_uniq (List.fast_sort compare requires) in
   { pkg with deps = requires }
 
 let () =
