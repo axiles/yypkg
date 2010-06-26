@@ -21,6 +21,7 @@ open Printf
 open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
+exception ProcessFailed
 
 (* FIXME: explain why this function is needed *)
 let read pid descr =
@@ -57,8 +58,8 @@ let read pid descr =
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
       | _, Unix.WEXITED 0 -> (read_once descr) :: accu
-      (* FIXME: hmmmm... *)
-      | _, _ -> assert false
+      (* unhandled case, we'll say the process failed and raise an exception *)
+      | _, _ -> raise ProcessFailed
   in
   let l = read_rc pid descr [] in
   let ll = List.fold_left (fun a b -> List.rev_append b a) [] l in
@@ -206,7 +207,7 @@ let tar_compress tar_args compress out =
  *   'tar xv' will output the list of files expanded to stdout
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar tar_kind tar_args input =
+let decompress_untar ?(test=true) tar_kind tar_args input =
   let compressor = compressor_of_ext input in
   let c = [| compressor; "-d"; "-c"; input |] in
   (* On windows, piping between the decompressor and tar is painfully slow,
@@ -229,6 +230,12 @@ let decompress_untar tar_kind tar_args input =
         (* 'tar -f -' ensures we're reading from stdin with both gnu tar and
          * bsdtar : bsdtar would default to /dev/tape0 otherwise *)
         let t = Array.append [| tar; "xvf"; "-" |] tar_args in
+        (* by default, tar will read the whole archive when asked to extract a
+         * file, thus checking the archive for corruption, gnu tar has a
+         * --occurrences option to stop at the first match, this can speed up
+         * things tremendously *)
+        let t = Array.append t
+          (if GNU = tar_kind && test then [| "--occurences=1" |] else t) in
         let c_out, c_in = Unix.pipe () in
         let t_out, t_in = Unix.pipe () in
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
