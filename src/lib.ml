@@ -53,12 +53,13 @@ let read pid descr =
      * even if nothing is available yet, but when it dies, it becomes unable to
      * write more and we can read everything available in one big pass *)
     match Unix.waitpid [ Unix.WNOHANG ] pid with
-      (* still alive: read and start again *)
+      (* still alive: read and start again, '0' because no child had its state
+       * changed (we're using WNOHANG) *)
       | 0, _ -> read_rc pid descr ((read_once descr) :: accu)
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
-      | _, Unix.WEXITED 0 -> (read_once descr) :: accu
-      (* unhandled case, we'll say the process failed and raise an exception *)
+      | pid, Unix.WEXITED 0 -> (read_once descr) :: accu
+      (* all other cases, we'll say the process failed and raise an exception *)
       | _, _ -> raise ProcessFailed
   in
   let l = read_rc pid descr [] in
