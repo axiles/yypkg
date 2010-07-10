@@ -168,7 +168,7 @@ let unix_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
   let fst_out_channel = Unix.open_process_in s in
   let fst_out = Unix.descr_of_in_channel fst_out_channel in
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o640 in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
   let pid = Unix.create_process compress.(0) compress fst_out second_out Unix.stderr in
   ignore (Unix.waitpid [] pid);
   Unix.close fst_out;
@@ -185,7 +185,7 @@ let win_tar_compress tar_args compress out =
   let named_pipe = [ [| named_pipe; fifo_path |]; compress; [| "-c" |] ] in
   let named_pipe = Array.concat named_pipe in
   (* this is the output of the compressor *)
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o640 in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
   (* we start the compressor which waits from input on the named pipe *)
   let pid = Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
   Unix.stderr in
