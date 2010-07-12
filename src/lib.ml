@@ -21,6 +21,7 @@ open Printf
 open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
+exception ProcessFailed
 
 (* FIXME: explain why this function is needed *)
 let read pid descr =
@@ -52,13 +53,14 @@ let read pid descr =
      * even if nothing is available yet, but when it dies, it becomes unable to
      * write more and we can read everything available in one big pass *)
     match Unix.waitpid [ Unix.WNOHANG ] pid with
-      (* still alive: read and start again *)
+      (* still alive: read and start again, '0' because no child had its state
+       * changed (we're using WNOHANG) *)
       | 0, _ -> read_rc pid descr ((read_once descr) :: accu)
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
-      | _, Unix.WEXITED 0 -> (read_once descr) :: accu
-      (* FIXME: hmmmm... *)
-      | _, _ -> assert false
+      | pid, Unix.WEXITED 0 -> (read_once descr) :: accu
+      (* all other cases, we'll say the process failed and raise an exception *)
+      | _, _ -> raise ProcessFailed
   in
   let l = read_rc pid descr [] in
   let ll = List.fold_left (fun a b -> List.rev_append b a) [] l in
@@ -166,7 +168,7 @@ let unix_tar_compress tar_args compress out =
   let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
   let fst_out_channel = Unix.open_process_in s in
   let fst_out = Unix.descr_of_in_channel fst_out_channel in
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o640 in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
   let pid = Unix.create_process compress.(0) compress fst_out second_out Unix.stderr in
   ignore (Unix.waitpid [] pid);
   Unix.close fst_out;
@@ -183,7 +185,7 @@ let win_tar_compress tar_args compress out =
   let named_pipe = [ [| named_pipe; fifo_path |]; compress; [| "-c" |] ] in
   let named_pipe = Array.concat named_pipe in
   (* this is the output of the compressor *)
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o640 in
+  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
   (* we start the compressor which waits from input on the named pipe *)
   let pid = Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
   Unix.stderr in
@@ -206,7 +208,7 @@ let tar_compress tar_args compress out =
  *   'tar xv' will output the list of files expanded to stdout
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar tar_kind tar_args input =
+let decompress_untar ?(test=true) tar_kind tar_args input =
   let compressor = compressor_of_ext input in
   let c = [| compressor; "-d"; "-c"; input |] in
   (* On windows, piping between the decompressor and tar is painfully slow,
@@ -229,6 +231,12 @@ let decompress_untar tar_kind tar_args input =
         (* 'tar -f -' ensures we're reading from stdin with both gnu tar and
          * bsdtar : bsdtar would default to /dev/tape0 otherwise *)
         let t = Array.append [| tar; "xvf"; "-" |] tar_args in
+        (* by default, tar will read the whole archive when asked to extract a
+         * file, thus checking the archive for corruption, gnu tar has a
+         * --occurrence option to stop at the first match, this can speed up
+         * things tremendously *)
+        let t = Array.append t
+          (if GNU = tar_kind && test then [| "--occurrence=1" |] else t) in
         let c_out, c_in = Unix.pipe () in
         let t_out, t_in = Unix.pipe () in
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in

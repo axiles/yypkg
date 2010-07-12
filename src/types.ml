@@ -121,6 +121,7 @@ type pkg = {
   metadata : metadata;
   filename : string;
   signature : string option;
+  files : string list;
   deps : string list;
 } with sexp
 

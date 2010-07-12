@@ -19,14 +19,23 @@ let get_uri uri output =
   ignore (Unix.waitpid [] pid)
 
 let download_to_folder folder p =
-  let download_folder = filename_concat [ folder; "packages" ] in
   let uri = String.concat "/" [ mirror; version; "packages"; p.filename ] in
-  let output = filename_concat [ download_folder; p.filename ] in
-  FileUtil.mkdir ~parent:true ~mode:0o755 download_folder;
+  let output = filename_concat [ folder; p.filename ] in
+  FileUtil.mkdir ~parent:true ~mode:0o755 folder;
   get_uri uri output
 
 let find_packages_named pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.package_name name_list) pkglist
+
+let rev_uniq l =
+  let rec rev_uniq_rc accu cur = function
+    | t :: q when t = cur -> rev_uniq_rc accu cur q
+    | t :: q -> rev_uniq_rc (t :: accu) t q
+    | [] -> accu
+  in
+  match l with
+    | t :: q -> rev_uniq_rc [ t ] t q
+    | [] -> []
 
 let get_deps pkglist p =
   let rec add accu p =
@@ -36,3 +45,22 @@ let get_deps pkglist p =
   in
   let names = add [ p.metadata.package_name ] p in
   find_packages_named pkglist names
+
+let get_packages with_deps output_folder package = 
+  let pkglist = get_uri_contents pkg_list_uri in
+  let pkglist = pkglist_of_sexp (Sexplib.Sexp.of_string pkglist) in
+  let pkglist =
+    let p = List.find (fun p -> p.metadata.package_name = package) pkglist in
+    if with_deps then
+      get_deps pkglist p
+    else
+      [ p ]
+  in 
+  List.iter (download_to_folder output_folder) pkglist
+
+let default_output_folder =
+  try
+    let prefix = Unix.getenv "YYPREFIX" in
+    Lib.filename_concat [ prefix; "var"; "cache"; "packages"; version]
+  with Not_found -> ""
+
