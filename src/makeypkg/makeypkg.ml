@@ -130,7 +130,7 @@ module PrefixFix = struct
     Str.matched_group 1 prefix
   let fix_file arch ext prefix_re f file =
     let prefix = find_prefix prefix_re file in
-    let new_prefix = "__YYPREFIX" ^ (prefix_of_arch arch) in
+    let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
     f file prefix new_prefix
   let fix_files arch folder ext prefix_re f =
     let files = find_files folder ext in
@@ -187,5 +187,7 @@ let () =
     | "bzip2" -> [| bzip2; "-9" |]
     | _ -> assert false
   in
-  let output = Filename.concat cmd_line.output (output_of_cmdline cmd_line) in
-  tar_compress tar_args snd output
+  let output_file = output_of_cmdline cmd_line in
+  let output = Filename.concat cmd_line.output output_file in
+  tar_compress tar_args snd output;
+  Printf.printf "Package created in: %s\n." output_file
