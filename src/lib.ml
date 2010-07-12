@@ -236,7 +236,7 @@ let decompress_untar ?(test=true) tar_kind tar_args input =
          * --occurrence option to stop at the first match, this can speed up
          * things tremendously *)
         let t = Array.append t
-          (if GNU = tar_kind && test then [| "--occurrence=1" |] else t) in
+          (if GNU = tar_kind && test then [| "--occurrence=1" |] else [| |]) in
         let c_out, c_in = Unix.pipe () in
         let t_out, t_in = Unix.pipe () in
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
