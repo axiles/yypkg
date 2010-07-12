@@ -235,8 +235,8 @@ let decompress_untar ?(test=true) tar_kind tar_args input =
          * file, thus checking the archive for corruption, gnu tar has a
          * --occurrence option to stop at the first match, this can speed up
          * things tremendously *)
-        let t = Array.append t
-          (if GNU = tar_kind && test then [| "--occurrence=1" |] else [| |]) in
+        let t = Array.append t (if GNU = tar_kind && (not test)
+          then [| "--occurrence=1" |] else [| |]) in
         let c_out, c_in = Unix.pipe () in
         let t_out, t_in = Unix.pipe () in
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
