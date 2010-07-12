@@ -45,8 +45,11 @@ let prefix_of_cmd_line cmd_line =
     (* we've not been given -prefix, if the YYPREFIX env var is missing, this
      * will raise Not_found: we'll catch it and display the usage message *)
     | [] -> Sys.getenv "YYPREFIX", lf
-    (* we've been given the -prefix with a string argument, no problem here *)
-    | [ Args.Opt (_, [ Args.Val prefix ]) ] -> prefix, lf
+    (* we've been given the -prefix with a string argument
+     * we also set it as an env var so it can be used in install scripts *)
+    | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
+        Unix.putenv "YYPREFIX" prefix;
+        prefix, lf
     (* all other combinations are invalid: raise an exception that will be
      * caught later on *)
     | _ -> raise (Args.Parsing_failed "PREFIX environment variable not found and no -prefix specified")
