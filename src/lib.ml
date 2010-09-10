@@ -19,6 +19,7 @@
 
 open Printf
 open Types
+module U = Unix
 
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed
@@ -40,9 +41,9 @@ let read pid descr =
     let rec read_once_rc accu =
       (* check if there's something to read: a timeout of 0.02 to minimize
        * latency, shouldn't cost anything *)
-      match Unix.select [ descr ] [] [] 0.02 with
+      match U.select [ descr ] [] [] 0.02 with
         | [ _ ],  _, _ -> begin
-            match Unix.read descr s 0 160 with
+            match U.read descr s 0 160 with
               (* got as much as we asked for, there's probably more: try again*)
               | 160 as l -> read_once_rc ((String.sub s 0 l) :: accu)
               (* got less than asked, return *)
@@ -57,13 +58,13 @@ let read pid descr =
     (* As long as the process is alive, we have to wait for it to send more data
      * even if nothing is available yet, but when it dies, it becomes unable to
      * write more and we can read everything available in one big pass *)
-    match Unix.waitpid [ Unix.WNOHANG ] pid with
+    match U.waitpid [ U.WNOHANG ] pid with
       (* still alive: read and start again, '0' because no child had its state
        * changed (we're using WNOHANG) *)
       | 0, _ -> read_rc pid descr ((read_once descr) :: accu)
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
-      | pid, Unix.WEXITED 0 -> (read_once descr) :: accu
+      | pid, U.WEXITED 0 -> (read_once descr) :: accu
       (* all other cases, we'll say the process failed and raise an exception *)
       | _, _ -> raise ProcessFailed
   in
@@ -128,7 +129,7 @@ let string_of_version v =
 (* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
   match Sys.os_type with
-    | "Unix"
+    | "U"
     | "Cygwin" -> "/"
     | "Win32" -> "\\"
     | _ -> assert false
@@ -140,7 +141,7 @@ let dir_sep =
 let tar, xz, gzip, bzip2, named_pipe, wget = 
   match Sys.os_type with
     (* we don't set named_pipe for unix and cygwin because it's not used *)
-    | "Unix"
+    | "U"
     | "Cygwin" -> "bsdtar", "xz", "gzip", "bzip2", "", "wget"
     | "Win32" ->
         filename_concat [ binary_path; "bsdtar.exe" ],
@@ -169,43 +170,15 @@ let compressor_of_ext s =
     | _ -> assert false
 
 (* tar + compress on unix, piping the output of tar to the compressor *)
-let unix_tar_compress tar_args compress out =
-  let s = String.concat " " ([ tar; "cv" ] @ (Array.to_list tar_args)) in
-  let fst_out_channel = Unix.open_process_in s in
-  let fst_out = Unix.descr_of_in_channel fst_out_channel in
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
-  let pid = Unix.create_process compress.(0) compress fst_out second_out Unix.stderr in
-  ignore (Unix.waitpid [] pid);
-  List.iter Unix.close [ fst_out; second_out ]
-
-(* tar + compress on windows, less trivial than its unix counterpart... *)
-let win_tar_compress tar_args compress out =
-  (* we have to rely on a named pipe (aka fifo) since pipes are unreliable *)
-  let fifo_path = "\\\\.\\pipe\\makeypkg_compress" in
-  let tar_args = Array.to_list tar_args in
-  (* we tell tar to use the fifo as input *)
-  let s = String.concat " " ([ tar; "cvf";  fifo_path ] @ tar_args) in
-  (* NamedPipe.exe will redirect the named pipe to the compressor's input *)
-  let named_pipe = [ [| named_pipe; fifo_path |]; compress; [| "-c" |] ] in
-  let named_pipe = Array.concat named_pipe in
-  (* this is the output of the compressor *)
-  let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
-  (* we start the compressor which waits from input on the named pipe *)
-  let pid = Unix.create_process named_pipe.(0) named_pipe Unix.stdin second_out
-  Unix.stderr in
-  (* now we start tar which write to the named pipe *)
-  let tar_oc = Unix.open_process_out s in
-  ignore (Unix.close_process_out tar_oc);
-  ignore (Unix.waitpid [] pid);
-  Unix.close second_out
-
-(* auto-dispatch between the unix and windows versions of *_tar_compress *)
 let tar_compress tar_args compress out =
-  match Sys.os_type with
-    | "Cygwin"
-    | "Unix" -> unix_tar_compress tar_args compress out
-    | "Win32" -> win_tar_compress tar_args compress out
-    | _ -> assert false
+  let tar_args = Array.concat [ [| tar; "cv" |]; tar_args ] in
+  let fst_out, fst_in = U.pipe () in
+  let pid1 = U.create_process tar tar_args U.stdin fst_in U.stderr in
+  let snd_out = U.openfile out [ U.O_WRONLY; U.O_CREAT; U.O_TRUNC ] 0o644 in
+  let pid2 = U.create_process compress.(0) compress fst_out snd_out U.stderr in
+  match snd (U.waitpid [] pid2), snd (U.waitpid [] pid1) with
+  | U.WEXITED 0, U.WEXITED 0 -> List.iter U.close [ snd_out; fst_out; fst_in ]
+  | _, _ -> raise ProcessFailed
 
 (* decompress + untar, "f" will read the output from tar:
  *   'bsdtar xv -O' will output the content of files to stdout
@@ -217,16 +190,16 @@ let decompress_untar tar_args input =
    * up...) so we'll try to take advantage of that.
    * We also require that on other systems to save code. *)
   let t = Array.append [| tar; "xvf"; input |] tar_args in
-  let t_out, t_in = Unix.pipe () in
+  let t_out, t_in = U.pipe () in
   (* same as in the other branch : we are always using bsdtar here and if
     * we want the filelist, we need to read stderr *)
   let pid_t = if Array.fold_left (fun a b -> a || b = "-O") false tar_args then
-    Unix.create_process t.(0) t Unix.stdin t_in Unix.stderr
+    U.create_process t.(0) t U.stdin t_in U.stderr
   else
-    Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
+    U.create_process t.(0) t U.stdin U.stdout t_in
   in
   let l = read pid_t t_out in
-  List.iter Unix.close [ t_out; t_in ];
+  List.iter U.close [ t_out; t_in ];
   l
 
 let split_path ?(dir_sep=dir_sep) path =
