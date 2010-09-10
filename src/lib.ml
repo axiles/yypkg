@@ -176,8 +176,7 @@ let unix_tar_compress tar_args compress out =
   let second_out = Unix.openfile out [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
   let pid = Unix.create_process compress.(0) compress fst_out second_out Unix.stderr in
   ignore (Unix.waitpid [] pid);
-  Unix.close fst_out;
-  Unix.close second_out
+  List.iter Unix.close [ fst_out; second_out ]
 
 (* tar + compress on windows, less trivial than its unix counterpart... *)
 let win_tar_compress tar_args compress out =
@@ -211,44 +210,24 @@ let tar_compress tar_args compress out =
 (* decompress + untar, "f" will read the output from tar:
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar ?(test=true) tar_args input =
-  let compressor = compressor_of_ext input in
-  let c = [| compressor; "-d"; "-c"; input |] in
+let decompress_untar tar_args input =
   (* On windows, piping between the decompressor and tar is painfully slow,
    * hopefully bsdtar can link against lib{lzma,z,bz2}, avoiding the need to
    * pipe between process which makes it 100 times faster (number not made
-   * up...) so we'll try to take advantage of that *)
-  match Sys.os_type, Sys.file_exists compressor with
-    | "Win32", false -> 
-        let t = Array.append [| tar; "xvf"; input |] tar_args in
-        let t_out, t_in = Unix.pipe () in
-        (* same as in the other branch : we are always using bsdtar here and if
-          * we want the filelist, we need to read stderr *)
-        let pid_t = if List.mem "-O" (Array.to_list tar_args) then
-          Unix.create_process t.(0) t Unix.stdin t_in Unix.stderr
-        else
-          Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
-        in
-        read pid_t t_out
-    | _ -> 
-        (* bsdtar defaults to /dev/tape0 with "-f '-'" *)
-        let t = Array.append [| tar; "xvf"; "-" |] tar_args in
-        let c_out, c_in = Unix.pipe () in
-        let t_out, t_in = Unix.pipe () in
-        let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
-        (* if we're using bsdtar and want the filelist, we have to read from
-         * stderr: see the comment right before the function for more details *)
-        let pid_t =
-          if List.mem "-O" (Array.to_list tar_args) then
-            Unix.create_process t.(0) t c_out t_in Unix.stderr
-          else
-            Unix.create_process t.(0) t c_out Unix.stdout t_in
-        in
-        let l = read pid_t t_out in
-        (* let's clean the compressor from the process table *)
-        ignore (Unix.waitpid [ Unix.WNOHANG ] pid_c);
-        List.iter Unix.close [ c_out; c_in; t_out; t_in ];
-        l
+   * up...) so we'll try to take advantage of that.
+   * We also require that on other systems to save code. *)
+  let t = Array.append [| tar; "xvf"; input |] tar_args in
+  let t_out, t_in = Unix.pipe () in
+  (* same as in the other branch : we are always using bsdtar here and if
+    * we want the filelist, we need to read stderr *)
+  let pid_t = if Array.fold_left (fun a b -> a || b = "-O") false tar_args then
+    Unix.create_process t.(0) t Unix.stdin t_in Unix.stderr
+  else
+    Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
+  in
+  let l = read pid_t t_out in
+  List.iter Unix.close [ t_out; t_in ];
+  l
 
 let split_path ?(dir_sep=dir_sep) path =
   Str.split (Str.regexp dir_sep) path
