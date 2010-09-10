@@ -23,7 +23,12 @@ open Types
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed
 
-(* FIXME: explain why this function is needed *)
+let list_rev_concat l = 
+  List.fold_left (fun a b -> List.rev_append b a) [] l
+
+let list_concat l =
+  List.rev (list_rev_concat l)
+
 let read pid descr =
   (* We'll be reading at most 160 characters at a time, I don't know if there's
    * a better way to do it: more, less, adptive. No idea but this should be good
@@ -132,13 +137,13 @@ let dir_sep =
 
 (* absolute paths to tar, xz, gzip and bzip2, and NamedPipe if on windows *)
 (* on windows, we use bsdtar and gnu tar on others *)
-let tar, tar_kind, xz, gzip, bzip2, named_pipe, wget = 
+let tar, xz, gzip, bzip2, named_pipe, wget = 
   match Sys.os_type with
     (* we don't set named_pipe for unix and cygwin because it's not used *)
     | "Unix"
-    | "Cygwin" -> "tar", GNU, "xz", "gzip", "bzip2", "", "wget"
+    | "Cygwin" -> "bsdtar", "xz", "gzip", "bzip2", "", "wget"
     | "Win32" ->
-        filename_concat [ binary_path; "bsdtar.exe" ], BSD,
+        filename_concat [ binary_path; "bsdtar.exe" ],
         filename_concat [ binary_path; "xz.exe" ],
         filename_concat [ binary_path; "gzip.exe" ],
         filename_concat [ binary_path; "bzip2.exe" ],
@@ -204,11 +209,9 @@ let tar_compress tar_args compress out =
     | _ -> assert false
 
 (* decompress + untar, "f" will read the output from tar:
- *   'tar xv -O' will output the content of files to stdout
- *   'tar xv' will output the list of files expanded to stdout
  *   'bsdtar xv -O' will output the content of files to stdout
  *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar ?(test=true) tar_kind tar_args input =
+let decompress_untar ?(test=true) tar_args input =
   let compressor = compressor_of_ext input in
   let c = [| compressor; "-d"; "-c"; input |] in
   (* On windows, piping between the decompressor and tar is painfully slow,
@@ -221,30 +224,25 @@ let decompress_untar ?(test=true) tar_kind tar_args input =
         let t_out, t_in = Unix.pipe () in
         (* same as in the other branch : we are always using bsdtar here and if
           * we want the filelist, we need to read stderr *)
-        let pid_t = if not (List.mem "-O" (Array.to_list tar_args)) then
-          Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
-        else
+        let pid_t = if List.mem "-O" (Array.to_list tar_args) then
           Unix.create_process t.(0) t Unix.stdin t_in Unix.stderr
+        else
+          Unix.create_process t.(0) t Unix.stdin Unix.stdout t_in
         in
         read pid_t t_out
     | _ -> 
-        (* 'tar -f -' ensures we're reading from stdin with both gnu tar and
-         * bsdtar : bsdtar would default to /dev/tape0 otherwise *)
+        (* bsdtar defaults to /dev/tape0 with "-f '-'" *)
         let t = Array.append [| tar; "xvf"; "-" |] tar_args in
-        (* by default, tar will read the whole archive when asked to extract a
-         * file, thus checking the archive for corruption, gnu tar has a
-         * --occurrence option to stop at the first match, this can speed up
-         * things tremendously *)
-        let t = Array.append t (if GNU = tar_kind && (not test)
-          then [| "--occurrence=1" |] else [| |]) in
         let c_out, c_in = Unix.pipe () in
         let t_out, t_in = Unix.pipe () in
         let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
         (* if we're using bsdtar and want the filelist, we have to read from
          * stderr: see the comment right before the function for more details *)
-        let pid_t = if BSD = tar_kind && not (List.mem "-O" (Array.to_list tar_args))
-          then Unix.create_process t.(0) t c_out Unix.stdout t_in
-          else Unix.create_process t.(0) t c_out t_in Unix.stderr
+        let pid_t =
+          if List.mem "-O" (Array.to_list tar_args) then
+            Unix.create_process t.(0) t c_out t_in Unix.stderr
+          else
+            Unix.create_process t.(0) t c_out Unix.stdout t_in
         in
         let l = read pid_t t_out in
         (* let's clean the compressor from the process table *)
@@ -320,8 +318,8 @@ let write_temp_file base_name contents =
   dir, base_name
 
 (* reads 'package_script.el' from a package *)
-let open_package tar_kind package =
-  let l = decompress_untar tar_kind [| "-O"; "package_script.el" |] package in
+let open_package package =
+  let l = decompress_untar [| "-O"; "package_script.el" |] package in
   let s = String.concat "\n" l in
   script_of_sexp (Sexplib.Sexp.of_string s)
 

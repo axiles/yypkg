@@ -33,7 +33,6 @@ let cmd_line_spec = [
     "-delpreds", [], "remove a predicate";
     "-listpreds", [], "list predicates";
     (* not handled currently: "-regen", []; *)
-    "-set-tar-kind", [], "choose between \"gnu\" and \"bsd\" tar";
   ], "parent option for:";
   "-init", [], "setups a directory tree for yypkg (run once)";
 ]
@@ -81,13 +80,6 @@ let config opts =
           | Args.Opt ("-delpreds", preds) -> 
               let vals = List.map Args.val_of_opts preds in
               List.fold_left Config.delpred conf vals
-          | Args.Opt ("-set-tar-kind", kinds) -> begin
-              match kinds with
-                | [ kind ] -> 
-                    let kind = Args.val_of_opts kind in
-                    Config.set_tar_kind conf kind
-                | _ -> raise (Args.Parsing_failed "Only one tar_kind can be given at once.")
-            end
           (* Args makes sure this last case can't happen *)
           | _ -> assert false
         in

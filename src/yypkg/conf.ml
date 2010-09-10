@@ -24,8 +24,6 @@ let set conf = function
   | Predicate (binding, value) -> 
       let preds = List.remove_assoc binding conf.preds in
       { conf with preds = (binding, value) :: preds }
-  | Tar_kind kind -> 
-      { conf with tar_kind = kind }
 
 let unset conf binding = 
   { conf with preds = List.remove_assoc binding conf.preds }

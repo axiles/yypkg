@@ -37,9 +37,6 @@ type version = {
   package_iteration : int;
 }
 
-(* both don't behave the same way of course *)
-type tar_kind = BSD | GNU with sexp
-
 (* not really used right now, might well be dropped in the future
  * I think I've even forgotten why I wanted to have different types for them
  * (well, for safety of course, but what exactly ? *)
@@ -110,12 +107,10 @@ type db = package list with sexp
   * stability=stable,release_candidate *)
 type conf = {
   preds : predicates;
-  tar_kind : tar_kind;
 } with sexp
 
 type field = 
   | Predicate of (string * string list)
-  | Tar_kind of tar_kind
 
 type pkg = {
   metadata : metadata;

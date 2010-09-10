@@ -73,7 +73,7 @@ let mkdir path_unexpanded =
   [ path_unexpanded ]
 
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
-let expand tar_kind pkg i p =
+let expand pkg i p =
   (* XXX: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
   let l = (List.length (Lib.split_path ~dir_sep:"/" i)) - 1 in
@@ -81,19 +81,11 @@ let expand tar_kind pkg i p =
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
-  let tar_args = Array.append 
-    (* gnu tar doesn't default to --wildcards while bsdtar defaults to wildcards * and doesn't recognize the option *)
-    ( if tar_kind = GNU then [| "--wildcards" |] else [| |] )
-    [| "-C"; pq; "--strip-components"; string_of_int l; iq |]
-  in
-  let x = Lib.decompress_untar tar_kind tar_args pkg in
-  match tar_kind with
-    | GNU ->
-        List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" l) (List.rev x)
-    (* bsdtar already strips the beginning of the path *)
-    | BSD -> 
-        let xx = List.rev_map filter_bsdtar_output x in
-        List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
+  let tar_args = [| "-C"; pq; "--strip-components"; string_of_int l; iq |] in
+  let x = Lib.decompress_untar tar_args pkg in
+  (* bsdtar already strips the beginning of the path *)
+  let xx = List.rev_map filter_bsdtar_output x in
+  List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
