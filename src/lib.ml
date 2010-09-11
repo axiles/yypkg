@@ -159,9 +159,8 @@ let tar, xz, gzip, bzip2, named_pipe, wget =
 let compressor_of_ext s =
   (* the extension is everything after the last dot in the string *)
   let ext_of_filename s =
-    let l = String.length s in
     let i = String.rindex s '.' in
-    String.sub s (i+1) (l-i-1)
+    String.sub s (i+1) (String.length s - i - 1)
   in
   match ext_of_filename s with
     | "tgz" -> gzip
@@ -181,24 +180,19 @@ let tar_compress tar_args compress out =
   | _, _ -> raise ProcessFailed
 
 (* decompress + untar, "f" will read the output from tar:
- *   'bsdtar xv -O' will output the content of files to stdout
- *   'bsdtar xv' will output the list of files expanded to stderr *)
-let decompress_untar tar_args input =
-  (* On windows, piping between the decompressor and tar is painfully slow,
-   * hopefully bsdtar can link against lib{lzma,z,bz2}, avoiding the need to
-   * pipe between process which makes it 100 times faster (number not made
-   * up...) so we'll try to take advantage of that.
-   * We also require that on other systems to save code. *)
-  let t = Array.append [| tar; "xvf"; input |] tar_args in
+ *   'bsdtar xv -O' outputs the content of files to stdout
+ *   'bsdtar xv' outputs the list of files expanded to stderr
+ *   'bsdtar t' outputs the list of files to stdout *)
+let from_tar action input =
   let t_out, t_in = U.pipe () in
-  (* same as in the other branch : we are always using bsdtar here and if
-    * we want the filelist, we need to read stderr *)
-  let pid_t = if Array.fold_left (fun a b -> a || b = "-O") false tar_args then
-    U.create_process t.(0) t U.stdin t_in U.stderr
-  else
-    U.create_process t.(0) t U.stdin U.stdout t_in
+  (* as per the comment before the function, we have to read stdout or stderr *)
+  let t_args, t_out, t_err = match action with
+  | `extract (pq, strip, iq) -> [| tar; "xvf"; input |], U.stdout, t_in
+  | `get file -> [| tar; "xf"; input; "-O"; file |], t_in, U.stderr
+  | `list -> [| tar; "tf"; input |], t_in, U.stderr
   in
-  let l = read pid_t t_out in
+  let t_pid = U.create_process t_args.(0) t_args t_in t_out t_err in
+  let l = read t_pid t_out in
   List.iter U.close [ t_out; t_in ];
   l
 
@@ -271,7 +265,17 @@ let write_temp_file base_name contents =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let l = decompress_untar [| "-O"; "package_script.el" |] package in
+  let l = from_tar (`get "package_script.el") package in
   let s = String.concat "\n" l in
   script_of_sexp (Sexplib.Sexp.of_string s)
+
+let rev_uniq l =
+  let rec rev_uniq_rc accu cur = function
+    | t :: q when t = cur -> rev_uniq_rc accu cur q
+    | t :: q -> rev_uniq_rc (t :: accu) t q
+    | [] -> accu
+  in
+  match l with
+    | t :: q -> rev_uniq_rc [ t ] t q
+    | [] -> []
 

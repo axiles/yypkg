@@ -23,19 +23,14 @@ open Types
 exception Package_does_not_exist
 exception File_not_found of string
 
-(* List.fold_left Filename.concat *)
-let filename_concat = function
-  | t :: q -> List.fold_left Filename.concat t q
-  | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
-
 let ahk_bin =
-  filename_concat [ Lib.install_path; "ahk.exe" ]
+  Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
 
 let db_path =
-  filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
+  Lib.filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
 
 let conf_path =
-  filename_concat [ "etc"; "yypkg.conf" ]
+  Lib.filename_concat [ "etc"; "yypkg.conf" ]
 
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
@@ -81,8 +76,7 @@ let expand pkg i p =
   let iq = expand_environment_variables i in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
-  let tar_args = [| "-C"; pq; "--strip-components"; string_of_int l; iq |] in
-  let x = Lib.decompress_untar tar_args pkg in
+  let x = Lib.from_tar (`extract (pq, string_of_int l, iq)) pkg in
   (* bsdtar already strips the beginning of the path *)
   let xx = List.rev_map filter_bsdtar_output x in
   List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx

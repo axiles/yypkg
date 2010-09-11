@@ -27,16 +27,6 @@ let download_to_folder folder p =
 let find_packages_named pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.package_name name_list) pkglist
 
-let rev_uniq l =
-  let rec rev_uniq_rc accu cur = function
-    | t :: q when t = cur -> rev_uniq_rc accu cur q
-    | t :: q -> rev_uniq_rc (t :: accu) t q
-    | [] -> accu
-  in
-  match l with
-    | t :: q -> rev_uniq_rc [ t ] t q
-    | [] -> []
-
 let get_deps pkglist p =
   let rec add accu p =
     let l = List.filter (fun n -> not (List.mem n accu)) p.deps in
@@ -51,10 +41,7 @@ let get_packages with_deps output_folder package =
   let pkglist = pkglist_of_sexp (Sexplib.Sexp.of_string pkglist) in
   let pkglist =
     let p = List.find (fun p -> p.metadata.package_name = package) pkglist in
-    if with_deps then
-      get_deps pkglist p
-    else
-      [ p ]
+    if with_deps then get_deps pkglist p else [ p ]
   in 
   List.iter (download_to_folder output_folder) pkglist
 

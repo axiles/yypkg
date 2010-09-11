@@ -20,26 +20,11 @@ let merge_list l h id =
 let check_suffix ext s =
   Filename.check_suffix s ext
 
-let decompress_list input =
-  let compressor = Lib.compressor_of_ext input in
-  let c = [| compressor; "-d"; "-c"; input |] in
-  assert (not ("Win32" = Sys.os_type));
-  let t = [| Lib.tar; "tf"; "-" |] in
-  let c_out, c_in = Unix.pipe () in
-  let t_out, t_in = Unix.pipe () in
-  let pid_c = Unix.create_process c.(0) c Unix.stdin c_in Unix.stderr in
-  let pid_t = Unix.create_process t.(0) t c_out Unix.stdout t_in in
-  let l = Lib.read pid_t t_out in
-  ignore (Unix.waitpid [ Unix.WNOHANG ] pid_c);
-  List.iter Unix.close [ c_out; c_in; t_out; t_in ];
-  l
-
 let tar_grep filelist expr ext file =
-  let tar_args = [| "-O"; "--wildcards"; "*." ^ ext |] in
   let quotes_re = Str.regexp "\\(\"\\|'\\)\\(.*\\)\\(\"\\|'\\)" in
   let re = Str.regexp expr in
   if List.exists (check_suffix ext) filelist then
-    let l = Lib.decompress_untar tar_args file in
+    let l = Lib.from_tar (`get ("*." ^ ext)) file in
     let l = List.filter (fun x -> Str.string_match re x 0) l in
     let l = List.rev_map (Str.replace_first re "") l in
     let l = List.rev_map (Str.global_replace quotes_re "\\2") l in
@@ -63,7 +48,7 @@ let x_provides package_name filelist ext h =
 let pkg_of_file folder file = 
   let file_absolute = Filename.concat folder file in
   let metadata, _, _ = Lib.open_package file_absolute in
-  let filelist = decompress_list file_absolute in
+  let filelist = Lib.from_tar `list file_absolute in
   let rels = [ "pc", pc; "la", la; "dll", libs; "so", libs; "a", libs ] in
   List.iter (fun (a, b) -> x_provides metadata.package_name filelist a b) rels;
   {
@@ -99,7 +84,7 @@ let add_deps packages folder pkg =
   let la_libs_requires = list_deps libs pkg.metadata.package_name la_requires in
   let la_requires = list_deps la pkg.metadata.package_name la_requires in
   let requires = List.concat [ pc_requires; la_requires; la_libs_requires ] in
-  let requires = Sherpalib.rev_uniq (List.fast_sort compare requires) in
+  let requires = Lib.rev_uniq (List.fast_sort compare requires) in
   { pkg with deps = requires }
 
 let () =
