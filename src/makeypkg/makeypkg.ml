@@ -36,7 +36,7 @@ type cmd_line = {
   compressor : string;
 }
 
-let strip_trailing_slash s =
+let strip_trailing_slash s = (* XXX: what if we have a path ending with '///' *)
   (* dir_sep's length is 1 *)
   if s.[String.length s - 1] = dir_sep.[0] then
     String.sub s 0 (String.length s - 1)
@@ -166,6 +166,7 @@ let path_fixups folder arch fixups =
   List.concat (List.map (dispatch folder arch) fixups)
 
 let package_script_el cmd_line ~pkg_size =
+  let pkg_size = FileUtil.string_of_size pkg_size in
   let folder = cmd_line.folder_basename in
   let meta = meta ~cmd_line ~pkg_size in
   let expand = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
@@ -175,18 +176,36 @@ let package_script_el cmd_line ~pkg_size =
   let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
   sprintf "(\n%s\n)" (String.concat "\n" l)
 
+let smallest_bigger_power_of_two size =
+  2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
+
+let xz_settings_of_size size =
+  let lzma_settings size = String.concat "," [
+    sprintf "dict=%d" (max (1 lsl 26) (smallest_bigger_power_of_two size));
+    "lc=3";
+    "lp=0";
+    "pb=2";
+    "mode=normal";
+    "nice=64";
+    "mf=bt4";
+    "depth=0";
+  ]
+  in
+  [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
+
+let compressor_of_string size = function
+  | "xz" -> xz_settings_of_size size
+  | "gzip" -> [| gzip; "-9" |]
+  | "bzip2" -> [| bzip2; "-9" |]
+  | _ -> assert false
+
 let () =
   let cmd_line = parse_command_line () in
-  let pkg_size= FileUtil.string_of_size (fst (FileUtil.du [cmd_line.folder])) in
+  let pkg_size = fst (FileUtil.du [ cmd_line.folder ]) in
   let script = package_script_el ~pkg_size cmd_line in
   let script_dir, script_name = write_temp_file "package_script.el" script in
   let tar_args = [| "-C"; script_dir; script_name; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |] in
-  let snd = match cmd_line.compressor with
-    | "xz" -> [| xz; "--x86"; "--lzma2=dict=67108864,lc=3,lp=0,pb=2,mode=normal,nice=64,mf=bt4,depth=0" |]
-    | "gzip" -> [| gzip; "-9" |]
-    | "bzip2" -> [| bzip2; "-9" |]
-    | _ -> assert false
-  in
+  let snd = compressor_of_string (FileUtil.byte_of_size pkg_size) cmd_line.compressor in
   let output_file = output_of_cmdline cmd_line in
   let output = Filename.concat cmd_line.output output_file in
   tar_compress tar_args snd output;
