@@ -36,10 +36,10 @@ type cmd_line = {
   compressor : string;
 }
 
-let strip_trailing_slash s = (* XXX: what if we have a path ending with '///' *)
+let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
   if s.[String.length s - 1] = dir_sep.[0] then
-    String.sub s 0 (String.length s - 1)
+    strip_trailing_slash (String.sub s 0 (String.length s - 1))
   else
     s
 
@@ -116,6 +116,9 @@ let prefix_of_arch = function
   | _ -> assert false
 
 module PrefixFix = struct
+  (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
+   * hard-coded paths. We find them and replace them with a variable which value
+   * will be set during package install. Not perfect but usually works. *)
   let find_files folder ext =
     FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
   let install_actions folder file =
