@@ -29,7 +29,6 @@ type settings = {
   folder_dirname : string;
   folder_basename : string;
   architecture : string;
-  compressor : string;
   metafile : string;
 }
 
@@ -40,27 +39,19 @@ let rec strip_trailing_slash s =
   else
     s
 
-let output_file { name; version } { compressor; architecture } =
-  let ext = match compressor with
-    | "xz"  -> ".txz"
-    | "gzip" -> ".tgz"
-    | "bzip2" -> ".tbz2"
-    | _ -> assert false
-  in
+let output_file { name; version } { architecture } =
+  let ext = ".txz" in
   (* if we included 'ext' in concat's call, we'd have an extra separator *)
   (String.concat "-" [ name; string_of_version version; architecture ]) ^ ext
 
 let parse_command_line () = 
-  let output, folder, meta, arch, compressor =
-    ref "", ref "", ref "", ref "", ref ""
-  in
+  let output, folder, meta, arch = ref "", ref "", ref "", ref "" in
   let lst = [
     (* the output filename will be made from the other param values *)
     "-o", Arg.Set_string output, "output folder";
     "-meta", Arg.Set_string meta, "package metadata file";
     (* the package usually won't install if arch doesn't match *)
     "-arch", Arg.Set_string arch, "arch triplet";
-    "-compressor", Arg.Set_string compressor, "xz, gzip or bzip2";
   ]
   in
   let usage_msg = "ERROR: All arguments mentionned in --help are mandatory." in
@@ -68,7 +59,7 @@ let parse_command_line () =
   (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
-  if List.exists ((=) "") [ !output; !folder; !meta; !arch; !compressor ] then
+  if List.exists ((=) "") [ !output; !folder; !meta; !arch ] then
     let () = prerr_endline usage_msg in
     exit 0
   else
@@ -84,7 +75,6 @@ let parse_command_line () =
       folder_dirname = dirname;
       folder_basename = FilePath.DefaultPath.basename folder;
       architecture = !arch;
-      compressor = !compressor;
       metafile = !meta;
     }
 
@@ -167,7 +157,7 @@ let package_script_el ~pkg_size { folder_basename; metafile; folder; architectur
 let smallest_bigger_power_of_two size =
   2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
 
-let xz_settings_of_size size =
+let xz_call size =
   let lzma_settings size = String.concat "," [
     sprintf "dict=%d" (max (1 lsl 26) (smallest_bigger_power_of_two size));
     "lc=3";
@@ -181,15 +171,9 @@ let xz_settings_of_size size =
   in
   [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
 
-let compressor_of_string size = function
-  | "xz" -> xz_settings_of_size size
-  | "gzip" -> [| gzip; "-9" |]
-  | "bzip2" -> [| bzip2; "-9" |]
-  | _ -> assert false
-
 let compress settings meta (script_dir, script_name) =
   let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
-  let snd = compressor_of_string (FileUtil.byte_of_size meta.size_expanded) settings.compressor in
+  let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
   let output_file = output_file meta settings in
   let output_path = Filename.concat settings.output output_file in
   tar_compress tar_args snd output_path;
