@@ -21,7 +21,7 @@ open Types
 open Lib
 open Types
 
-exception Package_name_must_end_in_txz_tgz_or_tbz2
+exception Package_name_must_end_in_txz (* XXX: not used currently *)
 
 type settings = {
   output : string;
@@ -75,16 +75,15 @@ let parse_command_line () =
     }
 
 let meta ~metafile ~pkg_size =
-  (* TODO: use the from sexp functions and set fields that can't be set
-   * beforehand, package_size_expanded in particular *)
   let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
   { metadata with size_expanded = pkg_size }
 
-let prefix_of_arch = function
+let prefix_of_arch = function (* XXX: quite often, we might get "noarch" as an
+arch, so we definitely do need to take that case into account *)
   | "i686-w64-mingw32"
   | "x86_64-w64-mingw32" as s -> s
   | "i686-pc-mingw32" -> "/mingw"
-  | _ -> assert false
+  | _ -> assert false (* XXX *)
 
 module PrefixFix = struct
   (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
@@ -157,13 +156,7 @@ let smallest_bigger_power_of_two size =
 let xz_call size =
   let lzma_settings size = String.concat "," [
     sprintf "dict=%d" (max (1 lsl 26) (smallest_bigger_power_of_two size));
-    "lc=3";
-    "lp=0";
-    "pb=2";
-    "mode=normal";
-    "nice=64";
-    "mf=bt4";
-    "depth=0";
+    "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
   ]
   in
   [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]

@@ -136,36 +136,18 @@ let dir_sep =
 
 (* We expect tools in the installation directory *)
 
-(* absolute paths to tar, xz, gzip and bzip2, and NamedPipe if on windows *)
+(* absolute paths to tar and xz and NamedPipe if on windows *)
 (* on windows, we use bsdtar and gnu tar on others *)
-let tar, xz, gzip, bzip2, named_pipe, wget = 
+let tar, xz, named_pipe, wget = 
   match Sys.os_type with
     (* we don't set named_pipe for unix and cygwin because it's not used *)
     | "Unix"
-    | "Cygwin" -> "bsdtar", "xz", "gzip", "bzip2", "", "wget"
+    | "Cygwin" -> "bsdtar", "xz", "", "wget"
     | "Win32" ->
         filename_concat [ binary_path; "bsdtar.exe" ],
         filename_concat [ binary_path; "xz.exe" ],
-        filename_concat [ binary_path; "gzip.exe" ],
-        filename_concat [ binary_path; "bzip2.exe" ],
         filename_concat [ binary_path; "NamedPipe.exe" ],
         filename_concat [ binary_path; "wget.exe" ]
-    | _ -> assert false
-
-(* guess the compressor (xz, gzip, bzip2) from the extension of a string *)
-(* this function may raise a bunch of exceptions which should be caught with a
- * "try compressor_of_ext with _ -> ...": no need to be more specific, it only
- * means the user gave a wrong filename *)
-let compressor_of_ext s =
-  (* the extension is everything after the last dot in the string *)
-  let ext_of_filename s =
-    let i = String.rindex s '.' in
-    String.sub s (i+1) (String.length s - i - 1)
-  in
-  match ext_of_filename s with
-    | "tgz" -> gzip
-    | "txz" -> xz
-    | "tbz2" -> bzip2
     | _ -> assert false
 
 (* tar + compress on unix, piping the output of tar to the compressor *)

@@ -25,7 +25,7 @@ exception Bad_prefix_specification of Args.opt list
 (* all the options we accept *)
 let cmd_line_spec = [
   "-prefix", [], "prefix yypkg will be working in";
-  "-install", [], "install a package (ends in .t{xz,gz,bz2}";
+  "-install", [], "install a package (extension is .txz)";
   "-uninstall", [], "uninstall a package by name";
   "-list", [], "list the packages installed";
   "-config", [

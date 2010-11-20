@@ -21,7 +21,7 @@
   * create /etc and an empty conf in /etc/yypkg.conf
   * create /sbin
   * create /var/log/packages and an empty db in /var/log/packages/yypkg_db
-  * put the required binaries in /sbin (xz, gzip, bzip2, (bsd)tar...) *)
+  * put the required binaries in /sbin (xz, (bsd)tar,...) *)
 
 open Types
 open Yylib
