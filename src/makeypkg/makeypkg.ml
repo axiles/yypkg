@@ -28,7 +28,6 @@ type settings = {
   folder : string;
   folder_dirname : string;
   folder_basename : string;
-  architecture : string;
   metafile : string;
 }
 
@@ -39,27 +38,25 @@ let rec strip_trailing_slash s =
   else
     s
 
-let output_file { name; version } { architecture } =
-  let ext = ".txz" in
-  (* if we included 'ext' in concat's call, we'd have an extra separator *)
-  (String.concat "-" [ name; string_of_version version; architecture ]) ^ ext
+let output_file { name; version; predicates } =
+  let arch = arch_of_preds predicates in
+  (* if we included the ext in concat's call, we'd have an extra separator *)
+  (String.concat "-" [ name; string_of_version version; arch ]) ^ ".txz"
 
 let parse_command_line () = 
-  let output, folder, meta, arch = ref "", ref "", ref "", ref "" in
+  let output, folder, meta = ref "", ref "", ref "" in
   let lst = [
-    (* the output filename will be made from the other param values *)
+    (* the output file*name* will be built from the other param values *)
     "-o", Arg.Set_string output, "output folder";
     "-meta", Arg.Set_string meta, "package metadata file";
-    (* the package usually won't install if arch doesn't match *)
-    "-arch", Arg.Set_string arch, "arch triplet";
   ]
   in
   let usage_msg = "ERROR: All arguments mentionned in --help are mandatory." in
-  let no_meta_msg = "WARNING: No meta file given, using (stupid) defalts." in
+  let no_meta_msg = "WARNING: No meta file given, using (stupid) defaults." in
   (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
-  if List.exists ((=) "") [ !output; !folder; !meta; !arch ] then
+  if List.exists ((=) "") [ !output; !folder; !meta ] then
     let () = prerr_endline usage_msg in
     exit 0
   else
@@ -74,7 +71,6 @@ let parse_command_line () =
       folder = folder;
       folder_dirname = dirname;
       folder_basename = FilePath.DefaultPath.basename folder;
-      architecture = !arch;
       metafile = !meta;
     }
 
@@ -147,11 +143,12 @@ let path_fixups folder arch fixups =
   in
   List.concat (List.map (dispatch folder arch) fixups)
 
-let package_script_el ~pkg_size { folder_basename; metafile; folder; architecture } =
+let package_script_el ~pkg_size { folder_basename; metafile; folder } =
   let folder = folder_basename in
   let meta = meta ~metafile ~pkg_size in
+  let arch = arch_of_preds meta.predicates in
   let expand = folder, Expand (folder, ".") in
-  let path_fixups = path_fixups folder architecture [ `PkgConfig; `Libtool ] in
+  let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
   meta, (expand :: path_fixups), [ Reverse folder ]
 
 let smallest_bigger_power_of_two size =
@@ -174,7 +171,7 @@ let xz_call size =
 let compress settings meta (script_dir, script_name) =
   let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
   let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
-  let output_file = output_file meta settings in
+  let output_file = output_file meta in
   let output_path = Filename.concat settings.output output_file in
   tar_compress tar_args snd output_path;
   output_path

@@ -129,7 +129,7 @@ let string_of_version v =
 (* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
   match Sys.os_type with
-    | "U"
+    | "Unix"
     | "Cygwin" -> "/"
     | "Win32" -> "\\"
     | _ -> assert false
@@ -141,7 +141,7 @@ let dir_sep =
 let tar, xz, gzip, bzip2, named_pipe, wget = 
   match Sys.os_type with
     (* we don't set named_pipe for unix and cygwin because it's not used *)
-    | "U"
+    | "Unix"
     | "Cygwin" -> "bsdtar", "xz", "gzip", "bzip2", "", "wget"
     | "Win32" ->
         filename_concat [ binary_path; "bsdtar.exe" ],
@@ -279,3 +279,5 @@ let rev_uniq l =
     | t :: q -> rev_uniq_rc [ t ] t q
     | [] -> []
 
+let arch_of_preds predicates =
+  try List.assoc "arch" predicates with Not_found -> "noarch"
