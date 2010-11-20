@@ -19,21 +19,18 @@
 open Printf
 open Types
 open Lib
+open Types
 
 exception Package_name_must_end_in_txz_tgz_or_tbz2
 
-type cmd_line = {
+type settings = {
   output : string;
   folder : string;
   folder_dirname : string;
   folder_basename : string;
-  pkg_name : string;
-  version : version;
-  pkger_name : string;
-  pkger_email : string;
-  descr : string;
-  arch : string;
+  architecture : string;
   compressor : string;
+  metafile : string;
 }
 
 let rec strip_trailing_slash s =
@@ -43,41 +40,39 @@ let rec strip_trailing_slash s =
   else
     s
 
-let output_of_cmdline c =
-  let ext = match c.compressor with
+let output_file { name; version } { compressor; architecture } =
+  let ext = match compressor with
     | "xz"  -> ".txz"
     | "gzip" -> ".tgz"
     | "bzip2" -> ".tbz2"
     | _ -> assert false
   in
-  (* if we put 'ext' in concat's call, we'd have an extra separator ("-") *)
-  (String.concat "-" [ c.pkg_name; string_of_version c.version; c.arch ]) ^ ext
+  (* if we included 'ext' in concat's call, we'd have an extra separator *)
+  (String.concat "-" [ name; string_of_version version; architecture ]) ^ ext
 
 let parse_command_line () = 
-  let output,folder,pkg_name,version,packager_email,packager_name,description,arch, compressor =
-    ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref "", ref "xz"
+  let output, folder, meta, arch, compressor =
+    ref "", ref "", ref "", ref "", ref ""
   in
   let lst = [
     (* the output filename will be made from the other param values *)
-    "-o", Arg.Set_string output, "set output folder";
-    "-name", Arg.Set_string pkg_name, "set the package name";
-    "-version", Arg.Set_string version, "set the package version";
-    "-email", Arg.Set_string packager_email, "packager's email";
-    "-packager_name", Arg.Set_string packager_name, "packager's name";
-    "-description", Arg.Set_string description, "description";
-    (* the package will only install if arch is matched *)
+    "-o", Arg.Set_string output, "output folder";
+    "-meta", Arg.Set_string meta, "package metadata file";
+    (* the package usually won't install if arch doesn't match *)
     "-arch", Arg.Set_string arch, "arch triplet";
     "-compressor", Arg.Set_string compressor, "xz, gzip or bzip2";
   ]
   in
-  let usage_msg = "All arguments mentionned in --help are mandatory." in
+  let usage_msg = "ERROR: All arguments mentionned in --help are mandatory." in
+  let no_meta_msg = "WARNING: No meta file given, using (stupid) defalts." in
   (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
-  if List.exists ((=) (ref "")) [output; folder; pkg_name; version; packager_name; packager_email; description; arch; compressor] then
+  if List.exists ((=) "") [ !output; !folder; !meta; !arch; !compressor ] then
     let () = prerr_endline usage_msg in
     exit 0
   else
+    (if !meta = "" then prerr_endline no_meta_msg);
     let folder = strip_trailing_slash !folder in
     let dirname = FilePath.DefaultPath.dirname (
       if not (FilePath.DefaultPath.is_relative folder) then folder
@@ -88,26 +83,16 @@ let parse_command_line () =
       folder = folder;
       folder_dirname = dirname;
       folder_basename = FilePath.DefaultPath.basename folder;
-      pkg_name = !pkg_name;
-      version = version_of_string !version;
-      pkger_name = !packager_name;
-      pkger_email = !packager_email;
-      descr = !description;
-      arch = !arch;
+      architecture = !arch;
       compressor = !compressor;
+      metafile = !meta;
     }
 
-let meta ~cmd_line ~pkg_size =
-  String.concat "\n" [
-    sprintf "(description \"%s\")" cmd_line.descr;
-    sprintf "(package_name \"%s\")" cmd_line.pkg_name;
-    sprintf "(package_version \"%s\")" (string_of_version cmd_line.version);
-    sprintf "(package_size_expanded \"%s\")" pkg_size;
-    sprintf "(packager_name \"%s\")" cmd_line.pkger_name;
-    sprintf "(packager_email \"%s\")" cmd_line.pkger_email;
-    sprintf "(predicates ((\"%s\" \"%s\")))" "arch" cmd_line.arch;
-    sprintf "(comments \"made with makeypkg\")";
-  ]
+let meta ~metafile ~pkg_size =
+  (* TODO: use the from sexp functions and set fields that can't be set
+   * beforehand, package_size_expanded in particular *)
+  let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
+  { metadata with size_expanded = pkg_size }
 
 let prefix_of_arch = function
   | "i686-w64-mingw32"
@@ -121,23 +106,27 @@ module PrefixFix = struct
    * will be set during package install. Not perfect but usually works. *)
   let find_files folder ext =
     FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
+
   let install_actions folder file =
     let file = split_path (FilePath.make_relative folder file) in
     let file = String.concat " " file in
-    sprintf "(\"dummy\" (SearchReplace (%s) __YYPREFIX ${YYPREFIX}))" file
+    "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
+
   let find_prefix prefix_re file =
     let contents = read_file file in
     let l = Queue.fold (fun l x -> x :: l) [] contents in
     let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
     (* matched_group will get the match from the List.find line before *)
     Str.matched_group 1 prefix
-  let fix_file arch ext prefix_re f file =
+
+  let fix_file arch ext prefix_re fix file =
     let prefix = find_prefix prefix_re file in
     let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
-    f file prefix new_prefix
-  let fix_files arch folder ext prefix_re f =
+    fix file prefix new_prefix
+
+  let fix_files arch folder ext prefix_re fix =
     let files = find_files folder ext in
-    List.iter (fix_file arch ext prefix_re f) files;
+    List.iter (fix_file arch ext prefix_re fix) files;
     List.map (install_actions folder) files
 end
 
@@ -168,16 +157,12 @@ let path_fixups folder arch fixups =
   in
   List.concat (List.map (dispatch folder arch) fixups)
 
-let package_script_el cmd_line ~pkg_size =
-  let pkg_size = FileUtil.string_of_size pkg_size in
-  let folder = cmd_line.folder_basename in
-  let meta = meta ~cmd_line ~pkg_size in
-  let expand = sprintf "(\"%s\" (Expand \"%s/*\" \"%s\"))" folder folder "." in
-  let path_fixups = path_fixups cmd_line.folder cmd_line.arch [ `PkgConfig; `Libtool ] in
-  let install = String.concat "\n" (expand :: path_fixups) in
-  let uninstall = sprintf "(Reverse \"%s\")" folder in
-  let l = List.map (sprintf "(\n%s\n)") [ meta; install; uninstall ] in
-  sprintf "(\n%s\n)" (String.concat "\n" l)
+let package_script_el ~pkg_size { folder_basename; metafile; folder; architecture } =
+  let folder = folder_basename in
+  let meta = meta ~metafile ~pkg_size in
+  let expand = folder, Expand (folder, ".") in
+  let path_fixups = path_fixups folder architecture [ `PkgConfig; `Libtool ] in
+  meta, (expand :: path_fixups), [ Reverse folder ]
 
 let smallest_bigger_power_of_two size =
   2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
@@ -202,14 +187,20 @@ let compressor_of_string size = function
   | "bzip2" -> [| bzip2; "-9" |]
   | _ -> assert false
 
+let compress settings meta (script_dir, script_name) =
+  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
+  let snd = compressor_of_string (FileUtil.byte_of_size meta.size_expanded) settings.compressor in
+  let output_file = output_file meta settings in
+  let output_path = Filename.concat settings.output output_file in
+  tar_compress tar_args snd output_path;
+  output_path
+
 let () =
-  let cmd_line = parse_command_line () in
-  let pkg_size = fst (FileUtil.du [ cmd_line.folder ]) in
-  let script = package_script_el ~pkg_size cmd_line in
-  let script_dir, script_name = write_temp_file "package_script.el" script in
-  let tar_args = [| "-C"; script_dir; script_name; "-C"; cmd_line.folder_dirname; cmd_line.folder_basename |] in
-  let snd = compressor_of_string (FileUtil.byte_of_size pkg_size) cmd_line.compressor in
-  let output_file = output_of_cmdline cmd_line in
-  let output = Filename.concat cmd_line.output output_file in
-  tar_compress tar_args snd output;
+  let settings = parse_command_line () in
+  let pkg_size = fst (FileUtil.du [ settings.folder ]) in
+  let meta, _, _ as script = package_script_el ~pkg_size settings in
+  let script = Sexplib.Sexp.to_string_hum (sexp_of_script script) in
+  let script_dir_and_name = write_temp_file "package_script.el" script in
+  let output_file = compress settings meta script_dir_and_name in
   Printf.printf "Package created in: %s\n." output_file
+

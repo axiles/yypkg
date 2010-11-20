@@ -25,7 +25,7 @@ let download_to_folder folder p =
   get_uri uri output
 
 let find_packages_named pkglist name_list =
-  List.filter (fun p -> List.mem p.metadata.package_name name_list) pkglist
+  List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
 let get_deps pkglist p =
   let rec add accu p =
@@ -33,14 +33,14 @@ let get_deps pkglist p =
     let accu = List.rev_append l accu in
     List.fold_left add accu (find_packages_named pkglist l)
   in
-  let names = add [ p.metadata.package_name ] p in
+  let names = add [ p.metadata.name ] p in
   find_packages_named pkglist names
 
 let get_packages with_deps output_folder package = 
   let pkglist = get_uri_contents pkg_list_uri in
   let pkglist = pkglist_of_sexp (Sexplib.Sexp.of_string pkglist) in
   let pkglist =
-    let p = List.find (fun p -> p.metadata.package_name = package) pkglist in
+    let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist p else [ p ]
   in 
   List.iter (download_to_folder output_folder) pkglist

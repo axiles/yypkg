@@ -28,6 +28,7 @@ type status =
   | RC of int
   | Snapshot of string
   | Stable
+with sexp
 
 type version = {
   major : int;
@@ -35,7 +36,7 @@ type version = {
   release : int;
   status : status;
   package_iteration : int;
-}
+} with sexp
 
 (* not really used right now, might well be dropped in the future
  * I think I've even forgotten why I wanted to have different types for them
@@ -81,10 +82,14 @@ type predicates = predicate list with sexp
 
 exception Unmatched_predicates of ((string * string) list)
 
+type size = FileUtil.size
+let size_of_sexp = Sexplib.Conv.opaque_of_sexp
+let sexp_of_size = Sexplib.Conv.sexp_of_opaque
+
 type metadata = {
-  package_name : string;
-  package_size_expanded : string;
-  package_version : string;
+  name : string;
+  size_expanded : size;
+  version : version;
   packager_email : string;
   packager_name : string;
   description : string;
