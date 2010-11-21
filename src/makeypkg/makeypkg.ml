@@ -65,14 +65,14 @@ module PrefixFix = struct
     (* matched_group will get the match from the List.find line before *)
     Str.matched_group 1 prefix
 
-  let fix_file prefix ext prefix_re fix file =
+  let fix_file prefix prefix_re fix file =
     let prefix = find_prefix prefix_re file in
     let new_prefix = "__YYPREFIX/" ^ prefix in
-    fix file prefix new_prefix
+    fix ~file ~prefix ~new_prefix
 
   let fix_files ~prefix ~folder ~ext ~search_re ~fix =
     let files = find_files folder ext in
-    List.iter (fix_file prefix ext search_re fix) files;
+    List.iter (fix_file prefix search_re fix) files;
     List.map (install_actions folder) files
 end
 
@@ -92,11 +92,14 @@ let output_file { name; version; predicates } =
   (String.concat "-" [ name; string_of_version version; arch ]) ^ ".txz"
 
 let meta ~metafile ~pkg_size =
-  let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
-  { metadata with size_expanded = pkg_size }
+  let sexp = match metafile with
+  | "-" -> Sexplib.Sexp.input_sexp stdin
+  | file -> Sexplib.Sexp.load_sexp file
+  in
+  { metadata_of_sexp sexp with size_expanded = pkg_size }
 
 let pkg_config_fixup ~folder ~prefix = 
-  let fix file prefix new_prefix = 
+  let fix ~file ~prefix ~new_prefix = 
     search_and_replace_in_file file prefix "${prefix}";
     search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
   in
@@ -104,12 +107,15 @@ let pkg_config_fixup ~folder ~prefix =
   PrefixFix.fix_files ~prefix ~folder ~ext:"pc" ~search_re ~fix
 
 let libtool_fixup ~folder ~prefix =
-  let fix file prefix new_prefix =
+  let fix ~file ~prefix ~new_prefix =
     (* Replace "foo///////bar///" with only "foor/bar/" *)
     let strip_slashes_re, strip_slashes_repl = "//+", "/" in
     (* Replace "foo/../bar" with "bar" *)
     let simplify_path_re, simplify_path_repl = "\\([^/]+/\\+\\.\\.\\)", "" in
-    let prefix_re = "[^'=]*" ^ prefix in
+    (* We set prefix to /foo/bar/x86_64-w64-mingw32/ during compilation but want
+     * to replace it with ${YYPREFIX}/x86_64-w64-mingw32/ : we have to include
+     * the "/foo/bar/" part too in the match expression *)
+    let prefix_re = "[^'= ]*" ^ prefix in
     search_and_replace_in_file file simplify_path_re simplify_path_repl;
     search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
     search_and_replace_in_file file prefix_re new_prefix
