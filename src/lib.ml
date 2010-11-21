@@ -232,8 +232,17 @@ let queue_map f q =
 
 (* Search for a regexp in a file's lines and Str.global_replace *)
 let search_and_replace_in_file file search replace =
+  let search = Str.regexp search in
   let contents = read_file file in
-  let f = Str.global_replace (Str.regexp search) replace in
+  (* It's possible that one replace makes a previously-impossible replace
+   * possible. An example is simplifying "foo/bar/baz/../..". If we simply do
+   * 's;[^/]\+/\+\.\.;/;', we'll be left with "foo/bar/.." *)
+  let rec f s =
+    if try (ignore (Str.search_forward search s 0); true) with _ -> false then
+      f (Str.global_replace search replace s)
+    else
+      s
+  in
   let new_contents = queue_map f contents in
   overwrite_file file new_contents
 

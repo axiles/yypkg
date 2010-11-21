@@ -21,6 +21,31 @@ open Types
 open Lib
 open Types
 
+let prefix_arch = [
+  "i686-w64-mingw32", "i686-w64-mingw32";
+  "x86_64-w64-mingw32", "x86_64-w64-mingw32";
+  "i686-pc-mingw32", "/mingw";
+]
+
+let xz_call size =
+  let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
+  let smallest_bigger_power_of_two size =
+    2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
+  in
+  let lzma_settings size = String.concat "," [
+    sprintf "dict=%d" (max sixty_four_mb (smallest_bigger_power_of_two size));
+    "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
+  ]
+  in
+  [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
+
+let rec strip_trailing_slash s =
+  (* dir_sep's length is 1 *)
+  if s.[String.length s - 1] = dir_sep.[0] then
+    strip_trailing_slash (String.sub s 0 (String.length s - 1))
+  else
+    s
+
 module PrefixFix = struct
   (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
    * hard-coded paths. We find them and replace them with a variable which value
@@ -30,7 +55,7 @@ module PrefixFix = struct
 
   let install_actions folder file =
     let file = split_path (FilePath.make_relative folder file) in
-    let file = String.concat " " file in
+    let file = String.concat "/" file in (* XXX: is this dir_sep portable? *)
     "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
 
   let find_prefix prefix_re file =
@@ -61,17 +86,64 @@ type settings = {
   metafile : string;
 }
 
-let rec strip_trailing_slash s =
-  (* dir_sep's length is 1 *)
-  if s.[String.length s - 1] = dir_sep.[0] then
-    strip_trailing_slash (String.sub s 0 (String.length s - 1))
-  else
-    s
-
 let output_file { name; version; predicates } =
   let arch = arch_of_preds predicates in
   (* if we included the ext in concat's call, we'd have an extra separator *)
   (String.concat "-" [ name; string_of_version version; arch ]) ^ ".txz"
+
+let meta ~metafile ~pkg_size =
+  let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
+  { metadata with size_expanded = pkg_size }
+
+let pkg_config_fixup ~folder ~prefix = 
+  let fix file prefix new_prefix = 
+    search_and_replace_in_file file prefix "${prefix}";
+    search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
+  in
+  let search_re = Str.regexp "^prefix=\\(.*\\)" in
+  PrefixFix.fix_files ~prefix ~folder ~ext:"pc" ~search_re ~fix
+
+let libtool_fixup ~folder ~prefix =
+  let fix file prefix new_prefix =
+    (* Replace "foo///////bar///" with only "foor/bar/" *)
+    let strip_slashes_re, strip_slashes_repl = "//+", "/" in
+    (* Replace "foo/../bar" with "bar" *)
+    let simplify_path_re, simplify_path_repl = "\\([^/]+/\\+\\.\\.\\)", "" in
+    let prefix_re = "[^'=]*" ^ prefix in
+    search_and_replace_in_file file simplify_path_re simplify_path_repl;
+    search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
+    search_and_replace_in_file file prefix_re new_prefix
+  in
+  let search_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
+  PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
+
+let path_fixups folder arch fixups =
+  (* If the arch is unknown or is "noarch", we have to disable auto-fixes *)
+  if List.mem_assoc arch prefix_arch then
+    let prefix = List.assoc arch prefix_arch in
+    let dispatch folder prefix = function
+      | `PkgConfig -> pkg_config_fixup ~folder ~prefix
+      | `Libtool -> libtool_fixup ~folder ~prefix
+    in
+    List.concat (List.map (dispatch folder prefix) fixups)
+  else
+    []
+
+let package_script_el ~pkg_size { folder_basename; metafile; folder } =
+  let folder = folder_basename in
+  let meta = meta ~metafile ~pkg_size in
+  let arch = arch_of_preds meta.predicates in
+  let expand = folder, Expand (folder, ".") in
+  let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
+  meta, (expand :: path_fixups), [ Reverse folder ]
+
+let compress settings meta (script_dir, script_name) =
+  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
+  let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
+  let output_file = output_file meta in
+  let output_path = Filename.concat settings.output output_file in
+  tar_compress tar_args snd output_path;
+  output_path
 
 let parse_command_line () = 
   let output, folder, meta = ref "", ref "", ref "" in
@@ -103,76 +175,6 @@ let parse_command_line () =
     folder_basename = FilePath.DefaultPath.basename folder;
     metafile = !meta;
   }
-
-let meta ~metafile ~pkg_size =
-  let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
-  { metadata with size_expanded = pkg_size }
-
-let prefix_arch = [
-  "i686-w64-mingw32", "i686-w64-mingw32";
-  "x86_64-w64-mingw32", "x86_64-w64-mingw32";
-  "i686-pc-mingw32", "/mingw";
-]
-
-let pkg_config_fixup ~folder ~prefix = 
-  let fix file prefix new_prefix = 
-    search_and_replace_in_file file prefix "${prefix}";
-    search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
-  in
-  let search_re = Str.regexp "^prefix=\\(.*\\)" in
-  PrefixFix.fix_files ~prefix ~folder ~ext:"pc" ~search_re ~fix
-
-let libtool_fixup ~folder ~prefix =
-  let fix file prefix new_prefix =
-    let strip_slashes_re, strip_slashes_repl = "//+", "/" in
-    let simplify_path_re, simplify_path_repl = "\\(|^/]+/../\\)", "" in
-    let prefix_re = "[^'=]*" ^ prefix in
-    search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
-    search_and_replace_in_file file simplify_path_re simplify_path_repl;
-    search_and_replace_in_file file prefix_re new_prefix
-  in
-  let search_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
-  PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
-
-let path_fixups folder arch fixups =
-  (* If the arch is unknown or is "noarch", we have to disable auto-fixes *)
-  if List.mem_assoc arch prefix_arch then
-    let prefix = List.assoc arch prefix_arch in
-    let dispatch folder prefix = function
-      | `PkgConfig -> pkg_config_fixup ~folder ~prefix
-      | `Libtool -> libtool_fixup ~folder ~prefix
-    in
-    List.concat (List.map (dispatch folder prefix) fixups)
-  else
-    []
-
-let package_script_el ~pkg_size { folder_basename; metafile; folder } =
-  let folder = folder_basename in
-  let meta = meta ~metafile ~pkg_size in
-  let arch = arch_of_preds meta.predicates in
-  let expand = folder, Expand (folder, ".") in
-  let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
-  meta, (expand :: path_fixups), [ Reverse folder ]
-
-let xz_call size =
-  let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
-  let smallest_bigger_power_of_two size =
-    2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
-  in
-  let lzma_settings size = String.concat "," [
-    sprintf "dict=%d" (max sixty_four_mb (smallest_bigger_power_of_two size));
-    "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
-  ]
-  in
-  [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
-
-let compress settings meta (script_dir, script_name) =
-  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
-  let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
-  let output_file = output_file meta in
-  let output_path = Filename.concat settings.output output_file in
-  tar_compress tar_args snd output_path;
-  output_path
 
 let () =
   let settings = parse_command_line () in
