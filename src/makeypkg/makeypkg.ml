@@ -21,6 +21,36 @@ open Types
 open Lib
 open Types
 
+module PrefixFix = struct
+  (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
+   * hard-coded paths. We find them and replace them with a variable which value
+   * will be set during package install. Not perfect but usually works. *)
+  let find_files folder ext =
+    FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
+
+  let install_actions folder file =
+    let file = split_path (FilePath.make_relative folder file) in
+    let file = String.concat " " file in
+    "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
+
+  let find_prefix prefix_re file =
+    let contents = read_file file in
+    let l = Queue.fold (fun l x -> x :: l) [] contents in
+    let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
+    (* matched_group will get the match from the List.find line before *)
+    Str.matched_group 1 prefix
+
+  let fix_file prefix ext prefix_re fix file =
+    let prefix = find_prefix prefix_re file in
+    let new_prefix = "__YYPREFIX/" ^ prefix in
+    fix file prefix new_prefix
+
+  let fix_files ~prefix ~folder ~ext ~search_re ~fix =
+    let files = find_files folder ext in
+    List.iter (fix_file prefix ext search_re fix) files;
+    List.map (install_actions folder) files
+end
+
 exception Package_name_must_end_in_txz (* XXX: not used currently *)
 
 type settings = {
@@ -56,75 +86,44 @@ let parse_command_line () =
   (* the last argument is the folder to package *)
   let () = Arg.parse lst ((:=) folder) usage_msg in
   (* check if any argument has not been set (missing from the command-line *)
-  if List.exists ((=) "") [ !output; !folder; !meta ] then
-    let () = prerr_endline usage_msg in
-    exit 0
-  else
-    (if !meta = "" then prerr_endline no_meta_msg);
-    let folder = strip_trailing_slash !folder in
-    let dirname = FilePath.DefaultPath.dirname (
-      if not (FilePath.DefaultPath.is_relative folder) then folder
-      else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
-    in
-    {
-      output = !output;
-      folder = folder;
-      folder_dirname = dirname;
-      folder_basename = FilePath.DefaultPath.basename folder;
-      metafile = !meta;
-    }
+  (if List.exists ((=) "") [ !output; !folder; !meta ] then
+    prerr_endline usage_msg;
+    ignore (exit 0));
+  (if !meta = "" then prerr_endline no_meta_msg);
+  let folder = strip_trailing_slash !folder in
+  (* make 'folder' an absolute path *)
+  let dirname = FilePath.DefaultPath.dirname (
+    if not (FilePath.DefaultPath.is_relative folder) then folder
+    else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
+  in
+  {
+    output = !output;
+    folder = folder;
+    folder_dirname = dirname;
+    folder_basename = FilePath.DefaultPath.basename folder;
+    metafile = !meta;
+  }
 
 let meta ~metafile ~pkg_size =
   let metadata = metadata_of_sexp (Sexplib.Sexp.load_sexp metafile) in
   { metadata with size_expanded = pkg_size }
 
-let prefix_of_arch = function (* XXX: quite often, we might get "noarch" as an
-arch, so we definitely do need to take that case into account *)
-  | "i686-w64-mingw32"
-  | "x86_64-w64-mingw32" as s -> s
-  | "i686-pc-mingw32" -> "/mingw"
-  | _ -> assert false (* XXX *)
+let prefix_arch = [
+  "i686-w64-mingw32", "i686-w64-mingw32";
+  "x86_64-w64-mingw32", "x86_64-w64-mingw32";
+  "i686-pc-mingw32", "/mingw";
+]
 
-module PrefixFix = struct
-  (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
-   * hard-coded paths. We find them and replace them with a variable which value
-   * will be set during package install. Not perfect but usually works. *)
-  let find_files folder ext =
-    FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
-
-  let install_actions folder file =
-    let file = split_path (FilePath.make_relative folder file) in
-    let file = String.concat " " file in
-    "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
-
-  let find_prefix prefix_re file =
-    let contents = read_file file in
-    let l = Queue.fold (fun l x -> x :: l) [] contents in
-    let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
-    (* matched_group will get the match from the List.find line before *)
-    Str.matched_group 1 prefix
-
-  let fix_file arch ext prefix_re fix file =
-    let prefix = find_prefix prefix_re file in
-    let new_prefix = "__YYPREFIX/" ^ (prefix_of_arch arch) in
-    fix file prefix new_prefix
-
-  let fix_files arch folder ext prefix_re fix =
-    let files = find_files folder ext in
-    List.iter (fix_file arch ext prefix_re fix) files;
-    List.map (install_actions folder) files
-end
-
-let pkg_config_fixup folder arch = 
-  let f file prefix new_prefix = 
+let pkg_config_fixup ~folder ~prefix = 
+  let fix file prefix new_prefix = 
     search_and_replace_in_file file prefix "${prefix}";
     search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
   in
-  let prefix_re = Str.regexp "^prefix=\\(.*\\)" in
-  PrefixFix.fix_files arch folder "pc" prefix_re f
+  let search_re = Str.regexp "^prefix=\\(.*\\)" in
+  PrefixFix.fix_files ~prefix ~folder ~ext:"pc" ~search_re ~fix
 
-let libtool_fixup folder arch =
-  let f file prefix new_prefix =
+let libtool_fixup ~folder ~prefix =
+  let fix file prefix new_prefix =
     let strip_slashes_re, strip_slashes_repl = "//+", "/" in
     let simplify_path_re, simplify_path_repl = "\\(|^/]+/../\\)", "" in
     let prefix_re = "[^'=]*" ^ prefix in
@@ -132,15 +131,20 @@ let libtool_fixup folder arch =
     search_and_replace_in_file file simplify_path_re simplify_path_repl;
     search_and_replace_in_file file prefix_re new_prefix
   in
-  let libdir_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
-  PrefixFix.fix_files arch folder "la" libdir_re f
+  let search_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
+  PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
 
 let path_fixups folder arch fixups =
-  let dispatch folder arch = function
-    | `PkgConfig -> pkg_config_fixup folder arch
-    | `Libtool -> libtool_fixup folder arch
-  in
-  List.concat (List.map (dispatch folder arch) fixups)
+  (* If the arch is unknown or is "noarch", we have to disable auto-fixes *)
+  if List.mem_assoc arch prefix_arch then
+    let prefix = List.assoc arch prefix_arch in
+    let dispatch folder prefix = function
+      | `PkgConfig -> pkg_config_fixup ~folder ~prefix
+      | `Libtool -> libtool_fixup ~folder ~prefix
+    in
+    List.concat (List.map (dispatch folder prefix) fixups)
+  else
+    []
 
 let package_script_el ~pkg_size { folder_basename; metafile; folder } =
   let folder = folder_basename in
@@ -150,12 +154,13 @@ let package_script_el ~pkg_size { folder_basename; metafile; folder } =
   let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
   meta, (expand :: path_fixups), [ Reverse folder ]
 
-let smallest_bigger_power_of_two size =
-  2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
-
 let xz_call size =
+  let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
+  let smallest_bigger_power_of_two size =
+    2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
+  in
   let lzma_settings size = String.concat "," [
-    sprintf "dict=%d" (max (1 lsl 26) (smallest_bigger_power_of_two size));
+    sprintf "dict=%d" (max sixty_four_mb (smallest_bigger_power_of_two size));
     "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
   ]
   in
