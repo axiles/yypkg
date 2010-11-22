@@ -86,10 +86,10 @@ type settings = {
   metafile : string;
 }
 
-let output_file { name; version; predicates } =
-  let arch = arch_of_preds predicates in
+let output_file metadata =
+  let arch = arch_of_preds metadata.predicates in
   (* if we included the ext in concat's call, we'd have an extra separator *)
-  (String.concat "-" [ name; string_of_version version; arch ]) ^ ".txz"
+  sprintf "%s-%s-%s.txz" metadata.name (string_of_version metadata.version) arch
 
 let meta ~metafile ~pkg_size =
   let sexp = match metafile with
@@ -135,9 +135,9 @@ let path_fixups folder arch fixups =
   else
     []
 
-let package_script_el ~pkg_size { folder_basename; metafile; folder } =
-  let folder = folder_basename in
-  let meta = meta ~metafile ~pkg_size in
+let package_script_el ~pkg_size settings =
+  let folder = settings.folder_basename in
+  let meta = meta ~metafile:settings.metafile ~pkg_size in
   let arch = arch_of_preds meta.predicates in
   let expand = folder, Expand (folder, ".") in
   let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
