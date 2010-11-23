@@ -116,7 +116,7 @@ type metadata = {
   packager_name : string;
   description : string;
   predicates : (string * string) list;
-  comments : string;
+  comments : string list;
 } with sexp
 
 type script =
