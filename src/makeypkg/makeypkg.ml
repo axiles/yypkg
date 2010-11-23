@@ -103,7 +103,7 @@ let dummy_meta () =
   let meta = { name = "dummy_name"; size_expanded = FileUtil.TB (Int64.of_int
     42); version = version; packager_email = "nobody@example.com";
     packager_name = "ulysse"; description = "dummy, dummy, dummy";
-    predicates = []; comments = [] }
+    predicates = ["arch", "x86_64-w64-mingw32"]; comments = [] }
   in
   Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
 
