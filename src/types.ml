@@ -83,8 +83,30 @@ type predicates = predicate list with sexp
 exception Unmatched_predicates of ((string * string) list)
 
 type size = FileUtil.size
-let size_of_sexp = Sexplib.Conv.opaque_of_sexp
-let sexp_of_size = Sexplib.Conv.sexp_of_opaque
+
+let size_of_sexp sexp = match sexp with
+  | Sexplib.Sexp.List [ Sexplib.Sexp.Atom mult; Sexplib.Sexp.Atom s ] ->
+      let i = try Int64.of_string s with Failure "int_of_string" ->
+        Sexplib.Conv.of_sexp_error "size_of_sexp: size isn't a valid integer" sexp
+      in
+      begin match mult with
+      | "TB" -> FileUtil.TB i | "GB" -> FileUtil.GB i | "MB" -> FileUtil.MB i
+      | "KB" -> FileUtil.KB i | "B" -> FileUtil.B i
+      | _ -> Sexplib.Conv.of_sexp_error "size_of_sexp: invalid size prefix" sexp
+      end
+  | _ -> Sexplib.Conv.of_sexp_error "size_of_sexp: not a FileUtil.size" sexp
+
+let sexp_of_size size =
+  let p s i =
+    let module S = Sexplib.Sexp in
+    S.List [ S.Atom s; S.Atom (Int64.to_string i) ]
+  in
+  match size with
+  | FileUtil.TB i -> p "TB" i
+  | FileUtil.GB i -> p "GB" i
+  | FileUtil.MB i -> p "MB" i
+  | FileUtil.KB i -> p "KB" i
+  | FileUtil.B i -> p "B" i
 
 type metadata = {
   name : string;
