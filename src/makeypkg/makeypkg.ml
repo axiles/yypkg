@@ -101,9 +101,9 @@ let meta ~metafile ~pkg_size =
 let dummy_meta () =
   let version = version_of_string "0.0.17-snapshot-0-0" in
   let meta = { name = "dummy_name"; size_expanded = FileUtil.TB (Int64.of_int
-    42); version; packager_email = "nobody@example.com"; packager_name =
-    "ulysse"; description = "dummy, dummy, dummy"; predicates = [];
-    comments = "none" }
+    42); version = version; packager_email = "nobody@example.com";
+    packager_name = "ulysse"; description = "dummy, dummy, dummy";
+    predicates = []; comments = "none" }
   in
   Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
 
