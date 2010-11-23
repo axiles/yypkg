@@ -98,6 +98,15 @@ let meta ~metafile ~pkg_size =
   in
   { metadata_of_sexp sexp with size_expanded = pkg_size }
 
+let dummy_meta () =
+  let version = version_of_string "0.0.17-snapshot-0-0" in
+  let meta = { name = "dummy_name"; size_expanded = FileUtil.TB (Int64.of_int
+    42); version; packager_email = "nobody@example.com"; packager_name =
+    "ulysse"; description = "dummy, dummy, dummy"; predicates = [];
+    comments = "none" }
+  in
+  Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
+
 let pkg_config_fixup ~folder ~prefix = 
   let fix ~file ~prefix ~new_prefix = 
     search_and_replace_in_file file prefix "${prefix}";
@@ -152,35 +161,44 @@ let compress settings meta (script_dir, script_name) =
   output_path
 
 let parse_command_line () = 
-  let output, folder, meta = ref "", ref "", ref "" in
+  let output, folder, meta, template = ref "", ref "", ref "", ref false in
   let lst = [
     (* the output file*name* will be built from the other param values *)
-    "-o", Arg.Set_string output, "output folder";
+    "-o", Arg.Set_string output, "output folder (defaults to current dir)";
     "-meta", Arg.Set_string meta, "package metadata file";
+    "-template", Arg.Set template, "write a template meta on stdout";
   ]
   in
-  let usage_msg = "ERROR: All arguments mentionned in --help are mandatory." in
-  let no_meta_msg = "WARNING: No meta file given, using (stupid) defaults." in
+  let usage_msg = "\
+Create a yypkg package from a folder.
+Use either (-o, -meta and a folder) XOR -template (see -help). Examples:
+  $ makeypkg -o /some/folder -meta pcre.META pcre-1.2.3
+  $ makeypkg -template"
+    in
   (* the last argument is the folder to package *)
-  let () = Arg.parse lst ((:=) folder) usage_msg in
-  (* check if any argument has not been set (missing from the command-line *)
-  (if List.exists ((=) "") [ !output; !folder; !meta ] then
-    prerr_endline usage_msg;
-    ignore (exit 0));
-  (if !meta = "" then prerr_endline no_meta_msg);
-  let folder = strip_trailing_slash !folder in
-  (* make 'folder' an absolute path *)
-  let dirname = FilePath.DefaultPath.dirname (
-    if not (FilePath.DefaultPath.is_relative folder) then folder
-    else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
-  in
-  {
-    output = !output;
-    folder = folder;
-    folder_dirname = dirname;
-    folder_basename = FilePath.DefaultPath.basename folder;
-    metafile = !meta;
-  }
+  Arg.parse lst ((:=) folder) usage_msg;
+  if !template then
+    let () = print_endline (dummy_meta ()) in
+    exit 0
+  else
+    (* check if any argument has not been set (missing from the command-line *)
+    if List.mem "" [ !output; !folder; !meta ] then
+      let () = prerr_endline usage_msg in
+      exit (-1)
+    else
+      let folder = strip_trailing_slash !folder in
+      (* make 'folder' an absolute path *)
+      let dirname = FilePath.DefaultPath.dirname (
+        if not (FilePath.DefaultPath.is_relative folder) then folder
+        else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
+      in
+      {
+        output = !output;
+        folder = folder;
+        folder_dirname = dirname;
+        folder_basename = FilePath.DefaultPath.basename folder;
+        metafile = !meta;
+      }
 
 let () =
   let settings = parse_command_line () in
