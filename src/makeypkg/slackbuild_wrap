@@ -1,0 +1,100 @@
+#!/bin/sh
+
+set -eux
+
+slackbuild=$1
+
+################################################################################
+### User Settings ###
+################################################################################
+
+MIRROR="http://notk.org/~adrien/gits/slackware64-current.ext"
+
+################################################################################
+### Settings ###
+################################################################################
+
+case "$HST" in
+  "w32") HST="i686-w64-mingw32";;
+  "w64") HST="x86_64-w64-mingw32";;
+esac
+
+case "$HST" in
+  "i686-w64-mingw32")
+  "x86_64-w64-mingw32")
+    PREFIX=/$HST
+    EXE_FORMAT="PE"
+  ;;
+esac
+
+# When cross-compiling, tools such as strip are prefixed.
+if [ -n ${HST} ]; then
+  STRIP="${HST}-strip"
+else
+  STRIP="strip"
+then
+
+export PKG_CONFIG_LIBDIR=${PREFIX}/lib/pkgconfig
+export PATH=${PREFIX}/bin:${PATH}
+
+################################################################################
+### Download sources ###
+################################################################################
+
+# # We need to find the filename for the sources
+# # We need a file ending with .tar.?z*, there shouldn't be too many
+# # We also limit the search to the current directory
+# # Finally, it has to be 41-bytes
+# srcfile=$(find -maxdepth 1 -name '*.tar.?z*' -size 41c)
+
+# We need to find the filename for the sources
+# It's stored in git and we assert it's the only file matching our regexp (...)
+srcfile=$(git ls-tree --name-only HEAD | grep '\.tar\.[gbx]z2\?$')
+
+# Classic way slackware discovers a version number
+VERSION=${VERSION:-"$(echo ${srcfile} | rev | cut -f 3- -d . | cut -f 1 -d - | rev)"}
+
+# Reset the file to be sure of its contents
+git checkout ${srcfile}
+
+sha1=$(cat ${srcfile})
+
+archive=${PKGNAM}-${VERSION}_${sha1}.tar.yypkg.bz2
+
+# Check the local archive isn't corrupted
+if [ -e ${archive} -a "${sha1}" != "$(sha1sum ${archive} | awk -F' ' '{ print $1; }')" ]; then
+  rm ${archive}
+fi
+
+# If the local archive doesn't exist or was corrupted, download it
+if [ ! -e ${archive} ]; then
+  wget ${MIRROR}/${sha1} --quiet -O ${archive}
+fi
+
+# We remove the file with the sha1 and replace it with our regular source
+# It's not a problem since it's still available in git's index
+rm ${srcfile}
+ln -s ${archive} ${srcfile}
+
+################################################################################
+### Sanity checks ###
+################################################################################
+
+# Check ${PREFIX} exists
+if [ ! -d ${PREFIX} ]; then
+  echo "${PREFIX} must exist and contain a valid toolchain in bin/. Aborting."
+  exit 1
+fi
+
+################################################################################
+### Fire up the slackbuild ###
+################################################################################
+
+HST=${HST} PREFIX=${PREFIX} VERSION=${VERSION} STRIP=${STRIP} EXE_FORMAT=${EXE_FORMAT} ./${slackbuild}
+
+################################################################################
+### Move source files back in place ###
+################################################################################
+
+git checkout ${srcfile}
+
