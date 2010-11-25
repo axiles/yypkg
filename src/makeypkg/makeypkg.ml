@@ -37,7 +37,7 @@ let xz_call size =
     "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
   ]
   in
-  [| xz; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
+  [| xz; "-vv"; "--x87"; sprintf "--lzma2=%s" (lzma_settings size) |]
 
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
