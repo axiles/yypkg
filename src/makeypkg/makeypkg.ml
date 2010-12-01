@@ -148,7 +148,8 @@ let package_script_el ~pkg_size settings =
   let folder = settings.folder_basename in
   let meta = meta ~metafile:settings.metafile ~pkg_size in
   let arch = arch_of_preds meta.predicates in
-  let expand = folder, Expand (folder, ".") in
+  (* we want to expand the content of folder so we suffix it with '/' *)
+  let expand = folder, Expand (folder ^ "/", ".") in
   let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
   meta, (expand :: path_fixups), [ Reverse folder ]
 

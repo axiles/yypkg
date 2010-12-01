@@ -181,7 +181,7 @@ let from_tar action input =
   l
 
 let split_path ?(dir_sep=dir_sep) path =
-  Str.split (Str.regexp dir_sep) path
+  Str.split_delim (Str.regexp dir_sep) path
 
 (* chop_list list i removes the first i elements of list and raises
  * ChopList_ChopingTooMuch if the list is shorter than i *)
