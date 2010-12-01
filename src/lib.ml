@@ -163,21 +163,21 @@ let tar_compress tar_args compress out =
   | U.WEXITED 0, U.WEXITED 0 -> ()
   | _, _ -> raise ProcessFailed
 
-(* decompress + untar, "f" will read the output from tar:
+(* decompress + untar, "f" will read the output from bsdtar:
  *   'bsdtar xv -O' outputs the content of files to stdout
  *   'bsdtar xv' outputs the list of files expanded to stderr
  *   'bsdtar t' outputs the list of files to stdout *)
 let from_tar action input =
-  let t_out, t_in = U.pipe () in
+  let t_r, t_w = U.pipe () in
   (* as per the comment before the function, we have to read stdout or stderr *)
-  let t_args, t_out, t_err = match action with
-  | `extract (pq, strip, iq) -> [| tar; "xvf"; input |], U.stdout, t_in
-  | `get file -> [| tar; "xf"; input; "-O"; file |], t_in, U.stderr
-  | `list -> [| tar; "tf"; input |], t_in, U.stderr
+  let t_args, t_stdout, t_stderr = match action with
+  | `extract (pq, strip, iq) -> [| tar; "xvf"; input |], U.stdout, t_w
+  | `get file -> [| tar; "xf"; input; "-qO"; file |], t_w, U.stderr
+  | `list -> [| tar; "tf"; input |], t_w, U.stderr
   in
-  let t_pid = U.create_process t_args.(0) t_args t_in t_out t_err in
-  let l = read t_pid t_out in
-  List.iter U.close [ t_out; t_in ];
+  let t_pid = U.create_process t_args.(0) t_args U.stdin t_stdout t_stderr in
+  let l = read t_pid t_r in
+  List.iter U.close [ t_r; t_w ];
   l
 
 let split_path ?(dir_sep=dir_sep) path =
