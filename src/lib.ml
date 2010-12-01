@@ -171,7 +171,8 @@ let from_tar action input =
   let t_r, t_w = U.pipe () in
   (* as per the comment before the function, we have to read stdout or stderr *)
   let t_args, t_stdout, t_stderr = match action with
-  | `extract (pq, strip, iq) -> [| tar; "xvf"; input |], U.stdout, t_w
+  | `extract (pq, strip, iq) ->
+      [| tar; "xvf"; input; "--strip-components"; strip |], U.stdout, t_w
   | `get file -> [| tar; "xf"; input; "-qO"; file |], t_w, U.stderr
   | `list -> [| tar; "tf"; input |], t_w, U.stderr
   in
