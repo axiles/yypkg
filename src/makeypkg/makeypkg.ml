@@ -33,7 +33,7 @@ let xz_call size =
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
   let lzma_settings size = String.concat "," [
-    sprintf "dict=%d" (max sixty_four_mb (smallest_bigger_power_of_two size));
+    sprintf "dict=%d" (min sixty_four_mb (smallest_bigger_power_of_two size));
     "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
   ]
   in
