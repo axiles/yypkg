@@ -239,12 +239,11 @@ let search_and_replace_in_file file search replace =
   let contents = read_file file in
   (* It's possible that one replace makes a previously-impossible replace
    * possible. An example is simplifying "foo/bar/baz/../..". If we simply do
-   * 's;[^/]\+/\+\.\.;/;', we'll be left with "foo/bar/.." *)
+   * 's;[^/]\+/\+\.\.;/;', we'll be left with "foo/bar/.." 
+   * In other words: we repeat until we reach a fixpoint *)
   let rec f s =
-    if try (ignore (Str.search_forward search s 0); true) with _ -> false then
-      f (Str.global_replace search replace s)
-    else
-      s
+    let s1 = Str.global_replace search replace s in
+    if s = s1 then s else f s1
   in
   let new_contents = queue_map f contents in
   overwrite_file file new_contents
