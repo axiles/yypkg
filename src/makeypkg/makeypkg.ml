@@ -56,7 +56,7 @@ module PrefixFix = struct
     FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
 
   let install_actions folder file =
-    let file = split_path (FilePath.make_relative folder file) in
+    let file = split_path (Filename.concat folder file) in
     let file = String.concat "/" file in (* XXX: is this dir_sep portable? *)
     "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
 
