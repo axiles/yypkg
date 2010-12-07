@@ -29,15 +29,17 @@ let prefix_arch = [
 
 let xz_call size =
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
+  let four_kb = 1 lsl 1 in (* min xz dictionnary size *)
   let smallest_bigger_power_of_two size =
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
-  let lzma_settings size = String.concat "," [
-    sprintf "dict=%d" (min sixty_four_mb (smallest_bigger_power_of_two size));
+  let dict = min sixty_four_mb (max four_kb (smallest_bigger_power_of_two size)) in
+  let lzma_settings dict = String.concat "," [
+    sprintf "dict=%d" dict;
     "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
   ]
   in
-  [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" (lzma_settings size) |]
+  [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" (lzma_settings dict) |]
 
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
