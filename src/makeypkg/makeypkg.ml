@@ -29,7 +29,7 @@ let prefix_arch = [
 
 let xz_call size =
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
-  let four_kb = 1 lsl 1 in (* min xz dictionnary size *)
+  let four_kb = 1 lsl 12 in (* min xz dictionnary size *)
   let smallest_bigger_power_of_two size =
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
