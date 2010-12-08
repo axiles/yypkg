@@ -28,6 +28,7 @@ let prefix_arch = [
 ]
 
 let xz_call size =
+  (* yylowcompress is mostly a quick hack, no need to make it very clean *)
   let yylowcompress = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
   let size = if yylowcompress then Int64.one else size in
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
