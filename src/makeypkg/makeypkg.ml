@@ -59,8 +59,14 @@ module PrefixFix = struct
     FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
 
   let install_actions folder file =
-    let file = split_path (Filename.concat folder file) in
-    let file = String.concat "/" file in (* XXX: is this dir_sep portable? *)
+    (* we need to find the path relative to the package root
+     * actual example:
+       * file is /tmp/package-gettext/i686-w64-mingw32/lib/libintl.la
+       * folder is /tmp/package-gettext *)
+    let file = split_path file in
+    let folder = split_path folder in
+    let file = chop_list file (List.length folder) in
+    let file = String.concat "/" file in
     "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
 
   let find_prefix prefix_re file =
@@ -72,6 +78,7 @@ module PrefixFix = struct
 
   let fix_file prefix prefix_re fix file =
     let prefix = find_prefix prefix_re file in
+    (* We always want '/' as a path separator *)
     let new_prefix = "__YYPREFIX/" ^ prefix in
     fix ~file ~prefix ~new_prefix
 
@@ -134,7 +141,7 @@ let libtool_fixup ~folder ~prefix =
     search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
     search_and_replace_in_file file prefix_re new_prefix
   in
-  let search_re = Str.regexp "libdir='\\(.*\\).lib.*'" in
+  let search_re = Str.regexp "libdir='\\(.*\\)/lib.*'" in
   PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
 
 let path_fixups folder arch fixups =
@@ -155,7 +162,7 @@ let package_script_el ~pkg_size settings =
   let arch = arch_of_preds meta.predicates in
   (* we want to expand the content of folder so we suffix it with '/' *)
   let expand = folder, Expand (folder ^ "/", ".") in
-  let path_fixups = path_fixups folder arch [ `PkgConfig; `Libtool ] in
+  let path_fixups = path_fixups settings.folder arch [ `PkgConfig; `Libtool ] in
   meta, (expand :: path_fixups), [ Reverse folder ]
 
 let compress settings meta (script_dir, script_name) =
