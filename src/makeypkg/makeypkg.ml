@@ -37,7 +37,7 @@ let xz_call size =
     let dict = max four_kb (smallest_bigger_power_of_two size) in
     let dict = min sixty_four_mb dict in
     let dict, mf, mode, nice = if fastest then
-      string_of_int four_kb, "hc3", "fast", "2"
+      string_of_int four_kb, "hc3", "fast", "3"
     else
       string_of_int dict, "bt4", "normal", "128"
     in
