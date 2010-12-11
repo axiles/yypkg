@@ -36,10 +36,13 @@ let xz_call size =
   let lzma_settings ?(fastest=false) size =
     let dict = max four_kb (smallest_bigger_power_of_two size) in
     let dict = min sixty_four_mb dict in
-    let dict, mf = if fastest then four_kb, "hc3" else dict, "bt4" in
-    String.concat "," [
-      sprintf "dict=%d" dict; sprintf "mf=%s" mf; "mode=normal"; "nice=64"
-    ]
+    let dict, mf, mode, nice = if fastest then
+      string_of_int four_kb, "hc3", "fast", "2"
+    else
+      string_of_int dict, "bt4", "normal", "128"
+    in
+    let p = sprintf "%s=%s" in
+    String.concat "," [ p "dict" dict; p "mf" mf; p "mode" mode; p "nice" nice ]
   in
   (* yylowcompress is mostly a quick hack, no need to make it very clean *)
   let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
