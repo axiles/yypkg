@@ -28,21 +28,23 @@ let prefix_arch = [
 ]
 
 let xz_call size =
-  (* yylowcompress is mostly a quick hack, no need to make it very clean *)
-  let yylowcompress = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
-  let size = if yylowcompress then Int64.one else size in
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
   let four_kb = 1 lsl 12 in (* min xz dictionnary size *)
   let smallest_bigger_power_of_two size =
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
-  let dict = min sixty_four_mb (max four_kb (smallest_bigger_power_of_two size)) in
-  let lzma_settings dict = String.concat "," [
-    sprintf "dict=%d" dict;
-    "lc=3"; "lp=0"; "pb=2"; "mode=normal"; "nice=64"; "mf=bt4"; "depth=0";
-  ]
+  let lzma_settings ?(fastest=false) size =
+    let dict = max four_kb (smallest_bigger_power_of_two size) in
+    let dict = min sixty_four_mb dict in
+    let dict, mf = if fastest then four_kb, "hc3" else dict, "bt4" in
+    String.concat "," [
+      sprintf "dict=%d" dict; sprintf "mf=%s" mf; "mode=normal"; "nice=64"
+    ]
   in
-  [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" (lzma_settings dict) |]
+  (* yylowcompress is mostly a quick hack, no need to make it very clean *)
+  let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
+  let lzma_settings = lzma_settings ~fastest size in
+  [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" lzma_settings |]
 
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
@@ -77,10 +79,13 @@ module PrefixFix = struct
     Str.matched_group 1 prefix
 
   let fix_file prefix prefix_re fix file =
-    let prefix = find_prefix prefix_re file in
-    (* We always want '/' as a path separator *)
-    let new_prefix = "__YYPREFIX/" ^ prefix in
-    fix ~file ~prefix ~new_prefix
+    (* it's possible that we don't find the prefix, raising an exception *)
+    try
+      let prefix = find_prefix prefix_re file in
+      (* We always want '/' as a path separator *)
+      let new_prefix = "__YYPREFIX/" ^ prefix in
+      fix ~file ~prefix ~new_prefix
+    with Not_found -> ()
 
   let fix_files ~prefix ~folder ~ext ~search_re ~fix =
     let files = find_files folder ext in
