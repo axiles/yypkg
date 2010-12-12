@@ -141,16 +141,12 @@ let libtool_fixup ~folder ~prefix =
     let strip_slashes_re, strip_slashes_repl = "//+", "/" in
     (* Replace "foo/../bar" with "bar" *)
     let simplify_path_re, simplify_path_repl = "\\([^/]+/\\+\\.\\.\\)", "" in
-    (* We need to remove -L${prefix} otherwise it'll get caught in a later
-     * replacement, removing the -L *)
-    let includes_of_prefix, nothing = " -L" ^ prefix ^ " ", " " in
     (* We set prefix to /foo/bar/x86_64-w64-mingw32/ during compilation but want
      * to replace it with ${YYPREFIX}/x86_64-w64-mingw32/ : we have to include
      * the "/foo/bar/" part too in the match expression *)
     let prefix_re = "[^'= ]*" ^ prefix in
     search_and_replace_in_file file simplify_path_re simplify_path_repl;
     search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
-    search_and_replace_in_file file includes_of_prefix nothing;
     search_and_replace_in_file file prefix_re new_prefix
   in
   let search_re = Str.regexp "libdir='\\(.*\\)/lib.*'" in
