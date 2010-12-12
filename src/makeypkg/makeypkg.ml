@@ -140,7 +140,7 @@ let libtool_fixup ~folder ~prefix =
     (* Replace "foo///////bar///" with only "foor/bar/" *)
     let strip_slashes_re, strip_slashes_repl = "/+", "/" in
     (* Replace "foo/../bar" with "bar" *)
-    let simplify_path_re, simplify_path_repl = "\\([^/]+/+\\.\\.\\)", "" in
+    let simplify_path_re, simplify_path_repl = "\\([^/']+/+\\.\\.\\)", "" in
     (* We set prefix to /foo/bar/x86_64-w64-mingw32/ during compilation but want
      * to replace it with ${YYPREFIX}/x86_64-w64-mingw32/ : we have to include
      * the "/foo/bar/" part too in the match expression *)
