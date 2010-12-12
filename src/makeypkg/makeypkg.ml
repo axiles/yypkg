@@ -24,7 +24,7 @@ open Types
 let prefix_arch = [
   "i686-w64-mingw32", "i686-w64-mingw32";
   "x86_64-w64-mingw32", "x86_64-w64-mingw32";
-  "i686-pc-mingw32", "/mingw";
+  "i686-pc-mingw32", "mingw";
 ]
 
 let xz_call size =
@@ -138,18 +138,31 @@ let pkg_config_fixup ~folder ~prefix =
 let libtool_fixup ~folder ~prefix =
   let fix ~file ~prefix ~new_prefix =
     (* Replace "foo///////bar///" with only "foor/bar/" *)
-    let strip_slashes_re, strip_slashes_repl = "//+", "/" in
+    let strip_slashes_re, strip_slashes_repl = "/+", "/" in
     (* Replace "foo/../bar" with "bar" *)
-    let simplify_path_re, simplify_path_repl = "\\([^/]+/\\+\\.\\.\\)", "" in
+    let simplify_path_re, simplify_path_repl = "\\([^/]+/+\\.\\.\\)", "" in
     (* We set prefix to /foo/bar/x86_64-w64-mingw32/ during compilation but want
      * to replace it with ${YYPREFIX}/x86_64-w64-mingw32/ : we have to include
      * the "/foo/bar/" part too in the match expression *)
-    let prefix_re = "[^'= ]*" ^ prefix in
+    let prefix_re = "\\([ '=]\\)" ^ prefix in
+    (* When the installation prefix is /i686-w64-mingw32, we can get strings
+     * like /i686-w64-mingw32/i686-w64-mingw32/lib32 and we need to make them
+     * independant of the installation prefix so we change the first occurence
+     * of "/i686-w64-mingw32" with "__YYPREFIX" *)
+    (* XXX: when the installation prefix is *NOT* that, we still have to do
+      * something, like: ${FOO}/i686-w64-mingw32/lib32 -> s/${FOO/__YYPREFIX/ *)
+    let install_prefix_is_prefix_re = prefix_re ^ prefix in
+    let change_prefix = "\\1__YYPREFIX" ^ prefix in
+    (* With the previous step done, the strings we still have (can) change are
+     * of the form "/i686-w64-mingw32/lib32" and for these, we prefix __YYPREFIX
+     * to them *)
+    let prepend_prefix = "\\1" ^ new_prefix in
     search_and_replace_in_file file simplify_path_re simplify_path_repl;
     search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
-    search_and_replace_in_file file prefix_re new_prefix
+    search_and_replace_in_file file install_prefix_is_prefix_re change_prefix;
+    search_and_replace_in_file file prefix_re prepend_prefix
   in
-  let search_re = Str.regexp "libdir='\\(.*\\)/lib.*'" in
+  let search_re = Str.regexp "libdir='\\(.*\\)/+lib.*'" in
   PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
 
 let path_fixups folder arch fixups =
