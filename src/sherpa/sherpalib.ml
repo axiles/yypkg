@@ -1,7 +1,7 @@
 open Types
 open Lib
 
-let mirror = "http://yypkg.yaxm.org"
+let mirror = "http://notk.org/~adrien/yypkg"
 let version = "13.1"
 let pkg_list_uri = String.concat "/" [ mirror; version; "pkglist" ]
 
