@@ -60,13 +60,22 @@ let pkg_of_file folder file =
   }
 
 let filename_of_libtool s =
-  if s.[0] = '-' && s.[1] = 'l' then
-    (* XXX: this will fail when..., hmmm, when... well, it's pretty brittle
-     * this can fail for several reasons: if we only strip ".0" out of
-     * "libfoo.so.1.2.0" or if something is appended to the library name, some
-     * wildcards/regexps would probably be welcome, but when splitting the
-     * filenames and adding to the hash tables, not here *)
-    sprintf "lib%s" (String.sub s 2 (String.length s - 2))
+  if s.[0] = '-' then
+    if s.[1] = 'l' then
+      (* XXX: this will fail when..., hmmm, when... well, it's pretty brittle
+       * this can fail for several reasons: if we only strip ".0" out of
+       * "libfoo.so.1.2.0" or if something is appended to the library name, some
+       * wildcards/regexps would probably be welcome, but when splitting the
+       * filenames and adding to the hash tables, not here *)
+      sprintf "lib%s" (String.sub s 2 (String.length s - 2))
+    else
+      if s.[1] = 'L' then (
+        (* s is of the form -L/foo/bar: nothing to include, bail out *)
+        Printf.eprintf "Can't get a library name from `%s'\n%!" s;
+        invalid_arg "filename_of_libtool")
+      else (
+        Printf.eprintf "Don't know what to do with `%s'\n%!" s;
+        invalid_arg "filename_of_libtool")
   else
     Filename.basename (Filename.chop_extension s) 
 
@@ -80,7 +89,7 @@ let add_deps packages folder pkg =
   let pc_requires = pc_split pc_requires in
   let pc_requires = list_deps pc pkg.metadata.name pc_requires in
   let la_requires = tar_grep pkg.files "dependency_libs=" "la" file_absolute in
-  let la_requires = List.rev_map filename_of_libtool la_requires in
+  let la_requires = Lib.list_rev_map_exn filename_of_libtool la_requires in
   let la_libs_requires = list_deps libs pkg.metadata.name la_requires in
   let la_requires = list_deps la pkg.metadata.name la_requires in
   let requires = List.concat [ pc_requires; la_requires; la_libs_requires ] in
@@ -94,5 +103,5 @@ let () =
   let files = List.fast_sort compare files in
   let l = List.rev_map (pkg_of_file folder) files in
   let l = List.rev_map (add_deps l folder) l in
-  let l = Sexplib.Sexp.to_string (sexp_of_pkglist l) in
+  let l = Sexplib.Sexp.to_string_hum (sexp_of_pkglist l) in
   print_endline l 
