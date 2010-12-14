@@ -7,7 +7,7 @@
 # -I /ocaml/lib/ocaml/site-lib/mikmatch_str pa_mikmatch_str.cma
 
 O=preprocessed_src
-mkdir -p $O/{args,makeypkg,yypkg}
+mkdir -p $O/{args,makeypkg,yypkg,sherpa}
 
 PKGS='mikmatch_str sexplib.syntax'
 I_FLAGS='ocamlfind query -i-format -predicates syntax,preprocessor -r -separator " "'
@@ -15,5 +15,7 @@ A_FLAGS='ocamlfind query -a-format -predicates syntax,preprocessor -r -separator
 I_PARAMS=$(eval "$I_FLAGS $PKGS")
 A_PARAMS=$(eval "$A_FLAGS $PKGS")
 
-find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -path "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do camlp4o $I_PARAMS $A_PARAMS $A -o ${A/src/preprocessed_src}; done
+find src -iname "*.ml" \! -name "*myocamlbuild.ml*" \! -path "*_build*" -print0 | while read -d "$(echo -en '\0')" A; do
+  camlp4o $I_PARAMS $A_PARAMS $A -o ${A/src/preprocessed_src}
+done
 
