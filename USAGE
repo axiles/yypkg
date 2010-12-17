@@ -43,4 +43,5 @@ We can also uninstall packages:
 
 
 
-There exists a frontend that is able to fetch package from repositories, pulling their dependencies too.
+The sherpa frontend to yypkg is able to fetch packages from repositories. It also handles dependencies.
+It comes as a command-line program (sherpa) and a web-based graphical interface (sherpa_web).
