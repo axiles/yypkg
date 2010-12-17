@@ -105,33 +105,37 @@ let main () =
       Sys.chdir prefix;
       Yylib.sanity_checks ();
       match action, actionopts with
-        (* install, accepts one package at a time *)
-        | "-install", [Args.Val s] ->
-            let s = FilePath.DefaultPath.make_absolute old_cwd s in
-            Db.update (Install.install s (Conf.read ()))
-        (* uninstall, accepts one package at a time *)
-        | "-uninstall", [ Args.Val s ] -> Db.update (Uninstall.uninstall s)
-        (* list the installed packages *)
-        | "-list", [] -> 
-            List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
-        (* config does nothing on its own but has suboptions *)
-        | "-config", subopts -> config subopts
-        (* if an option was different, Args.parse would already have complained,
-         * so this final pattern will never be matched *)
-        | _ -> assert false
+      (* install, accepts one package at a time *)
+      | "-install", l ->
+          let l = Args.to_string_list l in
+          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
+          let f conf = List.fold_left (Install.install (Conf.read ())) conf l in
+          Db.update f
+      (* uninstall, accepts one package at a time *)
+      | "-uninstall", l ->
+          let l = Args.to_string_list l in
+          Db.update (fun db -> List.fold_left Uninstall.uninstall db l)
+      (* list the installed packages *)
+      | "-list", [] -> 
+          List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
+      (* config does nothing on its own but has suboptions *)
+      | "-config", subopts -> config subopts
+      (* if an option was different, Args.parse would already have complained,
+       * so this final pattern will never be matched *)
+      | _ -> assert false
 
 let () =
   (* FIXME: if an exception happens, no matter what it is, the error message
    * will always be the same: the command-line is wrong, even if it was
    * perfectly fine (a.g. -list but the database being corrupt *)
   try main () with 
-    | Args.Incomplete_parsing (opts, sl) ->
-        Args.print_spec 0 (Args.usage_msg cmd_line_spec)
-    | Args.Parsing_failed s as e -> raise e
-    | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
-        prerr_endline "You forgot to run -init or something got corrupted."
-    | Yylib.File_not_found p as e -> raise e
-    | Unmatched_predicates l ->
-        let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
-        List.iter f l
+  | Args.Incomplete_parsing (opts, sl) ->
+      Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+  | Args.Parsing_failed s as e -> raise e
+  | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
+      prerr_endline "You forgot to run -init or something got corrupted."
+  | Yylib.File_not_found p as e -> raise e
+  | Unmatched_predicates l ->
+      let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
+      List.iter f l
 

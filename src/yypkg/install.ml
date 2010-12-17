@@ -43,7 +43,7 @@ let install_package package conf db =
     | _, f_preds -> 
         raise (Unmatched_predicates f_preds)
 
-let install p conf db =
+let install conf db p =
   let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
   (* check the file exists, may raise 'File_not_found p' : caught in yypkg.ml *)
   assert_file_exists p;
