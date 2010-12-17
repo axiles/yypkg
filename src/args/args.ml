@@ -111,4 +111,11 @@ let val_of_opts = function
   | Val s -> s
   | Opt _ -> assert false
 
+let to_string_list l =
+  let l, m = List.partition is_opt l in
+  if m <> [] then
+    raise (Invalid_argument "to_string_list")
+  else
+    List.rev (List.rev_map val_of_opts l)
+
 exception Parsing_failed of string
