@@ -1,0 +1,26 @@
+The first thing you'll want to do with yypkg is to set the YYPREFIX environment variable to the "install" location: the place where everything will be installed to. Do not use a folder that is managed by another package manager. It might work but it's completely untested and it's likely the packages from the two package managers will conflict.
+
+Examples:
+
+  export YYPREFIX=/opt/mgw64
+  set YYPREFIX C:/dev/mgw64
+
+It's also possible to use the -prefix command-line argument but there is no compelling reason to do so. Using an environment variable will usually be much clearer.
+
+
+Now, we'll init the yypkg installation:
+
+  yypkg -init
+
+
+Yypkg also uses predicates to prevent you from installing some packages by mistake, like a 32bit library in a 64bit toolchain. We have to tell it which architecture to accept:
+
+  yypkg -config -setpreds arch=noarch,x86_64-w64-mingw32
+
+Packages usually have a set of predicates and if one is not matched during the installation process, the package won't install.
+It's also important to use "noarch" because arch-independant packages will use it.
+
+Likewise, for a multilib setup, add the second architecture:
+
+  yypkg -config -setpreds arch=noarch,i686-w64-mingw32,x86_64-w64-mingw32
+
