@@ -1,1 +1,6 @@
-(cd preprocessed_src && ocamlbuild -Is makeypkg,yypkg -libs unix,bigarray,nums,str,sexplib,fileutils yypkg.native makeypkg.native)
+Building on windows is a bit different but not harder.
+
+Just run the following command in an msys shell:
+(cd preprocessed_src && ocamlbuild -Is makeypkg,yypkg,args,sherpa -libs unix,bigarray,nums,str,sexplib,fileutils {yypkg,makeypkg,sherpa,sherpa_gen}.native)
+
+Finally, put them somewhere in your path and replace the ".native" suffix with ".exe".
