@@ -19,20 +19,30 @@
 
 open Types
 
-(* splits the string "A=X" into "A","X" and then updates the association list *)
+(* Split a string "X=A,B,C" into (X, [A; B; C]) *)
+let key_value_pair s =
+  let l = String.length s in
+  let i = String.index s '=' in
+  let key = String.sub s 0 i in
+  let value = Str.split (Str.regexp ",") (String.sub s (i+1) (l-i-1)) in
+  key, value
+
+(* updates the association list from "X=A,B,C" strings *)
 let setpred conf pred =
-  let key_value_pair s =
-    let l = String.length s in
-    let i = String.index s '=' in
-    let key = String.sub s 0 i in
-    let value = Str.split (Str.regexp ",") (String.sub s (i+1) (l-i-1)) in
-    key, value
-  in
   let pred = Predicate (key_value_pair pred) in
   Conf.set conf pred
 
 let delpred conf pred =
   Conf.unset conf pred
+
+(* check if the predicate holds against conf *)
+let predicate_holds (conf : predicates) (key, value) = 
+  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
+   * configuration, equivalent to false *)
+  try 
+    let conf_vals = List.assoc key conf in
+    List.mem value conf_vals
+  with Not_found -> false
 
 (* Nothing to do right now *)
 (* let regen _ = () *)

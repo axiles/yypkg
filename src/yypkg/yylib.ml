@@ -108,15 +108,6 @@ let rm path_unexpanded =
   else
     Printf.printf "Not removed (doesn't exist): %s\n" path
 
-(* check if the predicate holds against conf *)
-let predicate_holds (conf : predicates) (key, value) = 
-  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
-   * configuration, equivalent to false *)
-  try 
-    let conf_vals = List.assoc key conf in
-    List.mem value conf_vals
-  with Not_found -> false
-
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =
   let f = function

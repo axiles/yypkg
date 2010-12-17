@@ -32,16 +32,16 @@ let execute_install_action package (id, action) =
         Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
-  let (metadata, install_actions, _ as script) =
-    Lib.open_package package in
-  match List.partition (predicate_holds conf.preds) metadata.predicates with
-    | _, [] -> 
-        let func = execute_install_action package in
-        let results = List.rev_map func install_actions in
-        let updated_db = Db.install_package db (script, results) in
-        updated_db
-    | _, f_preds -> 
-        raise (Unmatched_predicates f_preds)
+  let (metadata, install_actions, _ as script) = Lib.open_package package in
+  let pred_holds = Config.predicate_holds conf.preds in
+  match List.partition pred_holds metadata.predicates with
+  | _, [] -> 
+      let func = execute_install_action package in
+      let results = List.rev_map func install_actions in
+      let updated_db = Db.install_package db (script, results) in
+      updated_db
+  | _, f_preds -> 
+      raise (Unmatched_predicates f_preds)
 
 let install conf db p =
   let p = FilePath.DefaultPath.make_absolute Lib.install_path p in
