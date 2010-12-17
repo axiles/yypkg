@@ -24,3 +24,23 @@ Likewise, for a multilib setup, add the second architecture:
 
   yypkg -config -setpreds arch=noarch,i686-w64-mingw32,x86_64-w64-mingw32
 
+
+With that done, we can install packages:
+
+  yypkg -install foo.txz
+
+The package has to be a file. Yypkg doesn't support installing from package names, it only works on files. The sherpa frontend supports this however.
+
+
+Now, we can check the package list:
+
+  yypkg -list
+
+
+We can also uninstall packages:
+
+  yypkg -uninstall foo
+
+
+
+There exists a frontend that is able to fetch package from repositories, pulling their dependencies too.
