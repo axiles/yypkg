@@ -77,6 +77,9 @@ let wants_help () =
   let argv = Array.to_list Sys.argv in
   [] = argv || List.exists (fun x -> "-help"=x || "--help"=x || "-h"=x) argv
 
+let nothing_given () =
+  1 = Array.length Sys.argv
+
 let print_help cmd_line_spec =
   print_spec 0 (usage_msg cmd_line_spec)
 

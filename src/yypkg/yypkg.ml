@@ -41,17 +41,17 @@ let cmd_line_spec = [
 let prefix_of_cmd_line cmd_line =
   let lt, lf = List.partition (Args.is_opt ~s:"-prefix") cmd_line in
   match lt with
-    (* we've not been given -prefix, if the YYPREFIX env var is missing, this
-     * will raise Not_found: we'll catch it and display the usage message *)
-    | [] -> Sys.getenv "YYPREFIX", lf
-    (* we've been given the -prefix with a string argument
-     * we also set it as an env var so it can be used in install scripts *)
-    | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
-        Unix.putenv "YYPREFIX" prefix;
-        prefix, lf
-    (* all other combinations are invalid: raise an exception that will be
-     * caught later on *)
-    | _ -> raise (Args.Parsing_failed "PREFIX environment variable not found and no -prefix specified")
+  (* we've not been given -prefix, maybe ${YYPREFIX} ? *)
+  | [] when (try ignore (Sys.getenv "YYPREFIX");true with Not_found -> false) ->
+      Sys.getenv "YYPREFIX", lf
+  (* we've been given the -prefix with a string argument
+   * we also set it as an env var so it can be used in install scripts *)
+  | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
+      Unix.putenv "YYPREFIX" prefix;
+      prefix, lf
+  (* all other combinations are invalid: raise an exception that will be
+   * caught later on *)
+  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix specified")
 
 (* find the action from a command-line, only one allowed at a time *)
 let action_of_cmd_line cmd_line = 
@@ -66,30 +66,30 @@ let action_of_cmd_line cmd_line =
 
 let config opts =
   match List.partition (Args.is_opt ~s:"-listpreds") opts with
-    (* first: if -listpreds has been given, print the configuration predicates
-     * -listpreds must not be given together with other arguments *)
-    | _, [] -> Conf.print_preds (Conf.read ())
-    (* We're *very* nice to the user here: it's possible to add or remove
-     * several predicates at once, and to add, remove some, add again predicates
-     * in a single call to yypkg *)
-    | [], opts -> begin
-        let f conf = function
-          | Args.Opt ("-setpreds", preds) ->  
-              let vals = List.map Args.val_of_opts preds in
-              List.fold_left Config.setpred conf vals
-          | Args.Opt ("-delpreds", preds) -> 
-              let vals = List.map Args.val_of_opts preds in
-              List.fold_left Config.delpred conf vals
-          (* Args makes sure this last case can't happen *)
-          | _ -> assert false
-        in
-        Conf.update (fun conf -> List.fold_left f conf opts)
-      end
-    (* if -listpred has been given together with another argument: *)
-    | _ -> raise (Args.Parsing_failed "⁻listpred can't be combined with other arguments.")
+  (* first: if -listpreds has been given, print the configuration predicates
+   * -listpreds must not be given together with other arguments *)
+  | _, [] -> Conf.print_preds (Conf.read ())
+  (* We're *very* nice to the user here: it's possible to add or remove
+   * several predicates at once, and to add, remove some, add again predicates
+   * in a single call to yypkg *)
+  | [], opts -> begin
+      let f conf = function
+        | Args.Opt ("-setpreds", preds) ->  
+            let vals = List.map Args.val_of_opts preds in
+            List.fold_left Config.setpred conf vals
+        | Args.Opt ("-delpreds", preds) -> 
+            let vals = List.map Args.val_of_opts preds in
+            List.fold_left Config.delpred conf vals
+        (* Args makes sure this last case can't happen *)
+        | _ -> assert false
+      in
+      Conf.update (fun conf -> List.fold_left f conf opts)
+    end
+  (* if -listpred has been given together with another argument: *)
+  | _ -> raise (Args.Parsing_failed "⁻listpred can't be combined with other arguments.")
 
 let main () =
-  if Args.wants_help () then
+  if Args.wants_help () || Args.nothing_given () then
     Args.print_help cmd_line_spec
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
