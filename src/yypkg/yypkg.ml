@@ -75,11 +75,11 @@ let config opts =
   | [], opts -> begin
       let f conf = function
         | Args.Opt ("-setpreds", preds) ->  
-            let vals = List.map Args.val_of_opts preds in
-            List.fold_left Config.setpred conf vals
+            let preds = Args.to_string_list preds in
+            List.fold_left Config.setpred conf preds
         | Args.Opt ("-delpreds", preds) -> 
-            let vals = List.map Args.val_of_opts preds in
-            List.fold_left Config.delpred conf vals
+            let preds = Args.to_string_list preds in
+            List.fold_left Config.delpred conf preds
         (* Args makes sure this last case can't happen *)
         | _ -> assert false
       in
