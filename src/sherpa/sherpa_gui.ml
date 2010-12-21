@@ -16,8 +16,8 @@ type col = {
 type interface = {
   window : GWindow.window;
   paned : GPack.paned;
-  listview : GObj.widget;
-  textview : GObj.widget;
+  listview : GTree.tree_store;
+  textview : GText.view;
 }
 
 let hpolicy = `AUTOMATIC
@@ -42,7 +42,7 @@ let columns_l2 = [ x.name; x.version_inst; x.version_avail; x.size_installed; x.
 let textview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
   let view = GText.view ~packing:scrolled#add_with_viewport () in
-  scrolled#coerce
+  view, scrolled#coerce
 
 let update_listview ~(model : GTree.tree_store) db pkglist =
   let fill columns db pkg =
@@ -64,25 +64,24 @@ let listview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
   let model = GTree.tree_store cols in
   let treeview = GTree.view ~model ~packing:scrolled#add_with_viewport () in
+  let renderer_toggle = GTree.cell_renderer_toggle [] in
+  let renderer_text = GTree.cell_renderer_text [] in
+  let toggle col treepath =
+    let iter = model#get_iter treepath in
+    model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col))
+  in
   let column_toggle (title, col) =
-    let toggle treepath =
-      let iter = model#get_iter treepath in
-      let b = model#get ~row:iter ~column:col in
-      model#set ~row:iter ~column:col (not b)
-    in
-    let renderer_toggle = GTree.cell_renderer_toggle [] in
-    ignore (renderer_toggle#connect#toggled ~callback:toggle);
+    ignore (renderer_toggle#connect#toggled ~callback:(toggle col));
     GTree.view_column ~title ~renderer:(renderer_toggle, [ "active", col ]) ()
   in
   let column_string (title, col) =
-    let renderer_text = GTree.cell_renderer_text [] in
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
-  let columns1 = List.map column_toggle columns_l1 in
-  let columns = List.rev_append columns1 (List.rev_map column_string columns_l2) in
-  List.map treeview#append_column columns;
+  let columns1 = List.map (column_toggle ) columns_l1 in
+  let columns = columns1 @ (List.map column_string columns_l2) in
+  ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
   update_listview ~model (Db.read ()) (pkglist_of_uri pkg_list_uri);
-  scrolled#coerce
+  model, scrolled#coerce
 
 let window () =
   let window = GWindow.window () in
@@ -92,10 +91,10 @@ let window () =
 let interface () =
   let window = window () in
   let paned = GPack.paned `VERTICAL ~packing:window#add () in
-  let listview = listview () in
-  let textview = textview () in
-  paned#add1 listview;
-  paned#add2 textview;
+  let listview, listview_scrolled = listview () in
+  let textview, textview_scrolled = textview () in
+  paned#add1 listview_scrolled;
+  paned#add2 textview_scrolled;
   { window = window; paned = paned; listview = listview; textview = textview }
 
 let () =
