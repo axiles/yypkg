@@ -1,5 +1,5 @@
 all:
-	cd src && ocamlbuild -cflag -rectypes {yypkg,makeypkg,sherpa{,_gen,_gui}}.native
+	cd src && ocamlbuild -cflag -rectypes yypkg.native makeypkg.native sherpa.native sherpa_gen.native sherpa_gui.native
 
 clean:
 	cd src && ocamlbuild -clean
