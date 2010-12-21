@@ -35,6 +35,7 @@ let cmd_line_spec = [
     (* not handled currently: "-regen", []; *)
   ], "parent option for:";
   "-init", [], "setups a directory tree for yypkg (run once)";
+  "-sherpa", [], "run the sherpa gui";
 ]
 
 (* find the prefix from a command-line *)
@@ -120,11 +121,13 @@ let main () =
           List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
       (* config does nothing on its own but has suboptions *)
       | "-config", subopts -> config subopts
+      (* FIXME *)
+      | "-sherpa", [] -> ()
       (* if an option was different, Args.parse would already have complained,
        * so this final pattern will never be matched *)
       | _ -> assert false
 
-let () =
+let main () =
   (* FIXME: if an exception happens, no matter what it is, the error message
    * will always be the same: the command-line is wrong, even if it was
    * perfectly fine (a.g. -list but the database being corrupt *)
@@ -139,3 +142,5 @@ let () =
       let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
       List.iter f l
 
+let () =
+  main ()

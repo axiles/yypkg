@@ -36,9 +36,11 @@ let get_deps pkglist p =
   let names = add [ p.metadata.name ] p in
   find_packages_named pkglist names
 
+let pkglist_of_uri uri =
+  pkglist_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
+
 let get_packages with_deps output_folder package = 
-  let pkglist = get_uri_contents pkg_list_uri in
-  let pkglist = pkglist_of_sexp (Sexplib.Sexp.of_string pkglist) in
+  let pkglist = pkglist_of_uri pkg_list_uri in
   let pkglist =
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist p else [ p ]
