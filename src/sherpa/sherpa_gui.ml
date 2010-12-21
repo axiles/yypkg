@@ -36,7 +36,6 @@ let columns = {
   description = "Description", cols#add Gobject.Data.string;
 }
 let x = columns
-let columns_l1 = [ x.installed; x.selected ]
 let columns_l2 = [ x.name; x.version_inst; x.version_avail; x.size_installed; x.size_package; x.description ]
 
 let textview () =
@@ -64,23 +63,23 @@ let listview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
   let model = GTree.tree_store cols in
   let treeview = GTree.view ~model ~packing:scrolled#add_with_viewport () in
-  let renderer_toggle = GTree.cell_renderer_toggle [] in
   let renderer_text = GTree.cell_renderer_text [] in
   let toggle col treepath =
     let iter = model#get_iter treepath in
     model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col))
   in
-  let column_toggle (title, col) =
-    ignore (renderer_toggle#connect#toggled ~callback:(toggle col));
+  let column_toggle ~tie (title, col) =
+    let renderer_toggle = GTree.cell_renderer_toggle [] in
+    if tie then ignore (renderer_toggle#connect#toggled ~callback:(toggle col));
     GTree.view_column ~title ~renderer:(renderer_toggle, [ "active", col ]) ()
   in
   let column_string (title, col) =
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
-  let columns1 = List.map (column_toggle ) columns_l1 in
-  let columns = columns1 @ (List.map column_string columns_l2) in
+  let inst = column_toggle ~tie:true x.installed in
+  let sel = column_toggle ~tie:false x.selected in
+  let columns = inst :: sel :: List.map column_string columns_l2 in
   ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
-  update_listview ~model (Db.read ()) (pkglist_of_uri pkg_list_uri);
   model, scrolled#coerce
 
 let window () =
@@ -101,4 +100,5 @@ let () =
   Yypkg.main ();
   let interface = interface () in
   interface.window#show ();
+  update_listview ~model:interface.listview (Db.read ()) (pkglist_of_uri pkg_list_uri);
   GMain.Main.main ()
