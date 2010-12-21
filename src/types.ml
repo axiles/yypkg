@@ -132,7 +132,7 @@ type db = package list with sexp
 (* list of predicates that are checked before installing apackage: for instance:
   * arch=x86_64,noarch
   * stability=stable,release_candidate *)
-type conf = { (* XXX: is it duplicating the "predicates" field in metadata?? *)
+type conf = {
   preds : predicates;
 } with sexp
 
@@ -148,4 +148,12 @@ type pkg = {
 } with sexp
 
 type pkglist = pkg list with sexp
+
+type sherpa_conf = {
+  mirror : string;
+  sherpa_version : string;
+} with sexp
+
+type sherpa_conf_field =
+  | Mirror of string
 

@@ -30,7 +30,10 @@ let db_path =
   Lib.filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
 
 let conf_path =
-  Lib.filename_concat [ "etc"; "yypkg.conf" ]
+  Lib.filename_concat [ "etc"; "yypkg.d"; "yypkg.conf" ]
+
+let sherpa_conf_path =
+  Lib.filename_concat [ "etc"; "yypkg.d"; "sherpa.conf" ]
 
 let rev_list_of_queue q =
   Queue.fold (fun l e -> e::l) [] q
@@ -134,5 +137,5 @@ let assert_file_exists f =
   * TODO: check the external binaries are available 
   * ... *)
 let sanity_checks () =
-  let required_files = [ db_path; conf_path ] in
+  let required_files = [ db_path; conf_path; sherpa_conf_path ] in
   List.iter assert_file_exists required_files

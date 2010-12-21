@@ -1,9 +1,22 @@
 open Types
 open Lib
 
-let mirror = "http://notk.org/~adrien/yypkg"
-let version = "13.1"
-let pkg_list_uri = String.concat "/" [ mirror; version; "pkglist" ]
+let read () =
+  sherpa_conf_of_sexp (Disk.read Yylib.sherpa_conf_path)
+
+let write conf =
+  Disk.write Yylib.sherpa_conf_path (sexp_of_sherpa_conf conf)
+
+let update f =
+  write (f (read ()))
+
+let pkg_list_uri () =
+  let conf = read () in
+  String.concat "/" [ conf.mirror; conf.sherpa_version; "pkglist" ]
+
+let pkg_uri filename =
+  let conf = read () in
+  String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
 
 let get_uri_contents uri =
   let a = [| wget; "-O"; "-"; "-q"; uri |] in
@@ -19,7 +32,7 @@ let get_uri uri output =
   ignore (Unix.waitpid [] pid)
 
 let download_to_folder folder p =
-  let uri = String.concat "/" [ mirror; version; "packages"; p.filename ] in
+  let uri = pkg_uri p.filename in
   let output = filename_concat [ folder; p.filename ] in
   FileUtil.mkdir ~parent:true ~mode:0o755 folder;
   get_uri uri output
@@ -39,8 +52,11 @@ let get_deps pkglist p =
 let pkglist_of_uri uri =
   pkglist_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
 
-let get_packages with_deps output_folder package = 
-  let pkglist = pkglist_of_uri pkg_list_uri in
+let pkglist () =
+  pkglist_of_uri (pkg_list_uri ())
+
+let get_packages ~with_deps ~output_folder ~package = 
+  let pkglist = pkglist () in
   let pkglist =
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist p else [ p ]
@@ -50,6 +66,6 @@ let get_packages with_deps output_folder package =
 let default_output_folder =
   try
     let prefix = Unix.getenv "YYPREFIX" in
-    Lib.filename_concat [ prefix; "var"; "cache"; "packages"; version]
+    Lib.filename_concat [ prefix; "var"; "cache"; "packages" ]
   with Not_found -> ""
 

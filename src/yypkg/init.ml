@@ -1,7 +1,6 @@
 (*
  * yypkg - A cross-platforma package manager
  * Copyright (C) 2010 Adrien Nader
- * Copyright (C) <year>  <name of author>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +34,8 @@ let init prefix =
   let make_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
   let folders, binaries = List.map (make_absolute prefix) [ 
     (* we pass "." here to create the prefix if it doesn't already exist *)
-    "."; "etc"; "sbin"; Lib.filename_concat [ "var"; "log"; "packages" ]
+    Lib.filename_concat [ "etc"; "yypkg.d" ]; "sbin";
+    Lib.filename_concat [ "var"; "log"; "packages" ]
   ], List.map (make_absolute Lib.binary_path) [
     "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe"; "makeypkg.exe"
   ]
@@ -47,4 +47,10 @@ let init prefix =
   (if "Win32" = Sys.os_type then FileUtil.cp binaries (make_absolute prefix "sbin"));
   Disk.write db_path (sexp_of_db []);
   let base_conf = { preds = [] } in
-  Disk.write conf_path (sexp_of_conf base_conf)
+  let base_sherpa_conf = {
+    mirror = "http://notk.org/~adrien/yypkg";
+    sherpa_version = "latest";
+  }
+  in
+  Disk.write conf_path (sexp_of_conf base_conf);
+  Disk.write sherpa_conf_path (sexp_of_sherpa_conf base_sherpa_conf)

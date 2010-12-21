@@ -1,6 +1,6 @@
 open Types
-open Sherpalib
 open Lib
+open Sherpalib
 
 type col = {
   installed : string * bool GTree.column;
@@ -18,10 +18,33 @@ type interface = {
   paned : GPack.paned;
   listview : GTree.tree_store;
   textview : GText.view;
+  menubar : GMenu.menu_shell;
 }
 
 let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
+
+let set_dialog ~text ~callback ~parent () =
+  let dialog = GWindow.dialog ~parent ~destroy_with_parent:true ~show:true () in
+  let textfield = GEdit.entry ~text () in
+  let hbox = GPack.hbox () in
+  let ok = GButton.button ~label:"ok" ~packing:hbox#add ~show:true () in
+  let cancel = GButton.button ~label:"cancel" ~packing:hbox#add ~show:true () in
+  ignore (ok#connect#clicked ~callback:(callback dialog textfield));
+  ignore (cancel#connect#clicked ~callback:dialog#destroy);
+  dialog#vbox#pack ~expand:false textfield#coerce;
+  dialog#vbox#pack ~expand:false hbox#coerce
+
+let set_conf_field prop ~parent =
+  let conf = read () in
+  let text, f = match prop with
+  | `mirror -> conf.mirror, fun mirror conf -> { conf with mirror = mirror }
+  | `version -> conf.sherpa_version, fun version conf -> { conf with sherpa_version = version }
+  in
+  let ok_callback dialog textfield () =
+    update (f textfield#text); dialog#destroy ()
+  in
+  set_dialog ~text ~callback:ok_callback ~parent
 
 let cols = new GTree.column_list
 
@@ -82,6 +105,40 @@ let listview () =
   ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
   model, scrolled#coerce
 
+let menu window listview =
+  let update () =
+    update_listview ~model:listview (Db.read ()) (pkglist ())
+  in
+  let file = [ `I ("_Quit", GMain.Main.quit) ] in
+  let package_list = [
+    `I ("_Search for an update", update);
+    `I ("_Force an update", update);
+  ]
+  in
+  let deps = [ `I ("_Mark dependencies", (fun () -> ())); ] in
+  let settings = [
+    `I ("Set _mirror", set_conf_field `mirror ~parent:window);
+    `I ("Set _version", set_conf_field `version ~parent:window);
+  ]
+  in
+  let help = [ `I ("_Help", (fun () -> ())) ] in
+  let menu = [
+    "_File", file;
+    "_Package list", package_list;
+    "_Dependencies", deps;
+    "_Settings", settings;
+    "_Help", help;
+  ]
+  in
+  let create_menu ~packing (label, entries) =
+    let item = GMenu.menu_item ~label ~packing () in
+    let menu = GMenu.menu ~packing:item#set_submenu () in
+    GToolbox.build_menu menu ~entries
+  in
+  let menubar = GMenu.menu_bar () in
+  ignore (List.map (create_menu ~packing:menubar#append) menu);
+  menubar
+
 let window () =
   let window = GWindow.window () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
@@ -89,16 +146,20 @@ let window () =
 
 let interface () =
   let window = window () in
-  let paned = GPack.paned `VERTICAL ~packing:window#add () in
+  let vbox = GPack.vbox ~packing:window#add () in
+  let paned = GPack.paned `VERTICAL () in
   let listview, listview_scrolled = listview () in
   let textview, textview_scrolled = textview () in
+  let menubar = menu window listview in
   paned#add1 listview_scrolled;
   paned#add2 textview_scrolled;
-  { window = window; paned = paned; listview = listview; textview = textview }
+  vbox#pack ~expand:false menubar#coerce;
+  vbox#pack ~expand:true paned#coerce;
+  { window = window; paned = paned; listview = listview; textview = textview;
+    menubar = menubar }
 
 let () =
   Yypkg.main ();
   let interface = interface () in
   interface.window#show ();
-  update_listview ~model:interface.listview (Db.read ()) (pkglist_of_uri pkg_list_uri);
   GMain.Main.main ()

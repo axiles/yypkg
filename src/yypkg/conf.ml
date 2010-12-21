@@ -23,10 +23,10 @@ open Yylib
 let set conf = function
   | Predicate (binding, value) -> 
       let preds = List.remove_assoc binding conf.preds in
-      { conf with preds = (binding, value) :: preds }
+      { preds = (binding, value) :: preds }
 
 let unset conf binding = 
-  { conf with preds = List.remove_assoc binding conf.preds }
+  { preds = List.remove_assoc binding conf.preds }
 
 let read () =
   conf_of_sexp (Disk.read conf_path)
@@ -34,12 +34,12 @@ let read () =
 let write conf =
   (* Let's sort the configuration. Won't be faster but should be nicer to read
    * when editing the file by hand. It'll also avoid requiring to sort the
-   * output when listing the configuration on command-line.
+   * output when listing the configuration to the user.
    * We use stable_sort so not to change anything if there are several bindings
    * for the same value, it shouldn't happen but Murphy's Law is Murphy's Law,
    * so why not stay safe? *)
   let sorted_preds = List.stable_sort compare conf.preds in
-  let conf = { conf with preds = sorted_preds } in
+  let conf = { preds = sorted_preds } in
   Disk.write conf_path (sexp_of_conf conf)
 
 (* read the conf, run the function, write the database to disk
