@@ -26,10 +26,10 @@ let vpolicy = `AUTOMATIC
 
 let set_dialog ~text ~callback ~parent () =
   let dialog = GWindow.dialog ~parent ~destroy_with_parent:true ~show:true () in
-  let textfield = GEdit.entry ~text () in
+  let textfield = GEdit.entry ~width:400 ~text () in
   let hbox = GPack.hbox () in
-  let ok = GButton.button ~label:"ok" ~packing:hbox#add ~show:true () in
-  let cancel = GButton.button ~label:"cancel" ~packing:hbox#add ~show:true () in
+  let ok = GButton.button ~stock:`OK ~packing:hbox#add ~show:true () in
+  let cancel = GButton.button ~stock:`CANCEL ~packing:hbox#add ~show:true () in
   ignore (ok#connect#clicked ~callback:(callback dialog textfield));
   ignore (cancel#connect#clicked ~callback:dialog#destroy);
   dialog#vbox#pack ~expand:false textfield#coerce;
@@ -50,7 +50,7 @@ let cols = new GTree.column_list
 
 let columns = {
   installed = "Installed", cols#add Gobject.Data.boolean;
-  selected = "Auto-selected", cols#add Gobject.Data.boolean;
+  selected = "Future", cols#add Gobject.Data.boolean;
   name = "Name", cols#add Gobject.Data.string;
   version_inst = "Version (installed)", cols#add Gobject.Data.string;
   version_avail = "Version (available)", cols#add Gobject.Data.string;
@@ -72,7 +72,7 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
     let name = metadata.Types.name in
     let iter = model#append () in
     let version = string_of_version metadata.version in
-    let size = FileUtil.string_of_size metadata.size_expanded in
+    let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let installed = List.exists (Yylib.package_is_named name) db in
     model#set ~row:iter ~column:(snd columns.selected) installed;
     model#set ~row:iter ~column:(snd columns.name) name;
