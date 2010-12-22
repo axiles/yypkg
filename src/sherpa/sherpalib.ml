@@ -40,13 +40,13 @@ let download_to_folder folder p =
 let find_packages_named pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
-let get_deps pkglist p =
+let get_deps pkglist packages =
   let rec add accu p =
     let l = List.filter (fun n -> not (List.mem n accu)) p.deps in
     let accu = List.rev_append l accu in
     List.fold_left add accu (find_packages_named pkglist l)
   in
-  let names = add [ p.metadata.name ] p in
+  let names = List.fold_left add [] packages in
   find_packages_named pkglist names
 
 let pkglist_of_uri uri =
@@ -59,7 +59,7 @@ let get_packages ~with_deps ~output_folder ~package =
   let pkglist = pkglist () in
   let pkglist =
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
-    if with_deps then get_deps pkglist p else [ p ]
+    if with_deps then get_deps pkglist [ p ] else [ p ]
   in 
   List.iter (download_to_folder output_folder) pkglist
 

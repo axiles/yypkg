@@ -4,7 +4,7 @@ open Sherpalib
 
 type col = {
   installed : string * bool GTree.column;
-  selected : string * bool GTree.column;
+  with_deps : string * bool GTree.column;
   name : string * string GTree.column;
   version_inst : string * string GTree.column;
   version_avail : string * string GTree.column;
@@ -20,6 +20,8 @@ type interface = {
   textview : GText.view;
   menubar : GMenu.menu_shell;
 }
+
+let pkglist = lazy (ref (pkglist ()))
 
 let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
@@ -50,7 +52,7 @@ let cols = new GTree.column_list
 
 let columns = {
   installed = "Installed", cols#add Gobject.Data.boolean;
-  selected = "Future", cols#add Gobject.Data.boolean;
+  with_deps = "With deps", cols#add Gobject.Data.boolean;
   name = "Name", cols#add Gobject.Data.string;
   version_inst = "Version (installed)", cols#add Gobject.Data.string;
   version_avail = "Version (available)", cols#add Gobject.Data.string;
@@ -74,7 +76,7 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
     let version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let installed = List.exists (Yylib.package_is_named name) db in
-    model#set ~row:iter ~column:(snd columns.selected) installed;
+    model#set ~row:iter ~column:(snd columns.installed) installed;
     model#set ~row:iter ~column:(snd columns.name) name;
     model#set ~row:iter ~column:(snd columns.size_installed) size;
     model#set ~row:iter ~column:(snd columns.version_avail) version;
@@ -82,32 +84,70 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
   in
   List.iter (fill columns db) pkglist
 
+let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
+  let rec find accu pred f iter =
+    let accu = if pred model iter then (f model iter) :: accu else accu in
+    if model#iter_next iter then find accu pred f iter else accu
+  in
+  let rec update columns selecteds iter =
+    let name = model#get ~row:iter ~column:(snd columns.name) in
+    let selected = List.mem name selecteds in
+    model#set ~row:iter ~column:(snd columns.with_deps) selected;
+    if model#iter_next iter then update columns selecteds iter else ()
+  in
+  let selecteds = match model#get_iter_first with
+  | Some iter ->
+      let is_selected (model : GTree.tree_store) iter =
+        model#get ~row:iter ~column:(snd columns.installed)
+      in
+      let f (model : GTree.tree_store) iter =
+        model#get ~row:iter ~column:(snd columns.name)
+      in
+      find [] is_selected f iter
+  | None -> []
+  in
+  match model#get_iter_first with
+  | Some iter ->
+      let selecteds = find_packages_named pkglist selecteds in
+      let deps = get_deps pkglist selecteds in
+      let deps = List.map (fun p -> p.metadata.Types.name) deps in
+      update columns deps iter
+  | None -> ()
+
 let listview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
   let model = GTree.tree_store cols in
   let treeview = GTree.view ~model ~packing:scrolled#add_with_viewport () in
   let renderer_text = GTree.cell_renderer_text [] in
-  let toggle col treepath =
+  let toggle ?f col treepath =
     let iter = model#get_iter treepath in
-    model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col))
+    model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col));
+    match f with
+    | None -> ()
+    | Some f -> f ~model
   in
-  let column_toggle ~tie (title, col) =
+  let column_toggle ~auto ~on_toggle (title, col) =
     let renderer_toggle = GTree.cell_renderer_toggle [] in
-    if tie then ignore (renderer_toggle#connect#toggled ~callback:(toggle col));
+    (if auto then
+      ignore (renderer_toggle#connect#toggled ~callback:(on_toggle col))
+    else
+      ());
     GTree.view_column ~title ~renderer:(renderer_toggle, [ "active", col ]) ()
   in
   let column_string (title, col) =
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
-  let inst = column_toggle ~tie:true x.installed in
-  let sel = column_toggle ~tie:false x.selected in
+  let pkglist = Lazy.force pkglist in
+  let f = update_listview_deps ~pkglist:!pkglist in
+  let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
+  let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
   ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
   model, scrolled#coerce
 
 let menu window listview =
   let update () =
-    update_listview ~model:listview (Db.read ()) (pkglist ())
+    update_listview ~model:listview (Db.read ()) !(Lazy.force pkglist)
   in
   let file = [ `I ("_Quit", GMain.Main.quit) ] in
   let package_list = [
