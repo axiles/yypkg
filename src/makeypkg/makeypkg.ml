@@ -24,7 +24,6 @@ open Types
 let prefix_arch = [
   "i686-w64-mingw32", "i686-w64-mingw32";
   "x86_64-w64-mingw32", "x86_64-w64-mingw32";
-  "i686-pc-mingw32", "mingw";
 ]
 
 let xz_call size =

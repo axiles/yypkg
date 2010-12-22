@@ -53,6 +53,7 @@ let pkg_of_file folder file =
   List.iter (fun (a, b) -> x_provides metadata.name filelist a b) rels;
   {
     metadata = metadata;
+    size_compressed = (FileUtil.stat file).FileUtil.size;
     filename = file;
     signature = None;
     files = filelist;

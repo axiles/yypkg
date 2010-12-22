@@ -42,6 +42,7 @@ let set_conf_field prop ~parent =
   let text, f = match prop with
   | `mirror -> conf.mirror, fun mirror conf -> { conf with mirror = mirror }
   | `version -> conf.sherpa_version, fun version conf -> { conf with sherpa_version = version }
+  | `downloadfolder -> conf.download_folder, fun folder conf -> { conf with download_folder = folder }
   in
   let ok_callback dialog textfield () =
     update (f textfield#text); dialog#destroy ()
@@ -73,14 +74,17 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
     let metadata = pkg.metadata in
     let name = metadata.Types.name in
     let iter = model#append () in
-    let version = string_of_version metadata.version in
+    let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
-    let installed = List.exists (Yylib.package_is_named name) db in
-    model#set ~row:iter ~column:(snd columns.installed) installed;
     model#set ~row:iter ~column:(snd columns.name) name;
     model#set ~row:iter ~column:(snd columns.size_installed) size;
-    model#set ~row:iter ~column:(snd columns.version_avail) version;
-    model#set ~row:iter ~column:(snd columns.description) metadata.Types.description
+    model#set ~row:iter ~column:(snd columns.version_avail) sherpa_version;
+    model#set ~row:iter ~column:(snd columns.description) metadata.Types.description;
+    try
+      let (m, _, _), _ = List.find (Yylib.package_is_named name) db in
+      model#set ~row:iter ~column:(snd columns.installed) true;
+      model#set ~row:iter ~column:(snd columns.version_inst) (string_of_version m.version)
+    with _ -> ()
   in
   List.iter (fill columns db) pkglist
 
@@ -159,6 +163,7 @@ let menu window listview =
   let settings = [
     `I ("Set _mirror", set_conf_field `mirror ~parent:window);
     `I ("Set _version", set_conf_field `version ~parent:window);
+    `I ("Set _download folder", set_conf_field `downloadfolder ~parent:window);
   ]
   in
   let help = [ `I ("_Help", (fun () -> ())) ] in

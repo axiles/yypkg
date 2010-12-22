@@ -31,12 +31,13 @@ let mkdir =
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* On windows, we need an absolute filename it seems *)
-  let make_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
-  let folders, binaries = List.map (make_absolute prefix) [ 
-    (* we pass "." here to create the prefix if it doesn't already exist *)
-    Lib.filename_concat [ "etc"; "yypkg.d" ]; "sbin";
-    Lib.filename_concat [ "var"; "log"; "packages" ]
-  ], List.map (make_absolute Lib.binary_path) [
+  let mk_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
+  let fc = Lib.filename_concat in
+  let dl_folder = mk_absolute prefix (fc [ "var"; "log"; "packages" ]) in
+  let folders, binaries = dl_folder :: (List.map (mk_absolute prefix) [ 
+    fc [ "etc"; "yypkg.d" ]; "sbin";
+    fc [ "var"; "cache"; "packages" ];
+  ]), List.map (mk_absolute Lib.binary_path) [
     "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe"; "makeypkg.exe"
   ]
   in
@@ -44,12 +45,13 @@ let init prefix =
   Sys.chdir prefix;
   (* XXX: FileUtil.cp has some optional arguments but I'm not sure what they
    * default to *)
-  (if "Win32" = Sys.os_type then FileUtil.cp binaries (make_absolute prefix "sbin"));
+  (if "Win32" = Sys.os_type then FileUtil.cp binaries (mk_absolute prefix "sbin"));
   Disk.write db_path (sexp_of_db []);
   let base_conf = { preds = [] } in
   let base_sherpa_conf = {
     mirror = "http://notk.org/~adrien/yypkg";
     sherpa_version = "latest";
+    download_folder = dl_folder;
   }
   in
   Disk.write conf_path (sexp_of_conf base_conf);

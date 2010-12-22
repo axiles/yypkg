@@ -141,6 +141,7 @@ type field =
 
 type pkg = {
   metadata : metadata;
+  size_compressed : size;
   filename : string;
   signature : string option;
   files : string list;
@@ -152,6 +153,7 @@ type pkglist = pkg list with sexp
 type sherpa_conf = {
   mirror : string;
   sherpa_version : string;
+  download_folder : string;
 } with sexp
 
 type sherpa_conf_field =
