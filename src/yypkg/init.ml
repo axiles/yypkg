@@ -32,15 +32,12 @@ let mkdir =
 let init prefix =
   (* On windows, we need an absolute filename it seems *)
   let mk_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
-  let fc = Lib.filename_concat in
-  let dl_folder = mk_absolute prefix (fc [ "var"; "log"; "packages" ]) in
-  let folders, binaries = dl_folder :: (List.map (mk_absolute prefix) [ 
-    fc [ "etc"; "yypkg.d" ]; "sbin";
-    fc [ "var"; "cache"; "packages" ];
-  ]), List.map (mk_absolute Lib.binary_path) [
-    "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe"; "makeypkg.exe"
-  ]
-  in
+  let dl_folder = mk_absolute prefix default_download_path in
+  let folders = [conf_folder; "sbin"; db_folder] in
+  let binaries = [ "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe";
+  "makeypkg.exe" ] in
+  let folders = dl_folder :: (List.map (mk_absolute prefix) folders) in
+  let binaries = List.map (mk_absolute Lib.binary_path) binaries in
   List.iter mkdir folders;
   Sys.chdir prefix;
   (* XXX: FileUtil.cp has some optional arguments but I'm not sure what they

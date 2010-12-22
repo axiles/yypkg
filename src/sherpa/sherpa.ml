@@ -23,8 +23,8 @@ let main () =
     if "" = !package then
       x_must_be_provided "package name"
     else
-      (Sherpalib.get_packages ~with_deps:!with_deps
-        ~output_folder:!output_folder ~package:!package; 0)
+      (ignore (Sherpalib.get_packages ~with_deps:!with_deps
+        ~output_folder:!output_folder ~package:!package); 0)
 
 let () = 
   exit (main ())

@@ -37,17 +37,30 @@ let set_dialog ~text ~callback ~parent () =
   dialog#vbox#pack ~expand:false textfield#coerce;
   dialog#vbox#pack ~expand:false hbox#coerce
 
-let set_conf_field prop ~parent =
+let set_conf_field ~read ~update ~text ~f ~parent =
   let conf = read () in
-  let text, f = match prop with
-  | `mirror -> conf.mirror, fun mirror conf -> { conf with mirror = mirror }
-  | `version -> conf.sherpa_version, fun version conf -> { conf with sherpa_version = version }
-  | `downloadfolder -> conf.download_folder, fun folder conf -> { conf with download_folder = folder }
-  in
+  let text = text conf in
   let ok_callback dialog textfield () =
     update (f textfield#text); dialog#destroy ()
   in
   set_dialog ~text ~callback:ok_callback ~parent
+
+let set_sherpa_conf_field prop ~parent =
+  let text, f = match prop with
+  | `mirror -> (fun c -> c.mirror), fun mirror c -> { c with mirror = mirror }
+  | `version -> (fun c -> c.sherpa_version), fun version c -> { c with sherpa_version = version }
+  | `downloadfolder -> (fun c -> c.download_folder), fun folder c -> { c with download_folder = folder }
+  in
+  set_conf_field ~read ~update ~text ~f ~parent
+
+let set_yypkg_conf_field prop ~parent =
+  let pred_text pred c =
+    try String.concat "," (List.assoc pred c.preds) with Not_found -> ""
+  in
+  let text, f = match prop with
+  | `pred p -> pred_text p, fun s c -> Config.setpred c (p ^ "=" ^ s)
+  in
+  set_conf_field ~read:Conf.read ~update:Conf.update ~text ~f ~parent
 
 let cols = new GTree.column_list
 
@@ -90,28 +103,38 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
   in
   List.iter (fill columns db) pkglist
 
+let rec find model accu pred f iter =
+  let accu = if pred model iter then (f model iter) :: accu else accu in
+  if model#iter_next iter then find model accu pred f iter else accu
+
+let selecteds_of ~model ~column =
+  match model#get_iter_first with
+  | Some iter ->
+      let is_selected (model : GTree.tree_store) iter =
+        model#get ~row:iter ~column
+      in
+      let f (model : GTree.tree_store) iter =
+        model#get ~row:iter ~column:(snd columns.name)
+      in
+      find model [] is_selected f iter
+  | None -> []
+
+let process ~model () =
+  let pkglist = !(Lazy.force pkglist) in
+  let conf = read () in
+  let selecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
+  let selecteds = find_packages_named pkglist selecteds in
+  let pkgs = List.map (download_to_folder conf.download_folder) selecteds in
+  Db.update (Install.install (Conf.read ()) pkgs)
+
 let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
-  let rec find accu pred f iter =
-    let accu = if pred model iter then (f model iter) :: accu else accu in
-    if model#iter_next iter then find accu pred f iter else accu
-  in
   let rec update columns selecteds iter =
     let name = model#get ~row:iter ~column:(snd columns.name) in
     let selected = List.mem name selecteds in
     model#set ~row:iter ~column:(snd columns.with_deps) selected;
     if model#iter_next iter then update columns selecteds iter else ()
   in
-  let selecteds = match model#get_iter_first with
-  | Some iter ->
-      let is_selected (model : GTree.tree_store) iter =
-        model#get ~row:iter ~column:(snd columns.installed)
-      in
-      let f (model : GTree.tree_store) iter =
-        model#get ~row:iter ~column:(snd columns.name)
-      in
-      find [] is_selected f iter
-  | None -> []
-  in
+  let selecteds = selecteds_of ~model ~column:(snd columns.installed) in
   match model#get_iter_first with
   | Some iter ->
       let selecteds = find_packages_named pkglist selecteds in
@@ -143,8 +166,7 @@ let listview () =
   let column_string (title, col) =
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
-  let pkglist = Lazy.force pkglist in
-  let f = update_listview_deps ~pkglist:!pkglist in
+  let f = update_listview_deps ~pkglist:!(Lazy.force pkglist) in
   let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
   let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
@@ -155,24 +177,28 @@ let menu window listview =
   let update () =
     update_listview ~model:listview (Db.read ()) !(Lazy.force pkglist)
   in
-  let file = [ `I ("_Quit", GMain.Main.quit) ] in
+  let file = [
+    `I ("_Process", process ~model:listview);
+    `I ("_Quit", GMain.Main.quit);
+    ]
+  in
   let package_list = [
     `I ("_Search for an update", update);
     `I ("_Force an update", update);
   ]
   in
-  let deps = [ `I ("_Mark dependencies", (fun () -> ())); ] in
+  let predicates = [ `I ("_Arch", set_yypkg_conf_field (`pred "arch") ~parent:window); ] in
   let settings = [
-    `I ("Set _mirror", set_conf_field `mirror ~parent:window);
-    `I ("Set _version", set_conf_field `version ~parent:window);
-    `I ("Set _download folder", set_conf_field `downloadfolder ~parent:window);
+    `I ("_Mirror", set_sherpa_conf_field `mirror ~parent:window);
+    `I ("_Version", set_sherpa_conf_field `version ~parent:window);
+    `I ("_Download folder", set_sherpa_conf_field `downloadfolder ~parent:window);
+    `M ("_Predicates", predicates);
   ]
   in
   let help = [ `I ("_Help", (fun () -> ())) ] in
   let menu = [
     "_File", file;
     "_Package list", package_list;
-    "_Dependencies", deps;
     "_Settings", settings;
     "_Help", help;
   ]

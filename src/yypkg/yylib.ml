@@ -26,8 +26,17 @@ exception File_not_found of string
 let ahk_bin =
   Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
 
+let conf_folder =
+  Lib.filename_concat [ "etc"; "yypkg.d" ]
+
+let db_folder =
+  Lib.filename_concat [ "var"; "log"; "packages" ]
+
 let db_path =
-  Lib.filename_concat [ "var"; "log"; "packages"; "yypkg_db" ]
+  Lib.filename_concat [ db_folder; "yypkg_db" ]
+
+let default_download_path =
+  Lib.filename_concat [ "var"; "cache"; "packages" ]
 
 let conf_path =
   Lib.filename_concat [ "etc"; "yypkg.d"; "yypkg.conf" ]

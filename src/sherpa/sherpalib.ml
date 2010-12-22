@@ -19,7 +19,7 @@ let pkg_uri filename =
   String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
 
 let get_uri_contents uri =
-  let a = [| wget; "-O"; "-"; "-q"; uri |] in
+  let a = [| wget; "-O"; "-"; "-nv"; uri |] in
   let w_out, w_in = Unix.pipe () in
   (* TODO: read stderr for logs: let log_out, log_in = Unix.pipe () in *)
   let pid = Unix.create_process wget a Unix.stdin w_in Unix.stderr in
@@ -35,14 +35,16 @@ let download_to_folder folder p =
   let uri = pkg_uri p.filename in
   let output = filename_concat [ folder; p.filename ] in
   FileUtil.mkdir ~parent:true ~mode:0o755 folder;
-  get_uri uri output
+  get_uri uri output;
+  output
 
 let find_packages_named pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
 let get_deps pkglist packages =
   let rec add accu p =
-    let l = List.filter (fun n -> not (List.mem n accu)) p.deps in
+    let name = p.metadata.name in
+    let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.deps) in
     let accu = List.rev_append l accu in
     List.fold_left add accu (find_packages_named pkglist l)
   in
@@ -61,7 +63,7 @@ let get_packages ~with_deps ~output_folder ~package =
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist [ p ] else [ p ]
   in 
-  List.iter (download_to_folder output_folder) pkglist
+  List.map (download_to_folder output_folder) pkglist
 
 let default_output_folder =
   try

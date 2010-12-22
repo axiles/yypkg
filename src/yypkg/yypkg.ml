@@ -110,8 +110,7 @@ let main () =
       | "-install", l ->
           let l = Args.to_string_list l in
           let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
-          let f conf = List.fold_left (Install.install (Conf.read ())) conf l in
-          Db.update f
+          Db.update (Install.install (Conf.read ()) l)
       (* uninstall, accepts one package at a time *)
       | "-uninstall", l ->
           let l = Args.to_string_list l in

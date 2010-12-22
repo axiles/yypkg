@@ -49,4 +49,7 @@ let install conf db p =
   assert_file_exists p;
   (* if the line above didn't abort, go on and instal the package *)
   install_package p conf db
+  
+let install yypkg_conf l conf =
+  List.fold_left (install yypkg_conf) conf l
 
