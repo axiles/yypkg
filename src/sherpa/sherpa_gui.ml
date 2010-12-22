@@ -76,8 +76,10 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
     let iter = model#append () in
     let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
+    let size_pkg = FileUtil.string_of_size ~fuzzy:true pkg.size_compressed in
     model#set ~row:iter ~column:(snd columns.name) name;
     model#set ~row:iter ~column:(snd columns.size_installed) size;
+    model#set ~row:iter ~column:(snd columns.size_package) size_pkg;
     model#set ~row:iter ~column:(snd columns.version_avail) sherpa_version;
     model#set ~row:iter ~column:(snd columns.description) metadata.Types.description;
     try
