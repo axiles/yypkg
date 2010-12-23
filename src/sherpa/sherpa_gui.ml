@@ -154,18 +154,25 @@ let process ~model ~db () =
   Db.update (Uninstall.uninstall uninst);
   Db.update (Install.install (Conf.read ()) ipkgs)
 
-let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
+let update_listview_deps ~(model : GTree.tree_store) =
   let rec update columns selecteds iter =
     let name = model#get ~row:iter ~column:(snd columns.name) in
     let selected = List.mem name selecteds in
     model#set ~row:iter ~column:(snd columns.with_deps) selected;
     if model#iter_next iter then update columns selecteds iter else ()
   in
-  let selecteds, _unsel = selecteds_of ~model ~column:(snd columns.installed) in
+  let should_be_uninstalled unselecteds db p =
+    Yylib.is_installed db p.metadata.Types.name && List.mem p unselecteds
+  in
+  let pkglist = !(Lazy.force pkglist) in
+  let db = Db.read () in
+  let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.installed) in
   match model#get_iter_first with
   | Some iter ->
       let selecteds = find_all_by_name pkglist selecteds in
+      let unselecteds = find_all_by_name pkglist unselecteds in
       let deps = get_deps pkglist selecteds in
+      let deps = List.filter (fun p -> not (should_be_uninstalled unselecteds db p)) deps in
       let deps = List.map (fun p -> p.metadata.Types.name) deps in
       update columns deps iter
   | None -> ()
@@ -193,7 +200,7 @@ let listview () =
   let column_string (title, col) =
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
-  let f = update_listview_deps ~pkglist:!(Lazy.force pkglist) in
+  let f = update_listview_deps in
   let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
   let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
