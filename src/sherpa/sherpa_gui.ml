@@ -127,6 +127,7 @@ let update_listview ~(model : GTree.tree_store) ~(treeview : GTree.view) ~textvi
     try
       let m = Yylib.metadata_of_pkg (Yylib.find_by_name db name) in
       model#set ~row:iter ~column:(snd columns.installed) true;
+      model#set ~row:iter ~column:(snd columns.with_deps) true;
       model#set ~row:iter ~column:(snd columns.version_inst) (string_of_version m.version)
     with _ -> ()
   in
@@ -144,13 +145,24 @@ let selecteds_of ~model ~column =
       partition model ([], []) is_selected f f iter
   | None -> [], []
 
+let avail_is_newer_than_installed db p =
+  let name = p.metadata.Types.name in
+  if Yylib.is_installed db name then
+    let pkg = Yylib.find_by_name db name in
+    let installed = (Yylib.metadata_of_pkg pkg).version in
+    let avail = p.metadata.Types.version in
+    avail > installed
+  else
+    true
+
 let process ~model ~db () =
   let pkglist = !(Lazy.force pkglist) in
   let conf = read () in
   let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
   let selecteds = find_all_by_name pkglist selecteds in
   let uninst = List.filter (Yylib.is_installed db) unselecteds in
-  let ipkgs = List.map (download_to_folder conf.download_folder) selecteds in
+  let inewer = List.filter (avail_is_newer_than_installed db) selecteds in
+  let ipkgs = List.map (download_to_folder conf.download_folder) inewer in
   Db.update (Uninstall.uninstall uninst);
   Db.update (Install.install (Conf.read ()) ipkgs)
 
