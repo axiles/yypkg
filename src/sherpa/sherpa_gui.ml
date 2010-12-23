@@ -279,6 +279,7 @@ let interface () =
 
 let () =
   Yypkg.main ();
+  ignore (GtkMain.Main.init ());
   let interface = interface () in
   interface.window#show ();
   GMain.Main.main ()
