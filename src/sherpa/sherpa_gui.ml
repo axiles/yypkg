@@ -65,8 +65,8 @@ let set_yypkg_conf_field prop ~parent =
 let cols = new GTree.column_list
 
 let columns = {
-  installed = "Installed", cols#add Gobject.Data.boolean;
-  with_deps = "With deps", cols#add Gobject.Data.boolean;
+  installed = "Selected", cols#add Gobject.Data.boolean;
+  with_deps = "Deps included", cols#add Gobject.Data.boolean;
   name = "Name", cols#add Gobject.Data.string;
   version_inst = "Version (installed)", cols#add Gobject.Data.string;
   version_avail = "Version (available)", cols#add Gobject.Data.string;
