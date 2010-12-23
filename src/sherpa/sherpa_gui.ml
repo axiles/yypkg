@@ -234,7 +234,7 @@ let menu ~window ~model ~treeview ~textview =
   menubar
 
 let window () =
-  let window = GWindow.window () in
+  let window = GWindow.window ~width:800 ~height:480 () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
   window
 
@@ -245,8 +245,8 @@ let interface () =
   let textview, textview_scrolled = textview () in
   let model, treeview, listview_scrolled = listview () in
   let menubar = menu ~window ~model ~treeview ~textview in
-  paned#add1 listview_scrolled;
-  paned#add2 textview_scrolled;
+  paned#pack1 ~shrink:false listview_scrolled;
+  paned#pack2 ~shrink:true textview_scrolled;
   vbox#pack ~expand:false menubar#coerce;
   vbox#pack ~expand:true paned#coerce;
   { window = window; paned = paned; listview = model; textview = textview;
