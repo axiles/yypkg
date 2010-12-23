@@ -90,9 +90,13 @@ let textview () =
   let view = GText.view ~editable:false ~packing:scrolled#add_with_viewport () in
   view, scrolled#coerce
 
-let rec find model accu pred f iter =
-  let accu = if pred model iter then (f model iter) :: accu else accu in
-  if model#iter_next iter then find model accu pred f iter else accu
+let rec partition model (vrai, faux) pred f g iter =
+  let accu = if pred model iter then
+    ((f model iter) :: vrai), faux
+  else
+    vrai, ((g model iter) :: faux)
+  in
+  if model#iter_next iter then partition model accu pred f g iter else accu
 
 let selection_changed_cb ~pkglist ~textview ~(model : GTree.tree_store) ~selection () =
   match selection#get_selected_rows with
@@ -137,16 +141,18 @@ let selecteds_of ~model ~column =
       let f (model : GTree.tree_store) iter =
         model#get ~row:iter ~column:(snd columns.name)
       in
-      find model [] is_selected f iter
-  | None -> []
+      partition model ([], []) is_selected f f iter
+  | None -> [], []
 
-let process ~model () =
+let process ~model ~db () =
   let pkglist = !(Lazy.force pkglist) in
   let conf = read () in
-  let selecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
+  let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
   let selecteds = find_all_by_name pkglist selecteds in
-  let pkgs = List.map (download_to_folder conf.download_folder) selecteds in
-  Db.update (Install.install (Conf.read ()) pkgs)
+  let uninst = List.filter (Yylib.is_installed db) unselecteds in
+  let ipkgs = List.map (download_to_folder conf.download_folder) selecteds in
+  Db.update (Uninstall.uninstall uninst);
+  Db.update (Install.install (Conf.read ()) ipkgs)
 
 let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
   let rec update columns selecteds iter =
@@ -155,7 +161,7 @@ let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
     model#set ~row:iter ~column:(snd columns.with_deps) selected;
     if model#iter_next iter then update columns selecteds iter else ()
   in
-  let selecteds = selecteds_of ~model ~column:(snd columns.installed) in
+  let selecteds, _unsel = selecteds_of ~model ~column:(snd columns.installed) in
   match model#get_iter_first with
   | Some iter ->
       let selecteds = find_all_by_name pkglist selecteds in
@@ -199,7 +205,7 @@ let menu ~window ~model ~treeview ~textview =
     update_listview ~model ~treeview ~textview (Db.read ()) !(Lazy.force pkglist)
   in
   let file = [
-    `I ("Process", process ~model);
+    `I ("Process", process ~model ~db:(Db.read ()));
     `I ("Quit", GMain.Main.quit);
     ]
   in

@@ -54,8 +54,10 @@ let uninstall_package db package_name =
   Db.uninstall_package db package_name
 
 let uninstall db p =
-  if List.exists (package_is_named p) db then
+  if is_installed db p then
     uninstall_package db p
   else
     raise Package_does_not_exist
 
+let uninstall l db =
+  List.fold_left uninstall db l

@@ -50,6 +50,6 @@ let install conf db p =
   (* if the line above didn't abort, go on and instal the package *)
   install_package p conf db
   
-let install yypkg_conf l conf =
-  List.fold_left (install yypkg_conf) conf l
+let install yypkg_conf l db =
+  List.fold_left (install yypkg_conf) db l
 

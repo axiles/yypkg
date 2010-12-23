@@ -114,7 +114,7 @@ let main () =
       (* uninstall, accepts one package at a time *)
       | "-uninstall", l ->
           let l = Args.to_string_list l in
-          Db.update (fun db -> List.fold_left Uninstall.uninstall db l)
+          Db.update (Uninstall.uninstall l)
       (* list the installed packages *)
       | "-list", [] -> 
           List.iter (fun p->print_endline (metadata_of_pkg p).name) (Db.read ())

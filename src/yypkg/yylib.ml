@@ -153,3 +153,7 @@ let assert_file_exists f =
 let sanity_checks () =
   let required_files = [ db_path; conf_path; sherpa_conf_path ] in
   List.iter assert_file_exists required_files
+
+(* Test if a package is installed *)
+let is_installed db p =
+  List.exists (package_is_named p) db
