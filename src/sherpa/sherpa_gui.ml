@@ -77,16 +77,41 @@ let columns = {
 let x = columns
 let columns_l2 = [ x.name; x.version_inst; x.version_avail; x.size_installed; x.size_package; x.description ]
 
+let details_of_package pkg =
+  let buffer = GText.buffer () in
+  let field_tag = buffer#create_tag ~name:"field" [ `WEIGHT `BOLD ] in
+  buffer#insert ~tags:[field_tag] "Description";
+  buffer#insert ": ";
+  buffer#insert pkg.metadata.Types.description;
+  buffer
+
 let textview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
-  let view = GText.view ~packing:scrolled#add_with_viewport () in
+  let view = GText.view ~editable:false ~packing:scrolled#add_with_viewport () in
   view, scrolled#coerce
 
-let update_listview ~(model : GTree.tree_store) db pkglist =
+let rec find model accu pred f iter =
+  let accu = if pred model iter then (f model iter) :: accu else accu in
+  if model#iter_next iter then find model accu pred f iter else accu
+
+let selection_changed_cb ~pkglist ~textview ~(model : GTree.tree_store) ~selection () =
+  match selection#get_selected_rows with
+  | path :: _ ->
+      let iter = model#get_iter path in
+      let name = model#get ~row:iter ~column:(snd columns.name) in
+      let pkg = find_by_name pkglist name in
+      let buffer = details_of_package pkg in
+      textview#set_buffer buffer
+  | [] -> ()
+
+let update_listview ~(model : GTree.tree_store) ~(treeview : GTree.view) ~textview db pkglist =
   let fill columns db pkg =
     let metadata = pkg.metadata in
     let name = metadata.Types.name in
     let iter = model#append () in
+    let selection = treeview#selection in
+    let callback = selection_changed_cb ~pkglist ~textview ~model ~selection in
+    ignore (selection#connect#changed ~callback);
     let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let size_pkg = FileUtil.string_of_size ~fuzzy:true pkg.size_compressed in
@@ -96,16 +121,12 @@ let update_listview ~(model : GTree.tree_store) db pkglist =
     model#set ~row:iter ~column:(snd columns.version_avail) sherpa_version;
     model#set ~row:iter ~column:(snd columns.description) metadata.Types.description;
     try
-      let (m, _, _), _ = List.find (Yylib.package_is_named name) db in
+      let m = Yylib.metadata_of_pkg (Yylib.find_by_name db name) in
       model#set ~row:iter ~column:(snd columns.installed) true;
       model#set ~row:iter ~column:(snd columns.version_inst) (string_of_version m.version)
     with _ -> ()
   in
   List.iter (fill columns db) pkglist
-
-let rec find model accu pred f iter =
-  let accu = if pred model iter then (f model iter) :: accu else accu in
-  if model#iter_next iter then find model accu pred f iter else accu
 
 let selecteds_of ~model ~column =
   match model#get_iter_first with
@@ -123,7 +144,7 @@ let process ~model () =
   let pkglist = !(Lazy.force pkglist) in
   let conf = read () in
   let selecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
-  let selecteds = find_packages_named pkglist selecteds in
+  let selecteds = find_all_by_name pkglist selecteds in
   let pkgs = List.map (download_to_folder conf.download_folder) selecteds in
   Db.update (Install.install (Conf.read ()) pkgs)
 
@@ -137,7 +158,7 @@ let update_listview_deps ~(model : GTree.tree_store) ~pkglist =
   let selecteds = selecteds_of ~model ~column:(snd columns.installed) in
   match model#get_iter_first with
   | Some iter ->
-      let selecteds = find_packages_named pkglist selecteds in
+      let selecteds = find_all_by_name pkglist selecteds in
       let deps = get_deps pkglist selecteds in
       let deps = List.map (fun p -> p.metadata.Types.name) deps in
       update columns deps iter
@@ -171,36 +192,36 @@ let listview () =
   let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
   ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
-  model, scrolled#coerce
+  model, treeview, scrolled#coerce
 
-let menu window listview =
+let menu ~window ~model ~treeview ~textview =
   let update () =
-    update_listview ~model:listview (Db.read ()) !(Lazy.force pkglist)
+    update_listview ~model ~treeview ~textview (Db.read ()) !(Lazy.force pkglist)
   in
   let file = [
-    `I ("_Process", process ~model:listview);
-    `I ("_Quit", GMain.Main.quit);
+    `I ("Process", process ~model);
+    `I ("Quit", GMain.Main.quit);
     ]
   in
   let package_list = [
-    `I ("_Search for an update", update);
-    `I ("_Force an update", update);
+    `I ("Search for an update", update);
+    `I ("Force an update", update);
   ]
   in
-  let predicates = [ `I ("_Arch", set_yypkg_conf_field (`pred "arch") ~parent:window); ] in
+  let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch") ~parent:window); ] in
   let settings = [
-    `I ("_Mirror", set_sherpa_conf_field `mirror ~parent:window);
-    `I ("_Version", set_sherpa_conf_field `version ~parent:window);
-    `I ("_Download folder", set_sherpa_conf_field `downloadfolder ~parent:window);
-    `M ("_Predicates", predicates);
+    `I ("Mirror", set_sherpa_conf_field `mirror ~parent:window);
+    `I ("Version", set_sherpa_conf_field `version ~parent:window);
+    `I ("Download folder", set_sherpa_conf_field `downloadfolder ~parent:window);
+    `M ("Predicates", predicates);
   ]
   in
-  let help = [ `I ("_Help", (fun () -> ())) ] in
+  let help = [ `I ("Help", (fun () -> ())) ] in
   let menu = [
-    "_File", file;
-    "_Package list", package_list;
-    "_Settings", settings;
-    "_Help", help;
+    "File", file;
+    "Package list", package_list;
+    "Settings", settings;
+    "Help", help;
   ]
   in
   let create_menu ~packing (label, entries) =
@@ -221,14 +242,14 @@ let interface () =
   let window = window () in
   let vbox = GPack.vbox ~packing:window#add () in
   let paned = GPack.paned `VERTICAL () in
-  let listview, listview_scrolled = listview () in
   let textview, textview_scrolled = textview () in
-  let menubar = menu window listview in
+  let model, treeview, listview_scrolled = listview () in
+  let menubar = menu ~window ~model ~treeview ~textview in
   paned#add1 listview_scrolled;
   paned#add2 textview_scrolled;
   vbox#pack ~expand:false menubar#coerce;
   vbox#pack ~expand:true paned#coerce;
-  { window = window; paned = paned; listview = listview; textview = textview;
+  { window = window; paned = paned; listview = model; textview = textview;
     menubar = menubar }
 
 let () =

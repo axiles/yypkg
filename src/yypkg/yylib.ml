@@ -128,12 +128,17 @@ let file_exists_in_package file (_, result_list) =
   in
   List.exists f result_list
 
-let name_of_package ((m, _, _), _) =
-  m.name
+(* Return the yypkg metadata from a sherpa package *)
+let metadata_of_pkg ((m, _, _), _) =
+  m
 
 (* a predicate to check a package has some name, used with List.find *)
 let package_is_named name p =
-  (name_of_package p) = name
+  (metadata_of_pkg p).name = name
+
+(* Find a package by its name *)
+let find_by_name db name =
+  List.find (package_is_named name) db
 
 (* check a file exists: raises an exception with the name of the missing file if
   * it doesn't *)

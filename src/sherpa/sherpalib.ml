@@ -38,7 +38,10 @@ let download_to_folder folder p =
   get_uri uri output;
   output
 
-let find_packages_named pkglist name_list =
+let find_by_name pkglist name =
+  List.find (fun p -> p.metadata.name = name) pkglist
+
+let find_all_by_name pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
 let get_deps pkglist packages =
@@ -46,10 +49,10 @@ let get_deps pkglist packages =
     let name = p.metadata.name in
     let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.deps) in
     let accu = List.rev_append l accu in
-    List.fold_left add accu (find_packages_named pkglist l)
+    List.fold_left add accu (find_all_by_name pkglist l)
   in
   let names = List.fold_left add [] packages in
-  find_packages_named pkglist names
+  find_all_by_name pkglist names
 
 let pkglist_of_uri uri =
   pkglist_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))

@@ -117,7 +117,7 @@ let main () =
           Db.update (fun db -> List.fold_left Uninstall.uninstall db l)
       (* list the installed packages *)
       | "-list", [] -> 
-          List.iter (fun p -> print_endline (name_of_package p)) (Db.read ())
+          List.iter (fun p->print_endline (metadata_of_pkg p).name) (Db.read ())
       (* config does nothing on its own but has suboptions *)
       | "-config", subopts -> config subopts
       (* FIXME *)
