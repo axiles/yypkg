@@ -9,7 +9,7 @@
 O=preprocessed_src
 mkdir -p $O/{args,makeypkg,yypkg,sherpa}
 
-PKGS='mikmatch_str sexplib.syntax'
+PKGS='sexplib.syntax'
 I_FLAGS='ocamlfind query -i-format -predicates syntax,preprocessor -r -separator " "'
 A_FLAGS='ocamlfind query -a-format -predicates syntax,preprocessor -r -separator " "'
 I_PARAMS=$(eval "$I_FLAGS $PKGS")
