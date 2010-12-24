@@ -3,86 +3,103 @@
 set -eux
 
 slackbuild=$1
+folder=$(dirname $slackbuild)
+slackbuild=$(basename $slackbuild)
+# We get the name of the slackbuild, strip trailing digits and starting "lib"
+name=$(echo $slackbuild | rev | cut -d. -f2- | rev | sed -e 's/[[:digit:]]\+$//' -e 's/^lib//')
+
+cd $folder
 
 ################################################################################
 ### User Settings ###
 ################################################################################
 
-MIRROR="http://notk.org/~adrien/gits/slackware64-current.ext"
+INSTALL_MIRROR="http://notk.org/~adrien/gits/slackware64-current.ext"
+export lt_cv_deplibs_check_method='pass_all'
 
 ################################################################################
 ### Settings ###
 ################################################################################
 
-case "$HST" in
-  "w32") HST="i686-w64-mingw32";;
-  "w64") HST="x86_64-w64-mingw32";;
-esac
+INSTALL_PREFIX=/$YYPREFIX
 
-case "$HST" in
-  "i686-w64-mingw32")
-  "x86_64-w64-mingw32")
-    PREFIX=/$HST
-    EXE_FORMAT="PE"
-  ;;
-esac
+if [ "$HST" = "i686-w64-mingw32" ]; then
+  PREFIX=/$HST
+  LIBDIRSUFFIX="32"
+  EXE_FORMAT="PE"
+  STRIP=${HST}-strip
+elif [ "$HST" = "x86_64-w64-mingw32" ]; then
+  PREFIX=/$HST
+  LIBDIRSUFFIX="64"
+  EXE_FORMAT="PE"
+  STRIP=${HST}-strip
+fi
 
-# When cross-compiling, tools such as strip are prefixed.
-if [ -n ${HST} ]; then
-  STRIP="${HST}-strip"
-else
-  STRIP="strip"
-then
-
-export PKG_CONFIG_LIBDIR=${PREFIX}/lib/pkgconfig
-export PATH=${PREFIX}/bin:${PATH}
+export PKG_CONFIG_LIBDIR=${INSTALL_PREFIX}/${PREFIX}/lib${LIBDIRSUFFIX}/pkgconfig
+export PKG_CONFIG_PATH=""
+export PATH=${INSTALL_PREFIX}/bin:${PATH}
+export EXE_FORMAT
+export STRIP
 
 ################################################################################
 ### Download sources ###
 ################################################################################
 
-# # We need to find the filename for the sources
-# # We need a file ending with .tar.?z*, there shouldn't be too many
-# # We also limit the search to the current directory
-# # Finally, it has to be 41-bytes
-# srcfile=$(find -maxdepth 1 -name '*.tar.?z*' -size 41c)
-
 # We need to find the filename for the sources
-# It's stored in git and we assert it's the only file matching our regexp (...)
-srcfile=$(git ls-tree --name-only HEAD | grep '\.tar\.[gbx]z2\?$')
 
-# Classic way slackware discovers a version number
-VERSION=${VERSION:-"$(echo ${srcfile} | rev | cut -f 3- -d . | cut -f 1 -d - | rev)"}
+# It's stored in git and we may have several files to download (see libpng)
+# We assert that all files in the current folder are required and that some more
+# from subfolders may be required too but that these have ${name} in the path
+srcfiles=" $(git ls-tree --name-only HEAD | grep '\.tar\.[gbx]z2\?$')" || true
+srcfiles+=" $(git ls-tree -r --name-only HEAD | grep ${name} | grep '\.tar\.[gbx]z2\?$') " || true
 
-# Reset the file to be sure of its contents
-git checkout ${srcfile}
+# We also need resolve patch files, only difference is the regexp (no ".tar")
+patches=" $(git ls-tree --name-only HEAD | grep '\.[gbx]z2\?$') " || true
+patches+=" $(git ls-tree -r --name-only HEAD | grep ${name} | grep '\.[gbx]z2\?$') " || true
+for file in ${srcfiles} ${patches}; do
+  echo "Source file is ${file}"
 
-sha1=$(cat ${srcfile})
+  NAME_NOEXT="$(echo ${file} | rev | cut -d. -f3- | rev)"
+  EXT1="$(echo ${file} | rev | cut -d. -f2 | rev)"
+  EXT2="$(echo ${file} | rev | cut -d. -f1 | rev)"
 
-archive=${PKGNAM}-${VERSION}_${sha1}.tar.yypkg.bz2
+  # Reset the file to be sure of its contents
+  git checkout ${file}
 
-# Check the local archive isn't corrupted
-if [ -e ${archive} -a "${sha1}" != "$(sha1sum ${archive} | awk -F' ' '{ print $1; }')" ]; then
-  rm ${archive}
-fi
+  # If the file isn't ascii text, it means the file wasn't stored externally in git,
+  #   also meaning ${file} is probably directly the file and we don't need to fetch it
+  if [ "$(file -b ${file})" = "ASCII text" ]; then
+    sha1=$(cat ${file})
 
-# If the local archive doesn't exist or was corrupted, download it
-if [ ! -e ${archive} ]; then
-  wget ${MIRROR}/${sha1} --quiet -O ${archive}
-fi
+    archive=${NAME_NOEXT}_${sha1}.${EXT1}.yypkg.${EXT2}
 
-# We remove the file with the sha1 and replace it with our regular source
-# It's not a problem since it's still available in git's index
-rm ${srcfile}
-ln -s ${archive} ${srcfile}
+    # Check the local archive isn't corrupt
+    if [ -e ${archive} ]; then
+      if [ "${sha1}" != "$(sha1sum ${archive} | awk -F' ' '{ print $1; }')" ]; then
+        rm ${archive}
+      fi
+    fi
+
+    # If the local archive doesn't exist or was corrupted, download it
+    if [ ! -e ${archive} ]; then
+      wget ${INSTALL_MIRROR}/${sha1} --quiet -O ${archive}
+    fi
+
+    # We remove the file with the sha1 and replace it with our regular source
+    # It's not a problem since it's still available in git's index
+    rm ${file}
+    # If archive="foo/bar/baz.blah", basename prevents the link from dangling
+    ln -s "$(basename ${archive})" ${file}
+  fi
+done
 
 ################################################################################
 ### Sanity checks ###
 ################################################################################
 
-# Check ${PREFIX} exists
-if [ ! -d ${PREFIX} ]; then
-  echo "${PREFIX} must exist and contain a valid toolchain in bin/. Aborting."
+# Check ${INSTALL_PREFIX} exists
+if [ ! -d ${INSTALL_PREFIX} ]; then
+  echo "${INSTALL_PREFIX} must exist and contain a valid toolchain in bin/."
   exit 1
 fi
 
@@ -90,11 +107,11 @@ fi
 ### Fire up the slackbuild ###
 ################################################################################
 
-HST=${HST} PREFIX=${PREFIX} VERSION=${VERSION} STRIP=${STRIP} EXE_FORMAT=${EXE_FORMAT} ./${slackbuild}
+HST=${HST} PREFIX=${PREFIX} ./${slackbuild}
 
 ################################################################################
 ### Move source files back in place ###
 ################################################################################
 
-git checkout ${srcfile}
+git checkout ${srcfiles} ${patches}
 
