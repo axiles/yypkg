@@ -35,7 +35,7 @@ let init prefix =
   let dl_folder = mk_absolute prefix default_download_path in
   let folders = [conf_folder; "sbin"; db_folder] in
   let binaries = [ "NamedPipe.exe"; "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe";
-  "makeypkg.exe" ] in
+  "makeypkg.exe"; "wget.exe"; "sherpa_gui.exe"; "sherpa_gen.exe"; "sherpa.exe" ] in
   let folders = dl_folder :: (List.map (mk_absolute prefix) folders) in
   let binaries = List.map (mk_absolute Lib.binary_path) binaries in
   List.iter mkdir folders;
