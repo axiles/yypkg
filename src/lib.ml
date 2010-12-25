@@ -136,17 +136,14 @@ let dir_sep =
 
 (* We expect tools in the installation directory *)
 
-(* absolute paths to tar and xz and NamedPipe if on windows *)
-(* on windows, we use bsdtar and gnu tar on others *)
-let tar, xz, named_pipe, wget = 
+(* absolute paths to bsdtar, xz and wget *)
+let tar, xz, wget = 
   match Sys.os_type with
-    (* we don't set named_pipe for unix and cygwin because it's not used *)
     | "Unix"
-    | "Cygwin" -> "bsdtar", "xz", "", "wget"
+    | "Cygwin" -> "bsdtar", "xz", "wget"
     | "Win32" ->
         filename_concat [ binary_path; "bsdtar.exe" ],
         filename_concat [ binary_path; "xz.exe" ],
-        filename_concat [ binary_path; "NamedPipe.exe" ],
         filename_concat [ binary_path; "wget.exe" ]
     | _ -> assert false
 
