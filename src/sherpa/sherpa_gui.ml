@@ -216,7 +216,7 @@ let listview () =
   let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
   let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
-  ignore (List.map treeview#append_column columns); (* NOTE: ignore or not? *)
+  ignore (List.map treeview#append_column columns);
   model, treeview, scrolled#coerce
 
 let menu ~window ~model ~treeview ~textview =
@@ -229,8 +229,7 @@ let menu ~window ~model ~treeview ~textview =
     ]
   in
   let package_list = [
-    `I ("Search for an update", update);
-    `I ("Force an update", update);
+    `I ("Force update", update);
   ]
   in
   let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch") ~parent:window); ] in

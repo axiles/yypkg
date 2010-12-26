@@ -110,12 +110,15 @@ let is_opt ?s = function
         | None -> true
     end
 
+let is_val x =
+  not (is_opt x)
+
 let val_of_opts = function
   | Val s -> s
   | Opt _ -> assert false
 
 let to_string_list l =
-  let l, m = List.partition is_opt l in
+  let l, m = List.partition is_val l in
   if m <> [] then
     raise (Invalid_argument "to_string_list")
   else
