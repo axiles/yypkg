@@ -282,3 +282,7 @@ let list_rev_map_exn f l =
     | [] -> accu
   in
   aux f [] l
+
+let prepend_if pred accu x =
+  if pred x then x :: accu else accu
+

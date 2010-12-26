@@ -258,7 +258,7 @@ let menu ~window ~model ~treeview ~textview =
   menubar
 
 let window () =
-  let window = GWindow.window ~width:800 ~height:480 () in
+  let window = GWindow.window ~allow_shrink:true ~width:800 ~height:480 () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
   window
 

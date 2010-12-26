@@ -28,21 +28,22 @@ open Yylib
 let mkdir =
   FileUtil.mkdir ~parent:true ~mode:0o755
 
+let is_binary x =
+  let exts = [ "dll"; "exe" ] in
+  List.fold_left (fun b e -> b || FilePath.check_extension x e) false exts
+
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* On windows, we need an absolute filename it seems *)
   let mk_absolute prefix p = FilePath.DefaultPath.make_absolute prefix p in
   let dl_folder = mk_absolute prefix default_download_path in
   let folders = [conf_folder; "sbin"; db_folder] in
-  let binaries = [ "bsdtar.exe"; "liblzma-0.dll"; "yypkg.exe";
-  "makeypkg.exe"; "wget.exe"; "sherpa_gui.exe"; "sherpa_gen.exe"; "sherpa.exe" ] in
   let folders = dl_folder :: (List.map (mk_absolute prefix) folders) in
-  let binaries = List.map (mk_absolute Lib.binary_path) binaries in
   List.iter mkdir folders;
   Sys.chdir prefix;
-  (* XXX: FileUtil.cp has some optional arguments but I'm not sure what they
-   * default to *)
-  (if "Win32" = Sys.os_type then FileUtil.cp binaries (mk_absolute prefix "sbin"));
+  (if "Win32" = Sys.os_type then
+    let fl = FileUtil.find FileUtil.Is_file "." (Lib.prepend_if is_binary) [] in
+    FileUtil.cp fl (mk_absolute prefix "sbin"));
   Disk.write db_path (sexp_of_db []);
   let base_conf = { preds = [] } in
   let base_sherpa_conf = {
