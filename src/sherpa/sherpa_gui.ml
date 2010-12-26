@@ -192,7 +192,7 @@ let update_listview_deps ~(model : GTree.tree_store) =
 let listview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
   let model = GTree.tree_store cols in
-  let treeview = GTree.view ~model ~packing:scrolled#add_with_viewport () in
+  let treeview = GTree.view ~model ~reorderable:true ~packing:scrolled#add_with_viewport () in
   let renderer_text = GTree.cell_renderer_text [] in
   let toggle ?f col treepath =
     let iter = model#get_iter treepath in
@@ -216,6 +216,7 @@ let listview () =
   let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
   let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
+  List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
   ignore (List.map treeview#append_column columns);
   model, treeview, scrolled#coerce
 
