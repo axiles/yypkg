@@ -42,6 +42,11 @@ On windows, in cmd.exe, run: set YYPREFIX C:/path/to/your/prefix. Both forward a
 From now on, we assume that you've set YYPREFIX.
 
 \section{Initialisation}
+\subsection{-init}
+First, run yypkg -init. This will install some files, mostly create default settings and an empty package database.
+
+On windows, it will also copy binaries to sbin/ so these can always be found (wget, bsdtar, liblzma...).
+
 \begin{verbatim}
 ~/yypkg % export YYPREFIX=$(pwd)/prefix
 ~/yypkg % ./src/yypkg.native -init
@@ -49,22 +54,18 @@ From now on, we assume that you've set YYPREFIX.
 -rw-r--r-- 1 tux users 134 Dec 26 22:17 prefix/etc/yypkg.d/sherpa.conf
 -rw-r--r-- 1 tux users  12 Dec 26 22:17 prefix/etc/yypkg.d/yypkg.conf
 -rw-r--r-- 1 tux users   2 Dec 26 22:17 prefix/var/log/packages/yypkg_db
-~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,i686-w64-mingw32
 \end{verbatim}
-
-\subsection{-init}
-First, run yypkg -init. This will install some files, mostly create default settings and an empty package database.
-
-On windows, it will also copy binaries to sbin/ so these can always be found (wget, bsdtar, liblzma...).
 
 \subsection{-config -setpreds}
 Now, you have to tell yypkg which architectures it should accept for the packages. For instance, if you want win32 packages, you'll use 'i686-w64-mingw32'.
 \begin{verbatim}
-yypkg -config -setpreds i686-w64-mingw32,noarch
+~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,i686-w64-mingw32
 \end{verbatim}
+
 or
+
 \begin{verbatim}
-yypkg -config -setpreds x86_64-w64-mingw32,noarch
+~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,x86_64-w64-mingw32
 \end{verbatim}
 
 \section{sherpa-gui}
