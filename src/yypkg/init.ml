@@ -42,8 +42,9 @@ let init prefix =
   List.iter mkdir folders;
   Sys.chdir prefix;
   (if "Win32" = Sys.os_type then
-    let fl = FileUtil.find FileUtil.Is_file "." (Lib.prepend_if is_binary) [] in
-    FileUtil.cp fl (mk_absolute prefix "sbin"));
+    let module FU = FileUtil in
+    let fl = FU.find FU.Is_file Lib.binary_path (Lib.prepend_if is_binary) [] in
+    FU.cp fl (mk_absolute prefix "sbin"));
   Disk.write db_path (sexp_of_db []);
   let base_conf = { preds = [] } in
   let base_sherpa_conf = {
