@@ -105,7 +105,7 @@ let rm path_unexpanded =
   in
   (* FIXME: env var souldn't be kept in the database, they have to be expanded
    * before *)
-  let path = expand_environment_variables path_unexpanded in
+  let path = reduce_path (expand_environment_variables path_unexpanded) in
   if exists path then
     (* Sys.file_exists follows symlink and is therefore not usable *)
     if FileUtil.test FileUtil.Is_dir path then
