@@ -37,7 +37,7 @@ Since yypkg works in its own prefix, you need to tell it its value. This can be 
 
 With most shells, run: export YYPREFIX=/path/to/your/prefix. The path can be absolute or relative.
 
-On windows, in cmd.exe, run: set YYPREFIX C:/path/to/your/prefix. Both forward and backward slashes work. You can also set it globally in System Properties.
+On windows, in cmd.exe, run: set YYPREFIX=C:/path/to/your/prefix. Both forward and backward slashes work. You can also set it globally in System Properties.
 
 From now on, we assume that you've set YYPREFIX.
 
@@ -57,12 +57,12 @@ On windows, it will also copy binaries to sbin/ so these can always be found (wg
 \end{verbatim}
 
 \subsection{-config -setpreds}
-Now, you have to tell yypkg which architectures it should accept for the packages. For instance, if you want win32 packages, you'll use 'i686-w64-mingw32'.
+Now, you have to tell yypkg which architectures it should accept for the packages. For instance, for win32 packages, you'll use 'i686-w64-mingw32'.
 \begin{verbatim}
 ~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,i686-w64-mingw32
 \end{verbatim}
 
-or
+And for win64 packages (there are no win64 packages currently so don't use yet):
 
 \begin{verbatim}
 ~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,x86_64-w64-mingw32
@@ -72,7 +72,7 @@ or
 All the functions in yypkg are accessible from command-line and a graphical interface named sherpa (the sherpa carries packages to the yeti...).
 
 \begin{center}
-  \includegraphics{sherpa_gui_1.png}
+  \includegraphics{../screenshots/sherpa_gui_1.png}
 \end{center}
 
 \subsection{Starting}

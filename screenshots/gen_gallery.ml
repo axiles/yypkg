@@ -1,6 +1,6 @@
 let code oc image link = Printf.fprintf oc "\
 <body>
-  <a href=\"..\">Up</a>
+  <a href=\"..\">Up</a><br/>
   <a href=\"%s\"><img src=\"%s\"></a>
 </body>" link image
 

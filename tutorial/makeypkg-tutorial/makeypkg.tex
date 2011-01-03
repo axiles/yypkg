@@ -1,0 +1,102 @@
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+
+\pdfimageresolution=108
+
+\author{Adrien Nader}
+\title{YYPkg: building packages with makeypkg}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Generalities}
+Typically, making a package involves copying files from the source tree to another folder which will then be compressed.
+
+This can be done with a variety of approaches and tools which we won't discuss much here. The most common way being probably to set the DESTDIR variable when running 'make install'.
+
+\section{YYPkg-specific steps}
+\subsection{makeypkg -template}
+The makypkg tool requires a "meta" file to build a package. A template can be generated with 'makeypkg -template'.
+
+This file is a s-expression as used by sexplib. Currently, this will output:
+\begin{verbatim}
+((name dummy_name) (size_expanded (TB 42))
+ (version
+  ((major 0) (minor 0) (release 17) (status (Snapshot 0))
+   (package_iteration 0)))
+ (packager_email nobody@example.com) (packager_name ulysse)
+ (description "dummy, dummy, dummy") (predicates ((arch x86_64-w64-mingw32)))
+\end{verbatim}
+
+We'll quickly go over the fields:
+\begin{itemize}
+  \item{name}: the package name
+  \item{size\_expanded}: the size of the package once installed; it'll be set by makeypkg automatically but the field has to be present
+  \item{version}: THIS WILL CHANGE SOON!
+    \begin{itemize}
+      \item{major, minor, release}: regular numbers, not much to add
+      \item{status}: allows you to set the 'stability' of the package; you can choose between Alpha, Beta, RC, Snapshot, Stable. Only Snapshot takes an argument, meaning that you'd write '(status (Snapshot b05c06ebc))' but '(status Stable)'. Snapshot is meant to contain dates or commit hashes.
+      \item{package\_iteration}: indicates when you change something in the package but don't change the version of the software: could be incremented if you forgot to copy a file or are now stripping executables, or...
+    \end{itemize}
+  \item{packager\_email}: in case you need to be contacted for a package issue
+  \item{package\_name}: your name obviously; if you need to put spaces, remember to quote the whole string with double quotes.
+  \item{description}: not much to say
+  \item{predicates}: this is a set of predicates which have to be verified before a package is installed. This can be used to make sure that an i486 package is not installed on x86\_64. Some examples:
+    \begin{itemize}
+      \item{No predicate}: '(predicates ())'
+      \item{arch=x86\_64-w64-mingw32}: '(predicates (arch x86\_64-w64-mingw32))'
+      \item{pluto=saturn}: '(predicates (pluto saturn))'
+      \item{a=b \&\& c=d}: '(predicates (a b) (c d))'
+    \end{itemize}
+\end{itemize}
+
+\subsection{Running makeypkg}
+This is makeypkg's --help:
+\begin{verbatim}
+Create a yypkg package from a folder.
+Use either (-o, -meta and a folder) XOR -template (see -help). Examples:
+  $ makeypkg -o /some/folder -meta pcre.META pcre-1.2.3
+  $ makeypkg -template
+  -o output folder (defaults to current dir)
+  -meta package metadata file
+  -template write a template meta on stdout
+  -help  Display this list of options
+  --help  Display this list of options
+\end{verbatim}
+
+\begin{itemize}
+  \item{-o}: the folder the package will be put in; you don't chose the filename yourself.
+  \item{-meta}: the file to read package metadata from: use '-' for stdin (handy for making changes to the file dynamically, e.g. setting the value for the 'arch' predicate.
+  \item{-template}: described in previous section.
+\end{itemize}
+
+\subsection{A real-world example: pcre in mingw-builds}
+We'll be looking at two files: the end of the build script and pcre.yypkg.meta.
+
+make, make install as usual. Installing into \$PKG. We also use sed to replace '\%{ARCH}' with the actual value as set by your script.
+\begin{verbatim}
+CFLAGS="$SLKCFLAGS" make $NUMJOBS || make || exit 1
+make install DESTDIR=$PKG || exit 1
+sed -e "s/%{ARCH}/${HST}/" $CWD/${PKGNAM}.yypkg.meta | makeypkg -o ${OUTPUT} -meta - $PKG
+\end{verbatim}
+
+The meta file as piped to makeypkg through sed. Notice the value for the 'arch' predicate: '\%{ARCH}'.
+\begin{verbatim}
+((name pcre) (size_expanded (TB 42))
+ (version
+  ((major 8) (minor 2) (release 0) (status Stable)
+   (package_iteration 1)))
+ (packager_email adrien@notk.org) (packager_name "Adrien Nader")
+ (description "pcre") (predicates ((arch "%{ARCH}")))
+ (comments ()))
+\end{verbatim}
+
+This was a quick overview of the pcre build. For more details, see http://cgit.notk.org/adrien/mingw-builds/slackware64-current/tree/slackware64-current/source/l/pcre .
+
+\end{document}
+
