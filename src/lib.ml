@@ -70,11 +70,7 @@ let read pid descr =
   in
   let l = read_rc pid descr [] in
   let ll = List.fold_left (fun a b -> List.rev_append b a) [] l in
-  let s = String.concat "" ll in
-  (* Split on \r\n newlines on windows and \n newlines elsewhere *)
-  match Sys.os_type with
-    | "Win32" -> Str.split (Str.regexp "\r\n") s
-    | _ (* Uniw | Cygwin *) -> Str.split (Str.regexp "\n") s
+  Str.split (Str.regexp "\n") (String.concat "" ll)
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
