@@ -230,9 +230,6 @@ let rev_uniq l =
     | t :: q -> rev_uniq_rc [ t ] t q
     | [] -> []
 
-let arch_of_preds predicates =
-  try List.assoc "arch" predicates with Not_found -> "noarch"
-
 let list_rev_map_exn f l =
   let rec aux f accu = function
     | t :: q ->

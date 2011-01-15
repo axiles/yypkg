@@ -105,10 +105,11 @@ type settings = {
   metafile : string;
 }
 
-let output_file metadata =
-  let arch = arch_of_preds metadata.predicates in
-  (* if we included the ext in concat's call, we'd have an extra separator *)
-  sprintf "%s-%s-%s.txz" metadata.name (string_of_version metadata.version) arch
+let output_file meta =
+  let version = string_of_version meta.version in
+  match meta.target with
+  | None -> sprintf "%s-%s-%s.txz" meta.name version meta.host
+  | Some target -> sprintf "%s-%s-%s-%s.txz" meta.name version target meta.host
 
 let meta ~metafile ~pkg_size =
   let sexp = match metafile with
@@ -170,10 +171,9 @@ let path_fixups folder arch fixups =
 let package_script_el ~pkg_size settings =
   let folder = settings.folder_basename in
   let meta = meta ~metafile:settings.metafile ~pkg_size in
-  let arch = arch_of_preds meta.predicates in
   (* we want to expand the content of folder so we suffix it with '/' *)
   let expand = folder, Expand (folder ^ "/", ".") in
-  let path_fixups = path_fixups settings.folder arch [ `PkgConfig; `Libtool ] in
+  let path_fixups = path_fixups settings.folder meta.host [ `PkgConfig; `Libtool ] in
   meta, (expand :: path_fixups), [ Reverse folder ]
 
 let compress settings meta (script_dir, script_name) =
