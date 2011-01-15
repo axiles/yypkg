@@ -87,15 +87,6 @@ let binary_path =
 let install_path =
   filename_concat [ binary_path; ".." ]
 
-let dummy_meta () =
-  let version = dummy_version () in
-  let size_expanded = FileUtil.TB (Int64.of_int 42) in
-  let meta = { name = "dummy_name"; size_expanded = size_expanded; version =
-    version; packager_email = "nobody@example.com"; packager_name = "ulysse";
-    description = "dummy"; predicates = []; comments = [] }
-  in
-  Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
-
 (* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
   match Sys.os_type with

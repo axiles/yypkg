@@ -138,9 +138,21 @@ type metadata = {
   packager_email : string;
   packager_name : string;
   description : string;
+  host : string;
+  target : string sexp_option;
   predicates : (string * string) list;
   comments : string list;
 } with sexp
+
+let dummy_meta () =
+  let version = dummy_version () in
+  let size_expanded = FileUtil.TB (Int64.of_int 42) in
+  let meta = { name = "dummy_name"; size_expanded = size_expanded; version =
+    version; packager_email = "nobody@example.com"; packager_name = "ulysse";
+    description = "dummy"; host = "%{HST}"; target = Some "%{TGT}";
+    predicates = []; comments = [] }
+  in
+  Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
 
 type script =
   metadata
