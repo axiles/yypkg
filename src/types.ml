@@ -22,22 +22,44 @@ open Sexplib.Conv
 
 TYPE_CONV_PATH "Types"
 
-(* NOTE: this has to be kept ordered !!! *)
+type date =
+  int (* year *)
+  * int (* month *)
+  * int (* day *)
+  * int (* hour *)
+  * int (* minute *)
+with sexp
+
+let string_of_date (year, month, day, hour, minute) =
+  Printf.sprintf "%d-%d-%d,%d:%d" year month day hour minute
+
 type status = 
   | Alpha of int
   | Beta of int
   | RC of int
-  | Snapshot of string
+  | Snapshot_date of date
+  | Snapshot_hash of string
   | Stable
 with sexp
 
-type version = {
-  major : int;
-  minor : int;
-  release : int;
-  status : status;
-  package_iteration : int;
-} with sexp
+let string_of_status = function
+  | Alpha x -> sprintf "alpha-%d" x
+  | Beta x -> sprintf "beta-%d" x
+  | RC x -> sprintf "rc-%d" x
+  | Snapshot_date date -> sprintf "snapshot-%s" (string_of_date date)
+  | Snapshot_hash s -> sprintf "snapshot-%s" s
+  | Stable -> "stable"
+
+type version = (int list * status * int) with sexp
+
+(* create a string from a version *)
+let string_of_version (version, status, iteration) =
+  let version = String.concat "." (List.map string_of_int version) in
+  let status = string_of_status status in
+  String.concat "-" [ version; status; string_of_int iteration ]
+
+let dummy_version () =
+  [ 0; 0; 17 ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 0
 
 (* not really used right now, might well be dropped in the future
  * I think I've even forgotten why I wanted to have different types for them

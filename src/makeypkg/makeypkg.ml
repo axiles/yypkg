@@ -117,15 +117,6 @@ let meta ~metafile ~pkg_size =
   in
   { metadata_of_sexp sexp with size_expanded = pkg_size }
 
-let dummy_meta () =
-  let version = version_of_string "0.0.17-snapshot-0-0" in
-  let meta = { name = "dummy_name"; size_expanded = FileUtil.TB (Int64.of_int
-    42); version = version; packager_email = "nobody@example.com";
-    packager_name = "ulysse"; description = "dummy, dummy, dummy";
-    predicates = ["arch", "x86_64-w64-mingw32"]; comments = [] }
-  in
-  Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
-
 let pkg_config_fixup ~folder ~prefix = 
   let fix ~file ~prefix ~new_prefix = 
     search_and_replace_in_file file prefix "${prefix}";
@@ -211,8 +202,7 @@ Use either (-o, -meta and a folder) XOR -template (see -help). Examples:
   (* the last argument is the folder to package *)
   Arg.parse lst ((:=) folder) usage_msg;
   if !template then
-    let () = print_endline (dummy_meta ()) in
-    exit 0
+    (print_endline (dummy_meta ()); exit 0)
   else
     (* check if any argument has not been set (missing from the command-line *)
     if List.mem "" [ !output; !folder; !meta ] then

@@ -87,40 +87,14 @@ let binary_path =
 let install_path =
   filename_concat [ binary_path; ".." ]
 
-(* Simply make a version out of a string *)
-let version_of_string s =
-  (* we can factor this part, 'remaining' is handled later on *)
-  let major, minor, release, remaining =
-    Scanf.sscanf s "%d.%d.%d-%s" (fun a b c d -> a, b, c, d)
+let dummy_meta () =
+  let version = dummy_version () in
+  let size_expanded = FileUtil.TB (Int64.of_int 42) in
+  let meta = { name = "dummy_name"; size_expanded = size_expanded; version =
+    version; packager_email = "nobody@example.com"; packager_name = "ulysse";
+    description = "dummy"; predicates = []; comments = [] }
   in
-  (* handle 'remaining' now *)
-  let status, iter = match Str.split (Str.regexp "-") remaining with
-    | [ "alpha"; x; y ] -> Alpha (int_of_string x), (int_of_string y)
-    | [ "beta"; x ; y ] -> Beta (int_of_string x), (int_of_string y)
-    | [ "rc"; x ; y ] -> RC (int_of_string x), (int_of_string y)
-    | [ "snapshot"; x; y ] ->  Snapshot x, (int_of_string y)
-    | [ "stable" ; y ] -> Stable, (int_of_string y)
-    | _ -> assert false
-  in
-  {
-    major = major;
-    minor = minor;
-    release = release;
-    status = status;
-    package_iteration = iter;
-  }
-
-(* create a string from a version *)
-let string_of_version v =
-  let status = 
-    match v.status with
-      | Alpha x -> sprintf "alpha-%d" x
-      | Beta x -> sprintf "beta-%d" x
-      | RC x -> sprintf "rc-%d" x
-      | Snapshot s -> sprintf "snapshot-%s" s
-      | Stable -> "stable"
-  in
-  sprintf "%d.%d.%d-%s-%d" v.major v.minor v.release status v.package_iteration
+  Sexplib.Sexp.to_string_hum (sexp_of_metadata meta)
 
 (* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
