@@ -165,8 +165,9 @@ type package = script * (action_id * results) list with sexp
 type db = package list with sexp
 
 (* list of predicates that are checked before installing apackage: for instance:
-  * arch=x86_64,noarch
-  * stability=stable,release_candidate *)
+  * license=bsd
+  * stability=stable,release_candidate
+ * It's mostly free-form, and left as a way to extend the format easily *)
 type conf = {
   preds : predicates;
 } with sexp

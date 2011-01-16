@@ -21,7 +21,7 @@ open Types
 open Lib
 open Types
 
-let prefix_arch = [
+let host_prefix = [
   "i686-w64-mingw32", "i686-w64-mingw32";
   "x86_64-w64-mingw32", "x86_64-w64-mingw32";
 ]
@@ -156,10 +156,10 @@ let libtool_fixup ~folder ~prefix =
   let search_re = Str.regexp "libdir='\\(.*\\)/+lib.*'" in
   PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
 
-let path_fixups folder arch fixups =
-  (* If the arch is unknown or is "noarch", we have to disable auto-fixes *)
-  if List.mem_assoc arch prefix_arch then
-    let prefix = List.assoc arch prefix_arch in
+let path_fixups folder host fixups =
+  (* If the host is unknown or is "noarch", we have to disable auto-fixes *)
+  if List.mem_assoc host host_prefix then
+    let prefix = List.assoc host host_prefix in
     let dispatch folder prefix = function
       | `PkgConfig -> pkg_config_fixup ~folder ~prefix
       | `Libtool -> libtool_fixup ~folder ~prefix
