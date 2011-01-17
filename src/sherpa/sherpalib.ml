@@ -19,12 +19,7 @@ let pkg_uri filename =
   String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
 
 let get_uri_contents uri =
-  let a = [| wget; "-O"; "-"; "-nv"; uri |] in
-  let w_out, w_in = Unix.pipe () in
-  (* TODO: read stderr for logs: let log_out, log_in = Unix.pipe () in *)
-  let pid = Unix.create_process wget a Unix.stdin w_in Unix.stderr in
-  let l = Lib.read pid w_out in
-  String.concat "" l
+  run_and_read_stdout [| wget; "-O"; "-"; "-nv"; uri |]
 
 let get_uri uri output =
   let a = [| wget; "-O"; output; uri |] in
@@ -43,6 +38,12 @@ let find_by_name pkglist name =
 
 let find_all_by_name pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
+
+let find_all_by_host pkglist host =
+  List.filter (fun p -> host = p.host) pkglist
+
+let find_all_by_target pkglist target =
+  List.filter (fun p -> target = p.target) pkglist
 
 let get_deps pkglist packages =
   let rec add accu p =
@@ -74,3 +75,7 @@ let default_output_folder =
     Lib.filename_concat [ prefix; "var"; "cache"; "packages" ]
   with Not_found -> ""
 
+let guess_arch () =
+  match os_type with
+  | `Unix -> run_and_read_stdout [| "config.guess" |]
+  | `Windows -> "i686-w64-mingw32"

@@ -22,55 +22,80 @@ open Types
 module U = Unix
 
 exception ChopList_ChopingTooMuch of (int * int)
-exception ProcessFailed
+exception ProcessFailed of string option
 
-let list_rev_concat l = 
-  List.fold_left (fun a b -> List.rev_append b a) [] l
+let os_type =
+  match Sys.os_type with
+  | "Unix" | "Cygwin" -> `Unix
+  | "Win32" -> `Windows
+  | _ -> assert false
 
-let list_concat l =
-  List.rev (list_rev_concat l)
+(* it would have been too dull if all OSes had the same directory separators *)
+let dir_sep =
+  match os_type with
+    | `Unix -> "/"
+    | `Windows -> "\\"
 
-let read pid descr =
+let read pid ~accumulate ~output =
   (* We'll be reading at most 160 characters at a time, I don't know if there's
    * a better way to do it: more, less, adptive. No idea but this should be good
    * enough *)
   let s = String.make 160 '_' in
   (* This function reads everything available from a descriptor and returns
    * when there's nothing more available (yet) *)
-  let read_once descr =
-    let rec read_once_rc accu =
-      (* check if there's something to read: a timeout of 0.02 to minimize
-       * latency, shouldn't cost anything *)
-      match U.select [ descr ] [] [] 0.02 with
-        | [ _ ],  _, _ -> begin
-            match U.read descr s 0 160 with
-              (* got as much as we asked for, there's probably more: try again*)
-              | 160 as l -> read_once_rc ((String.sub s 0 l) :: accu)
-              (* got less than asked, return *)
-              | l -> (String.sub s 0 l) :: accu
-          end
-            (* ok, we got a timeout: return *)
-        | _ -> accu
-    in
-    read_once_rc []
+  let rec read_once descr buf =
+    (* check if there's something to read: a timeout of 0.02 to minimize
+     * latency, shouldn't cost anything *)
+    match Unix.select [ descr ] [] [] 0.02 with
+      | [ _ ],  _, _ -> begin
+          let l = Unix.read descr s 0 160 in
+          Buffer.add_substring buf s 0 l;
+          if l = 160 then read_once descr buf else ()
+        end
+          (* ok, we got a timeout: return *)
+      | _ -> ()
   in
-  let rec read_rc pid descr accu =
+  let rec read_rc pid accumulate accu =
     (* As long as the process is alive, we have to wait for it to send more data
      * even if nothing is available yet, but when it dies, it becomes unable to
      * write more and we can read everything available in one big pass *)
-    match U.waitpid [ U.WNOHANG ] pid with
+    match Unix.waitpid [ Unix.WNOHANG ] pid with
       (* still alive: read and start again, '0' because no child had its state
        * changed (we're using WNOHANG) *)
-      | 0, _ -> read_rc pid descr ((read_once descr) :: accu)
+      | 0, _ -> accumulate read_once accu; read_rc pid accumulate accu
       (* we know there won't be anything added now: we eat the remaining
        * characters and return right after that *)
-      | pid, U.WEXITED 0 -> (read_once descr) :: accu
-      (* all other cases, we'll say the process failed and raise an exception *)
-      | _, _ -> raise ProcessFailed
+      | pid, status -> accumulate read_once accu; status
   in
-  let l = read_rc pid descr [] in
-  let ll = List.fold_left (fun a b -> List.rev_append b a) [] l in
-  Str.split (Str.regexp "\n") (String.concat "" ll)
+  read_rc pid accumulate output
+
+type process_output = {
+  stdout : Buffer.t;
+  stderr : Buffer.t;
+}
+
+let accumulate ~stdout ~stderr f accu =
+  f stdout accu.stdout;
+  f stderr accu.stderr
+
+let run_and_read a =
+  let stdout_out, stdout_in = Unix.pipe () in
+  let stderr_out, stderr_in = Unix.pipe () in
+  let output = { stdout = Buffer.create 10000; stderr = Buffer.create 10000 } in
+  let accumulate = accumulate ~stdout:stdout_out ~stderr:stderr_out in
+  let pid = Unix.create_process a.(0) a Unix.stdin stdout_in stderr_in in
+  let status = read pid ~accumulate ~output in
+  List.iter Unix.close [ stdout_out; stdout_in; stderr_out; stderr_in ];
+  status, output
+
+let run_and_read_stdout a =
+  let status, output = run_and_read a in
+  match status with
+  | Unix.WEXITED 0 -> Buffer.contents output.stdout
+  | _ -> raise (ProcessFailed (Some (Buffer.contents output.stderr)))
+
+let split_by_line s =
+  Str.split (Str.regexp "\n") s
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
@@ -87,26 +112,17 @@ let binary_path =
 let install_path =
   filename_concat [ binary_path; ".." ]
 
-(* it would have been too dull if all OSes had the same directory separators *)
-let dir_sep =
-  match Sys.os_type with
-    | "Unix"
-    | "Cygwin" -> "/"
-    | "Win32" -> "\\"
-    | _ -> assert false
-
 (* We expect tools in the installation directory *)
 
 (* absolute paths to bsdtar, xz and wget *)
-let tar, xz, wget = 
-  match Sys.os_type with
-    | "Unix"
-    | "Cygwin" -> "bsdtar", "xz", "wget"
-    | "Win32" ->
+let tar, xz, wget, config_guess = 
+  match os_type with
+    | `Unix -> "bsdtar", "xz", "wget", "config.guess"
+    | `Windows ->
         filename_concat [ binary_path; "bsdtar.exe" ],
         filename_concat [ binary_path; "xz.exe" ],
-        filename_concat [ binary_path; "wget.exe" ]
-    | _ -> assert false
+        filename_concat [ binary_path; "wget.exe" ],
+        ""
 
 (* tar + compress on unix, piping the output of tar to the compressor *)
 let tar_compress tar_args compress out =
@@ -119,25 +135,26 @@ let tar_compress tar_args compress out =
   U.close fst_out; U.close snd_out;
   match snd (U.waitpid [] pid2), snd (U.waitpid [] pid1) with
   | U.WEXITED 0, U.WEXITED 0 -> ()
-  | _, _ -> raise ProcessFailed
+  | _, _ -> raise (ProcessFailed None)
 
 (* decompress + untar, "f" will read the output from bsdtar:
  *   'bsdtar xv -O' outputs the content of files to stdout
  *   'bsdtar xv' outputs the list of files expanded to stderr
  *   'bsdtar t' outputs the list of files to stdout *)
 let from_tar action input =
-  let t_r, t_w = U.pipe () in
   (* as per the comment before the function, we have to read stdout or stderr *)
-  let t_args, t_stdout, t_stderr = match action with
+  let stdout o = Buffer.contents o.stdout in
+  let stderr o = Buffer.contents o.stderr in
+  let tar_args, read_from = match action with
   | `extract (pq, strip, iq) ->
-      [| tar; "xvf"; input; "--strip-components"; strip |], U.stdout, t_w
-  | `get file -> [| tar; "xf"; input; "-qO"; file |], t_w, U.stderr
-  | `list -> [| tar; "tf"; input |], t_w, U.stderr
+      [| tar; "xvf"; input; "--strip-components"; strip |], stderr
+  | `get file -> [| tar; "xf"; input; "-qO"; file |], stdout
+  | `list -> [| tar; "tf"; input |], stdout
   in
-  let t_pid = U.create_process t_args.(0) t_args U.stdin t_stdout t_stderr in
-  let l = read t_pid t_r in
-  List.iter U.close [ t_r; t_w ];
-  l
+  let status, output = run_and_read tar_args in
+  match status with
+  | Unix.WEXITED 0 -> split_by_line (read_from output)
+  | _ -> raise (ProcessFailed (Some (stderr output)))
 
 let split_path ?(dir_sep=dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path

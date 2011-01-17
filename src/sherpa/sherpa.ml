@@ -2,6 +2,10 @@ open Types
 
 let usage_msg = ""
 
+let x_must_be_provided spec x =
+  Printf.eprintf "%s must be provided\n" x;
+  Arg.usage spec usage_msg
+
 let main () =
   let with_deps = ref false in
   let output_folder = ref Sherpalib.default_output_folder in
@@ -12,16 +16,11 @@ let main () =
   ]
   in
   Arg.parse spec ((:=) package) usage_msg;
-  let x_must_be_provided x =
-    Printf.eprintf "%s must be provided\n" x;
-    Arg.usage spec usage_msg;
-    1
-  in
   if "" = !output_folder then
-    x_must_be_provided "-output-folder"
+    (x_must_be_provided spec "-output-folder"; 1)
   else
     if "" = !package then
-      x_must_be_provided "package name"
+      (x_must_be_provided spec "package name"; 1)
     else
       (ignore (Sherpalib.get_packages ~with_deps:!with_deps
         ~output_folder:!output_folder ~package:!package); 0)
