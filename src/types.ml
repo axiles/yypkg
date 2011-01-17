@@ -59,7 +59,7 @@ let string_of_version (version, status, iteration) =
   String.concat "-" [ version; status; string_of_int iteration ]
 
 let dummy_version () =
-  [ 0; 0; 17 ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 0
+  [ 0; 0; 17 ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 1
 
 (* not really used right now, might well be dropped in the future
  * I think I've even forgotten why I wanted to have different types for them
