@@ -5,7 +5,9 @@ let la : (string, string) Hashtbl.t = Hashtbl.create 20
 let pc : (string, string) Hashtbl.t = Hashtbl.create 20
 let libs : (string, string) Hashtbl.t = Hashtbl.create 20
 
-let merge_list l h id =
+(* Update the hashtables to mention with the names of the packages containing
+ * the various files *)
+let update_list l h id =
   List.iter (fun x ->
     if Hashtbl.mem h x then
       let e = Hashtbl.find h x in
@@ -50,13 +52,15 @@ let pc_split l =
     s <> "" && match s.[0] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false in
   List.filter pred l
 
+(* Check that a library is provided by one and only one package *)
 let x_provides name filelist ext h =
+  (* Get a shortname from a filename *)
   let f s = 
     Filename.basename (Filename.chop_extension s)
   in
   let provides = List.find_all (filename_check_suffix ext) filelist in
   let provides = List.rev_map f provides in
-  merge_list provides h name
+  update_list provides h name
 
 (* create Types.pkg record given a yypkg package. Without listing deps *)
 let pkg_of_file folder file = 

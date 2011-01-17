@@ -39,11 +39,18 @@ let find_by_name pkglist name =
 let find_all_by_name pkglist name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
-let find_all_by_host pkglist host =
-  List.filter (fun p -> host = p.host) pkglist
-
-let find_all_by_target pkglist target =
-  List.filter (fun p -> target = p.target) pkglist
+let find_all_applicable ~pkglist ~runfor ~runon =
+  let pred ~runfor ~runon p =
+    match p.target with
+    (* Some target: the package is from a (cross-)toolchain *)
+    | Some target ->
+        (target = runfor || target = "noarch")
+        && (p.host = runon || p.host = "noarch")
+    (* Some target: the package is not from a toolchain, it's a lib *)
+    | None ->
+        (p.host = runfor || p.host = "noarch")
+  in
+  List.filter (pred ~runfor ~runon) pkglist
 
 let get_deps pkglist packages =
   let rec add accu p =
