@@ -148,7 +148,7 @@ let dummy_meta () =
   let version = dummy_version () in
   let size_expanded = FileUtil.TB (Int64.of_int 42) in
   let meta = { name = "dummy_name"; size_expanded = size_expanded; version =
-    version; packager_email = "nobody@example.com"; packager_name = "ulysse";
+    version; packager_email = "adrien@notk.org"; packager_name = "Adrien Nader";
     description = "dummy"; host = "%{HST}"; target = Some "%{TGT}";
     predicates = []; comments = [] }
   in
