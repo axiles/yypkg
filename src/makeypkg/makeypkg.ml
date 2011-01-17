@@ -230,5 +230,5 @@ let () =
   let script = Sexplib.Sexp.to_string_hum (sexp_of_script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
   let output_file = compress settings meta script_dir_and_name in
-  Printf.printf "Package created in: %s\n." output_file
+  Printf.printf "Package created as: %s\n." output_file
 

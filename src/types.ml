@@ -31,7 +31,7 @@ type date =
 with sexp
 
 let string_of_date (year, month, day, hour, minute) =
-  Printf.sprintf "%d-%d-%d,%d:%d" year month day hour minute
+  Printf.sprintf "%d-%d-%d-%d-%d" year month day hour minute
 
 type status = 
   | Alpha of int
