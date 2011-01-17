@@ -10,13 +10,12 @@ let write conf =
 let update f =
   write (f (read ()))
 
-let pkg_list_uri () =
-  let conf = read () in
-  String.concat "/" [ conf.mirror; conf.sherpa_version; "pkglist" ]
-
 let pkg_uri filename =
   let conf = read () in
   String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
+
+let pkg_list_uri () =
+  pkg_uri "pkglist"
 
 let get_uri_contents uri =
   run_and_read_stdout [| wget; "-O"; "-"; "-nv"; uri |]
