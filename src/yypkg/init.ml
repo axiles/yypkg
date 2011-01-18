@@ -51,6 +51,7 @@ let init prefix =
     mirror = "http://notk.org/~adrien/yypkg";
     sherpa_version = "latest";
     download_folder = dl_folder;
+    arch = Lib.guess_arch ();
   }
   in
   Disk.write conf_path (sexp_of_conf base_conf);

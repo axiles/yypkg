@@ -193,6 +193,7 @@ type sherpa_conf = {
   mirror : string;
   sherpa_version : string;
   download_folder : string;
+  arch : string;
 } with sexp
 
 type sherpa_conf_field =

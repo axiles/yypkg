@@ -80,8 +80,9 @@ let repo () =
   repo_of_uri (repo_uri ())
 
 let pkglist () =
+  let conf = read () in
   let repo = repo () in
-  let runon = guess_arch () in
+  let runon = conf.arch in
   find_all_applicable ~pkglist:repo.pkglist ~runfor:repo.repo_target ~runon
 
 let get_packages ~with_deps ~output_folder ~package = 
