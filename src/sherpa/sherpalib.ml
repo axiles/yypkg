@@ -64,18 +64,6 @@ let get_deps pkglist packages =
 let repo_of_uri uri =
   repo_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
 
-let guess_arch () =
-  match os_type with
-  | `Unix -> 
-      let host = run_and_read_stdout [| config_guess|] in
-      (* This gets the first line of input and remove any trailing newline:
-        * # Scanf.sscanf "truc\n" "%s" (fun s -> s);;  
-        * - : string = "truc"
-        * # Scanf.sscanf "truc\naaaaaaaa" "%s" (fun s -> s);;
-        * - : string = "truc" *)
-      Scanf.sscanf host "%s" (fun s -> s)
-  | `Windows -> "i686-w64-mingw32"
-
 let repo () =
   repo_of_uri (repo_uri ())
 
