@@ -14,8 +14,8 @@ let pkg_uri filename =
   let conf = read () in
   String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
 
-let pkg_list_uri () =
-  pkg_uri "pkglist"
+let repo_uri =
+  pkg_uri "repo"
 
 let get_uri_contents uri =
   run_and_read_stdout [| wget; "-O"; "-"; "-nv"; uri |]
@@ -40,14 +40,14 @@ let find_all_by_name pkglist name_list =
 
 let find_all_applicable ~pkglist ~runfor ~runon =
   let pred ~runfor ~runon p =
-    match p.target with
+    match p.metadata.target with
     (* Some target: the package is from a (cross-)toolchain *)
     | Some target ->
         (target = runfor || target = "noarch")
-        && (p.host = runon || p.host = "noarch")
+        && (p.metadata.host = runon || p.metadata.host = "noarch")
     (* Some target: the package is not from a toolchain, it's a lib *)
     | None ->
-        (p.host = runfor || p.host = "noarch")
+        (p.metadata.host = runfor || p.metadata.host = "noarch")
   in
   List.filter (pred ~runfor ~runon) pkglist
 
@@ -61,13 +61,24 @@ let get_deps pkglist packages =
   let names = List.fold_left add [] packages in
   find_all_by_name pkglist names
 
-let pkglist_of_uri uri =
-  pkglist_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
+let repo_of_uri uri =
+  repo_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
+
+let guess_arch () =
+  match os_type with
+  | `Unix -> run_and_read_stdout [| "config.guess" |]
+  | `Windows -> "i686-w64-mingw32"
+
+let repo () =
+  repo_of_uri repo_uri
 
 let pkglist () =
-  pkglist_of_uri (pkg_list_uri ())
+  let repo = repo () in
+  let runon = guess_arch () in
+  find_all_applicable ~pkglist:repo.pkglist ~runfor:repo.repo_target ~runon
 
 let get_packages ~with_deps ~output_folder ~package = 
+  (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist = pkglist () in
   let pkglist =
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
@@ -81,7 +92,3 @@ let default_output_folder =
     Lib.filename_concat [ prefix; "var"; "cache"; "packages" ]
   with Not_found -> ""
 
-let guess_arch () =
-  match os_type with
-  | `Unix -> run_and_read_stdout [| "config.guess" |]
-  | `Windows -> "i686-w64-mingw32"

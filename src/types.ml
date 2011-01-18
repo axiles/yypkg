@@ -184,7 +184,10 @@ type pkg = {
   deps : string list;
 } with sexp
 
-type pkglist = pkg list with sexp
+type repo = {
+  repo_target : string;
+  pkglist : pkg list;
+} with sexp
 
 type sherpa_conf = {
   mirror : string;

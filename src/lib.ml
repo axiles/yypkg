@@ -261,3 +261,9 @@ let list_rev_map_exn f l =
 let prepend_if pred accu x =
   if pred x then x :: accu else accu
 
+let rev_may_value l =
+  let f = function
+    | Some x -> x
+    | None -> assert false
+  in
+  List.rev_map f (List.filter ((<>) None) l)

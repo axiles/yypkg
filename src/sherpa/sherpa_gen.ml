@@ -131,14 +131,23 @@ let add_deps packages folder pkg =
   let requires = Lib.rev_uniq (List.fast_sort compare requires) in
   { pkg with deps = requires }
 
+let repo_metadata pkglist =
+  let targets = List.rev_map (fun p -> p.metadata.target) pkglist in
+  let targets = Lib.rev_may_value targets in
+  let target = Lib.rev_uniq (List.fast_sort compare targets) in
+  match target with
+  | [ target ] -> { repo_target = target; pkglist = pkglist }
+  | _ -> assert false
+
 let () =
   let folder = Sys.argv.(1) in
   let files = Array.to_list (Sys.readdir folder) in
   let files = List.filter (filename_check_suffix "txz") files in
   let files = List.fast_sort compare files in
   (* Build the list without deps first. *)
-  let l = List.rev_map (pkg_of_file folder) files in
+  let pkgs = List.rev_map (pkg_of_file folder) files in
   (* Add deps during a second stage. *)
-  let l = List.rev_map (add_deps l folder) l in
-  let l = Sexplib.Sexp.to_string_hum (sexp_of_pkglist l) in
-  print_string l
+  let pkgs = List.rev_map (add_deps pkgs folder) pkgs in
+  let repo = repo_metadata pkgs in
+  let repo = Sexplib.Sexp.to_string_hum (sexp_of_repo repo) in
+  print_string repo
