@@ -22,7 +22,15 @@ open Types
 module U = Unix
 
 exception ChopList_ChopingTooMuch of (int * int)
-exception ProcessFailed of string option
+exception ProcessFailed of (string * string option)
+
+let process_failed ?stderr a =
+  let s = String.concat " " (Array.to_list a) in
+  Printf.eprintf "Command `%s' failed.\n%!" s;
+  (match stderr with
+  | Some stderr -> Printf.eprintf "Here is the content of stderr:\n%s%!" stderr
+  | None -> ());
+  raise (ProcessFailed (s, stderr))
 
 let os_type =
   match Sys.os_type with
@@ -92,7 +100,7 @@ let run_and_read_stdout a =
   let status, output = run_and_read a in
   match status with
   | Unix.WEXITED 0 -> Buffer.contents output.stdout
-  | _ -> raise (ProcessFailed (Some (Buffer.contents output.stderr)))
+  | _ -> process_failed ~stderr:(Buffer.contents output.stderr) a
 
 let split_by_line s =
   Str.split (Str.regexp "\n") s
@@ -117,7 +125,7 @@ let install_path =
 (* absolute paths to bsdtar, xz and wget *)
 let tar, xz, wget, config_guess = 
   match os_type with
-    | `Unix -> "bsdtar", "xz", "wget", "config.guess"
+    | `Unix -> "bsdtar", "xz", "wget", "/usr/share/libtool/config/config.guess"
     | `Windows ->
         filename_concat [ binary_path; "bsdtar.exe" ],
         filename_concat [ binary_path; "xz.exe" ],
@@ -135,7 +143,7 @@ let tar_compress tar_args compress out =
   U.close fst_out; U.close snd_out;
   match snd (U.waitpid [] pid2), snd (U.waitpid [] pid1) with
   | U.WEXITED 0, U.WEXITED 0 -> ()
-  | _, _ -> raise (ProcessFailed None)
+  | _, _ -> process_failed tar_args 
 
 (* decompress + untar, "f" will read the output from bsdtar:
  *   'bsdtar xv -O' outputs the content of files to stdout
@@ -154,7 +162,7 @@ let from_tar action input =
   let status, output = run_and_read tar_args in
   match status with
   | Unix.WEXITED 0 -> split_by_line (read_from output)
-  | _ -> raise (ProcessFailed (Some (stderr output)))
+  | _ -> process_failed ~stderr:(stderr output) tar_args
 
 let split_path ?(dir_sep=dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path

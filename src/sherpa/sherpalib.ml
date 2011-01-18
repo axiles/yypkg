@@ -66,7 +66,14 @@ let repo_of_uri uri =
 
 let guess_arch () =
   match os_type with
-  | `Unix -> run_and_read_stdout [| "config.guess" |]
+  | `Unix -> 
+      let host = run_and_read_stdout [| config_guess|] in
+      (* This gets the first line of input and remove any trailing newline:
+        * # Scanf.sscanf "truc\n" "%s" (fun s -> s);;  
+        * - : string = "truc"
+        * # Scanf.sscanf "truc\naaaaaaaa" "%s" (fun s -> s);;
+        * - : string = "truc" *)
+      Scanf.sscanf host "%s" (fun s -> s)
   | `Windows -> "i686-w64-mingw32"
 
 let repo () =
