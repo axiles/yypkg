@@ -141,4 +141,4 @@ let () =
   (* Add deps during a second stage. *)
   let l = List.rev_map (add_deps l folder) l in
   let l = Sexplib.Sexp.to_string_hum (sexp_of_pkglist l) in
-  print_endline l 
+  print_string l
