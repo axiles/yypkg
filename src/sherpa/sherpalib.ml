@@ -14,7 +14,7 @@ let pkg_uri filename =
   let conf = read () in
   String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
 
-let repo_uri =
+let repo_uri () =
   pkg_uri "repo"
 
 let get_uri_contents uri =
@@ -70,7 +70,7 @@ let guess_arch () =
   | `Windows -> "i686-w64-mingw32"
 
 let repo () =
-  repo_of_uri repo_uri
+  repo_of_uri (repo_uri ())
 
 let pkglist () =
   let repo = repo () in
