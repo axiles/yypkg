@@ -123,14 +123,20 @@ let install_path =
 (* We expect tools in the installation directory *)
 
 (* absolute paths to bsdtar, xz and wget *)
-let tar, xz, wget, config_guess = 
+let tar, xz, wget = 
   match os_type with
-    | `Unix -> "bsdtar", "xz", "wget", "/usr/share/libtool/config/config.guess"
-    | `Windows ->
-        filename_concat [ binary_path; "bsdtar.exe" ],
-        filename_concat [ binary_path; "xz.exe" ],
-        filename_concat [ binary_path; "wget.exe" ],
-        ""
+  | `Unix -> "bsdtar", "xz", "wget"
+  | `Windows ->
+      filename_concat [ binary_path; "bsdtar.exe" ],
+      filename_concat [ binary_path; "xz.exe" ],
+      filename_concat [ binary_path; "wget.exe" ]
+
+let config_guess1, config_guess2 =
+  match os_type with
+  | `Unix ->
+      "/usr/share/libtool/config/config.guess",
+      "/usr/share/libtool/config.guess"
+  | `Windows -> "", ""
 
 (* tar + compress on unix, piping the output of tar to the compressor *)
 let tar_compress tar_args compress out =
@@ -279,7 +285,10 @@ let rev_may_value l =
 let guess_arch () =
   match os_type with
   | `Unix -> 
-      let host = run_and_read_stdout [| config_guess|] in
+      let host =
+        try run_and_read_stdout [| config_guess1 |] with
+        | ProcessFailed _ -> run_and_read_stdout [| config_guess2 |]
+      in
       (* This gets the first line of input and remove any trailing newline:
         * # Scanf.sscanf "truc\n" "%s" (fun s -> s);;  
         * - : string = "truc"
