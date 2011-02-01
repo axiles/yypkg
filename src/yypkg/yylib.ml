@@ -136,9 +136,24 @@ let metadata_of_script (m, _, _) =
 let package_is_named name p =
   (metadata_of_pkg p).name = name
 
+let package_name_matches_regexp regexp p =
+  Str.string_match regexp (metadata_of_pkg p).name 0
+
 (* Find a package by its name *)
 let find_by_name db name =
   List.find (package_is_named name) db
+
+(* Find if a package by name, matching a regular exression *)
+let find_all_by_name_regex db re =
+  List.find_all (package_name_matches_regexp re) db
+
+(* Test if a package is installed, by name *)
+let is_installed db p =
+  List.exists (package_is_named p) db
+
+(* Test if a package is installed, by name, matching a regular exression *)
+let is_installed_regex db re =
+  List.exists (package_name_matches_regexp re) db
 
 (* various sanity checks:
   * do etc/yypkg.conf and /var/log/packages/yypkg_db exist?
@@ -147,7 +162,3 @@ let find_by_name db name =
 let sanity_checks () =
   let required_files = [ db_path; conf_path; sherpa_conf_path ] in
   List.iter Lib.assert_file_exists required_files
-
-(* Test if a package is installed *)
-let is_installed db p =
-  List.exists (package_is_named p) db

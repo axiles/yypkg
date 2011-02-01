@@ -122,8 +122,9 @@ let main () =
           let l = Args.to_string_list l in
           Db.update (Uninstall.uninstall l)
       (* list the installed packages *)
-      | "-list", [] -> 
-          List.iter (fun p->print_endline (metadata_of_pkg p).name) (Db.read ())
+      | "-list", l ->
+          let l = Args.to_string_list l in
+          Yylist.list (Db.read ()) l
       (* config does nothing on its own but has suboptions *)
       | "-config", subopts -> config subopts
       (* FIXME *)
