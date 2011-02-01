@@ -26,7 +26,9 @@ exception Bad_prefix_specification of Args.opt list
 let cmd_line_spec = [
   "-prefix", [], "prefix yypkg will be working in";
   "-install", [], "install a package (extension is .txz)";
-  "-upgrade", [], "upgrade with package (extension is .txz)";
+  "-upgrade", [
+    "-install-new", [], "If package isn't already installed, install it.";
+  ], "upgrade with package (extension is .txz)";
   "-uninstall", [], "uninstall a package by name";
   "-list", [], "list the packages installed";
   "-config", [
@@ -90,6 +92,18 @@ let config opts =
   (* if -listpred has been given together with another argument: *)
   | _ -> raise (Args.Parsing_failed "⁻listpred can't be combined with other arguments.")
 
+(* upgrade with or without -install-new *)
+let upgrade old_cwd cmd_line = 
+  let f ?install_new l =
+    let l = Args.to_string_list l in
+    let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
+    Db.update (Upgrade.upgrade (Conf.read ()) l)
+  in
+  match List.partition Args.is_opt cmd_line with
+  | [ Args.Opt ("-install-new", []) ], l -> f ~install_new:true l
+  | [], l -> f l
+  | _ -> assert false
+
 let main () =
   if Args.wants_help () || Args.nothing_given () then
     Args.print_help cmd_line_spec
@@ -113,10 +127,7 @@ let main () =
           let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
           Db.update (Install.install (Conf.read ()) l)
       (* upgrade, accepts several packages at once *)
-      | "-upgrade", l ->
-          let l = Args.to_string_list l in
-          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
-          Db.update (Upgrade.upgrade (Conf.read ()) l)
+      | "-upgrade", l -> upgrade old_cwd l
       (* uninstall, accepts several packages at once *)
       | "-uninstall", l ->
           let l = Args.to_string_list l in

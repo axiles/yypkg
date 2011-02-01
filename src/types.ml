@@ -201,4 +201,5 @@ type sherpa_conf_field =
 
 exception Package_does_not_exist
 exception File_not_found of string
+exception Not_upgrading_non_installed_package of string
 
