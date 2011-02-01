@@ -65,7 +65,7 @@ let x_provides name filelist ext h =
 (* create Types.pkg record given a yypkg package. Without listing deps *)
 let pkg_of_file folder file = 
   let file_absolute = Filename.concat folder file in
-  let metadata, _, _ = Lib.open_package file_absolute in
+  let metadata = Yylib.metadata_of_script (Lib.open_package file_absolute) in
   let filelist = Lib.from_tar `list file_absolute in
   (* When a .pc file is found, add it to the global list of .pc files.
    * Same for .la, .dll, .so, .a, ... files *)

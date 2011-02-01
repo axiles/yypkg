@@ -45,7 +45,7 @@ let install_package package conf db =
 
 let install conf db p =
   (* check the file exists, may raise 'File_not_found p' : caught in yypkg.ml *)
-  assert_file_exists p;
+  Lib.assert_file_exists p;
   (* if the line above didn't abort, go on and instal the package *)
   install_package p conf db
   

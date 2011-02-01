@@ -297,4 +297,9 @@ let guess_arch () =
       Scanf.sscanf host "%s" (fun s -> s)
   | `Windows -> "i686-w64-mingw32"
 
+(* check a file exists: raises an exception with the name of the missing file if
+  * it doesn't *)
+let assert_file_exists f =
+  if not (Sys.file_exists f) then
+    raise (File_not_found f)
 

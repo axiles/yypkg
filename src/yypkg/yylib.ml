@@ -20,9 +20,6 @@
 open Printf
 open Types
 
-exception Package_does_not_exist
-exception File_not_found of string
-
 let ahk_bin =
   Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
 
@@ -132,6 +129,9 @@ let file_exists_in_package file (_, result_list) =
 let metadata_of_pkg ((m, _, _), _) =
   m
 
+let metadata_of_script (m, _, _) =
+  m
+
 (* a predicate to check a package has some name, used with List.find *)
 let package_is_named name p =
   (metadata_of_pkg p).name = name
@@ -140,19 +140,13 @@ let package_is_named name p =
 let find_by_name db name =
   List.find (package_is_named name) db
 
-(* check a file exists: raises an exception with the name of the missing file if
-  * it doesn't *)
-let assert_file_exists f =
-  if not (Sys.file_exists f) then
-    raise (File_not_found f)
-
 (* various sanity checks:
   * do etc/yypkg.conf and /var/log/packages/yypkg_db exist?
   * TODO: check the external binaries are available 
   * ... *)
 let sanity_checks () =
   let required_files = [ db_path; conf_path; sherpa_conf_path ] in
-  List.iter assert_file_exists required_files
+  List.iter Lib.assert_file_exists required_files
 
 (* Test if a package is installed *)
 let is_installed db p =

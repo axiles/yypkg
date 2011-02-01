@@ -26,6 +26,7 @@ exception Bad_prefix_specification of Args.opt list
 let cmd_line_spec = [
   "-prefix", [], "prefix yypkg will be working in";
   "-install", [], "install a package (extension is .txz)";
+  "-upgrade", [], "upgrade with package (extension is .txz)";
   "-uninstall", [], "uninstall a package by name";
   "-list", [], "list the packages installed";
   "-config", [
@@ -106,12 +107,17 @@ let main () =
       Sys.chdir prefix;
       Yylib.sanity_checks ();
       match action, actionopts with
-      (* install, accepts one package at a time *)
+      (* install, accepts several packages at once *)
       | "-install", l ->
           let l = Args.to_string_list l in
           let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
           Db.update (Install.install (Conf.read ()) l)
-      (* uninstall, accepts one package at a time *)
+      (* upgrade, accepts several packages at once *)
+      | "-upgrade", l ->
+          let l = Args.to_string_list l in
+          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
+          Db.update (Upgrade.upgrade (Conf.read ()) l)
+      (* uninstall, accepts several packages at once *)
       | "-uninstall", l ->
           let l = Args.to_string_list l in
           Db.update (Uninstall.uninstall l)
@@ -134,9 +140,9 @@ let main () =
   | Args.Incomplete_parsing (opts, sl) ->
       Args.print_spec 0 (Args.usage_msg cmd_line_spec)
   | Args.Parsing_failed s as e -> raise e
-  | Yylib.File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
+  | File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
       prerr_endline "You forgot to run -init or something got corrupted."
-  | Yylib.File_not_found p as e -> raise e
+  | File_not_found p as e -> raise e
   | Unmatched_predicates l ->
       let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
       List.iter f l

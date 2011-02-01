@@ -199,3 +199,6 @@ type sherpa_conf = {
 type sherpa_conf_field =
   | Mirror of string
 
+exception Package_does_not_exist
+exception File_not_found of string
+
