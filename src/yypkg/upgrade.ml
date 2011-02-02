@@ -9,7 +9,7 @@ let upgrade ?(install_new=false) yypkg_conf db p =
   let pred_holds = Config.predicate_holds yypkg_conf.preds in
   match List.partition pred_holds metadata.predicates with
   | _, [] -> 
-      if is_installed db p then
+      if is_installed db metadata.name then
         let uninstalled = Uninstall.uninstall [ metadata.name ] db in
         Install.install yypkg_conf [ p ] uninstalled
       else
