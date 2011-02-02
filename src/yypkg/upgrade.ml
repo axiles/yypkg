@@ -16,7 +16,7 @@ let upgrade ?(install_new=false) yypkg_conf db p =
         if install_new then
           Install.install yypkg_conf [ p ] db
         else
-          raise (Not_upgrading_non_installed_package p)
+          raise (Not_upgrading_not_installed_package p)
   |_, f_preds -> raise (Unmatched_predicates f_preds)
 
 let upgrade ?install_new yypkg_conf l db =

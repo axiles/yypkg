@@ -100,7 +100,7 @@ let upgrade old_cwd cmd_line =
     Db.update (Upgrade.upgrade (Conf.read ()) l)
   in
   match List.partition Args.is_opt cmd_line with
-  | [ Args.Opt ("-install-new", []) ], l -> f ~install_new:true l
+  | [ Args.Opt ("-install-new", l) ], [] -> f ~install_new:true l
   | [], l -> f l
   | _ -> assert false
 
