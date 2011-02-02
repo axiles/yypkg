@@ -97,7 +97,7 @@ let upgrade old_cwd cmd_line =
   let f ?install_new l =
     let l = Args.to_string_list l in
     let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
-    Db.update (Upgrade.upgrade (Conf.read ()) l)
+    Db.update (Upgrade.upgrade ?install_new (Conf.read ()) l)
   in
   match List.partition Args.is_opt cmd_line with
   | [ Args.Opt ("-install-new", l) ], [] -> f ~install_new:true l
