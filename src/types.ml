@@ -28,7 +28,17 @@ type date =
   * int (* day *)
   * int (* hour *)
   * int (* minute *)
-with sexp
+
+let sexp_of_date (year, month, day, hour, minute) =
+  let f = Sexplib.Conv.sexp_of_int in
+  Sexplib.Sexp.List [ f year; f month; f day; f hour; f minute ]
+
+let date_of_sexp sexp =
+  let f = int_of_sexp in
+  match sexp with
+  | Sexplib.Sexp.List [ year; month; day; hour; minute ] ->
+      (f year, f month, f day, f hour, f minute)
+  | _ -> of_sexp_error "data_of_sexp: list of 5 int atoms needed" sexp
 
 let string_of_date (year, month, day, hour, minute) =
   Printf.sprintf "%d-%d-%d-%d-%d" year month day hour minute
@@ -40,7 +50,27 @@ type status =
   | Snapshot_date of date
   | Snapshot_hash of string
   | Stable
-with sexp
+
+let status_of_sexp (sexp : Sexplib.Sexp.t) =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ Atom "Alpha"; i ] -> Alpha (int_of_sexp i)
+  | List [ Atom "Beta"; i ] -> Beta (int_of_sexp i)
+  | List [ Atom "RC"; i ] -> RC (int_of_sexp i)
+  | List [ Atom "Snapshot_date"; date ] -> Snapshot_date (date_of_sexp date)
+  | List [ Atom "Snapshot_hash"; hash ] -> Snapshot_hash (string_of_sexp hash)
+  | List [ Atom "Stable" ] -> Stable
+  | _ -> of_sexp_error "status_of_sexp: wrong atom or atom argument" sexp
+
+let sexp_of_status status =
+  let open Sexplib.Sexp in
+  match status with
+  | Alpha i -> List [ Atom "Alpha"; sexp_of_int i ]
+  | Beta i -> List [ Atom "Beta"; sexp_of_int i ]
+  | RC i -> List [ Atom "RC"; sexp_of_int i ]
+  | Snapshot_date date -> List [ Atom "Snapshot_date"; sexp_of_date date ]
+  | Snapshot_hash s -> List [ Atom "Snapshot_hash"; sexp_of_string s ]
+  | Stable -> Atom "Stable"
 
 let string_of_status = function
   | Alpha x -> sprintf "alpha-%d" x
@@ -50,7 +80,22 @@ let string_of_status = function
   | Snapshot_hash s -> sprintf "snapshot-%s" s
   | Stable -> "stable"
 
-type version = (int list * status * int) with sexp
+type version = (int list * status * int)
+
+let version_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ version_components; status; build_number ] ->
+      let version_components = list_of_sexp int_of_sexp version_components in
+      (version_components, status_of_sexp status, int_of_sexp build_number)
+  | List _ -> of_sexp_error
+      "version_of_sexp: list must contain exactly three elements" sexp
+  | Atom _ -> of_sexp_error "version_of_sexp: list needed" sexp
+
+let sexp_of_version (version_components, status, build_number) =
+  let open Sexplib.Sexp in
+  List [ sexp_of_list sexp_of_int version_components; sexp_of_status status;
+  sexp_of_int build_number ]
 
 (* create a string from a version *)
 let string_of_version (version, status, iteration) =
@@ -61,37 +106,26 @@ let string_of_version (version, status, iteration) =
 let dummy_version () =
   [ 0; 0; 17 ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 1
 
-(* not really used right now, might well be dropped in the future
- * I think I've even forgotten why I wanted to have different types for them
- * (well, for safety of course, but what exactly ? *)
-type absolute_path = string with sexp
-type relative_path = string with sexp
-
-(* paths outside the package, on the hard drive *)
-type outside_path = string with sexp
-
-(* paths inside the package *)
-type inside_path = relative_path with sexp
-
-type param = string with sexp
-type params = string list with sexp
-type argv = string list with sexp
+let string_list_of_sexp sexp = list_of_sexp string_of_sexp sexp
+let sexp_of_string_list params = sexp_of_list sexp_of_string params
 
 (* this is only a name, an identifier *)
-type action_id = string with sexp
+type action_id = string
+let action_id_of_sexp = string_of_sexp
+let sexp_of_action_id = sexp_of_string
 
 type install_action =
-  | AHK of params
-  | Exec of argv
-  | Expand of inside_path * outside_path
-  | MKdir of outside_path
+  | AHK of string list (* params *)
+  | Exec of string list (* argv *)
+  | Expand of string * string (* extract from X to Y: from archive to system *)
+  | MKdir of string (* mkdir X, path on the system *)
   (* TODO: the string list below should be 'outside_path
    * have to clean up the {in,out}side_path mess *)
   | SearchReplace of string list * string * string
 with sexp
 
 type uninstall_action =
-  | RM of outside_path
+  | RM of string (* RM X, path on the system *)
   | Reverse of action_id
 with sexp
 
@@ -101,7 +135,9 @@ type results =
 with sexp
 
 type predicate = string * string list with sexp
-type predicates = predicate list with sexp
+type predicates = predicate list
+let predicates_of_sexp sexp = list_of_sexp predicate_of_sexp sexp
+let sexp_of_predicates predicates = sexp_of_list sexp_of_predicate predicates
 
 exception Unmatched_predicates of ((string * string) list)
 
@@ -162,7 +198,9 @@ with sexp
 
 type package = script * (action_id * results) list with sexp
 
-type db = package list with sexp
+type db = package list
+let db_of_sexp sexp = list_of_sexp package_of_sexp sexp
+let sexp_of_db db = sexp_of_list sexp_of_package db
 
 (* list of predicates that are checked before installing apackage: for instance:
   * license=bsd
