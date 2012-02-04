@@ -20,8 +20,6 @@
 open Printf
 open Sexplib.Conv
 
-TYPE_CONV_PATH "Types"
-
 type date =
   int (* year *)
   * int (* month *)
@@ -303,3 +301,5 @@ exception Package_does_not_exist
 exception File_not_found of string
 exception Not_upgrading_not_installed_package of string
 
+module Sexp = struct
+end
