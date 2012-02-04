@@ -60,7 +60,7 @@ let status_of_sexp (sexp : Sexplib.Sexp.t) =
   | List [ Atom "Snapshot_date"; date ] -> Snapshot_date (date_of_sexp date)
   | List [ Atom "Snapshot_hash"; hash ] -> Snapshot_hash (string_of_sexp hash)
   | List [ Atom "Stable" ] -> Stable
-  | _ -> of_sexp_error "status_of_sexp: wrong atom or atom argument" sexp
+  | _ -> of_sexp_error "status_of_sexp: wrong atom or wrong atom argument" sexp
 
 let sexp_of_status status =
   let open Sexplib.Sexp in
@@ -145,21 +145,59 @@ let install_action_of_sexp sexp =
   | List [ Atom "SearchReplace"; List [ files; search; replace ] ] ->
       SearchReplace (string_list_of_sexp files, string_of_sexp search,
       string_of_sexp replace)
-  | _ -> of_sexp_error "install_action_of_sexp: wrong list or list argument"
-  sexp
+  | _ -> of_sexp_error
+      "install_action_of_sexp: wrong list or wrong list argument" sexp
 
 type uninstall_action =
   | RM of string (* RM X, path on the system *)
   | Reverse of action_id
-with sexp
+
+let uninstall_action_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ Atom "RM"; Atom dir ] -> RM dir
+  | List [ Atom "Reverse"; Atom action_id ] -> Reverse action_id
+  | _ -> of_sexp_error
+      "uninstall_action_of_sexp: wrong list or wrong list argument" sexp
+
+let sexp_of_uninstall_action uninstall_action =
+  let open Sexplib.Sexp in
+  match uninstall_action with
+  | RM dir -> List [ Atom "RM"; Atom dir ]
+  | Reverse action_id -> List [ Atom "Reverse"; Atom action_id ]
 
 type results = 
   | Filelist of string list
-  | NA
-with sexp
+  | NA (* XXX: what is this used for? *)
 
-type predicate = string * string list with sexp
-type predicates = predicate list
+let results_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ Atom "Filelist"; files ] -> Filelist (string_list_of_sexp files)
+  | Atom "NA" -> NA
+  | _ -> of_sexp_error
+      "results_of_sexp: wrong atom, wrong list or wrong list argument" sexp
+
+let sexp_of_results results =
+  let open Sexplib.Sexp in
+  match results with
+  | Filelist files -> List [ Atom "Filelist"; sexp_of_string_list files ]
+  | NA -> Atom "NA"
+
+type predicate = string * string list
+
+let predicate_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ name; values ] -> string_of_sexp name, string_list_of_sexp values
+  | _ -> of_sexp_error
+      "predicate_of_sexp: wrong list or wrong list argument" sexp
+
+let sexp_of_predicate (name, values) =
+  let open Sexplib.Sexp in
+  List [ Atom name; sexp_of_string_list values ]
+
+type predicates = (string * string list) list
 let predicates_of_sexp sexp = list_of_sexp predicate_of_sexp sexp
 let sexp_of_predicates predicates = sexp_of_list sexp_of_predicate predicates
 
