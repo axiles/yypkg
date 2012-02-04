@@ -122,7 +122,31 @@ type install_action =
   (* TODO: the string list below should be 'outside_path
    * have to clean up the {in,out}side_path mess *)
   | SearchReplace of string list * string * string
-with sexp
+
+let sexp_of_install_action install_action =
+  let open Sexplib.Sexp in
+  match install_action with
+  | AHK params -> List [ Atom "AHK"; sexp_of_string_list params ]
+  | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
+  | Expand (orig, dest) -> List [ Atom "Exec"; Atom orig; Atom dest ]
+  | MKdir dir -> List [ Atom "Exec"; Atom dir ]
+  | SearchReplace (files, search, replace) ->
+      List [ Atom "SearchReplace"; sexp_of_string_list files; Atom search; Atom
+      replace ]
+
+let install_action_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ Atom "AHK"; params ] -> AHK (string_list_of_sexp params)
+  | List [ Atom "Exec"; argv ] -> Exec (string_list_of_sexp argv)
+  | List [ Atom "Expand"; List [ orig; dest ] ] ->
+      Expand (string_of_sexp orig, string_of_sexp dest)
+  | List [ Atom "MKdir"; dir ] -> MKdir (string_of_sexp dir)
+  | List [ Atom "SearchReplace"; List [ files; search; replace ] ] ->
+      SearchReplace (string_list_of_sexp files, string_of_sexp search,
+      string_of_sexp replace)
+  | _ -> of_sexp_error "install_action_of_sexp: wrong list or list argument"
+  sexp
 
 type uninstall_action =
   | RM of string (* RM X, path on the system *)
