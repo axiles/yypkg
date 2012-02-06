@@ -36,7 +36,7 @@ let delpred conf pred =
   Conf.unset conf pred
 
 (* check if the predicate holds against conf *)
-let predicate_holds (conf : predicates) (key, value) = 
+let predicate_holds (conf : predicate list) (key, value) = 
   (* List.assoc may raise Not_found: means the predicate hasn't been set in the
    * configuration, equivalent to false *)
   try 

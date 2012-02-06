@@ -195,10 +195,6 @@ let sexp_of_predicate (name, values) =
   let open Sexplib.Sexp in
   List [ Atom name; sexp_of_string_list values ]
 
-type predicates = predicate list
-let predicates_of_sexp sexp = list_of_sexp predicate_of_sexp sexp
-let sexp_of_predicates predicates = sexp_of_list sexp_of_predicate predicates
-
 exception Unmatched_predicates of ((string * string) list)
 
 type size = FileUtil.size
@@ -307,8 +303,18 @@ let sexp_of_db db = sexp_of_list sexp_of_package db
   * stability=stable,release_candidate
  * It's mostly free-form, and left as a way to extend the format easily *)
 type conf = {
-  preds : predicates;
-} with sexp
+  preds : predicate list;
+}
+
+let sexp_of_conf conf =
+  let open Sexplib.Sexp in
+  List [ sexp_of_list sexp_of_predicate conf.preds ]
+
+let conf_of_sexp sexp =
+  let open Sexplib.Sexp in
+  match sexp with
+  | List [ predicates ] -> { preds = list_of_sexp predicate_of_sexp predicates }
+  | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
 
 type field = 
   | Predicate of (string * string list)
