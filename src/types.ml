@@ -164,21 +164,21 @@ let sexp_of_uninstall_action uninstall_action =
   | RM dir -> List [ Atom "RM"; Atom dir ]
   | Reverse action_id -> List [ Atom "Reverse"; Atom action_id ]
 
-type results = 
+type result = 
   | Filelist of string list
   | NA (* XXX: what is this used for? *)
 
-let results_of_sexp sexp =
+let result_of_sexp sexp =
   let open Sexplib.Sexp in
   match sexp with
   | List [ Atom "Filelist"; files ] -> Filelist (string_list_of_sexp files)
   | Atom "NA" -> NA
   | _ -> of_sexp_error
-      "results_of_sexp: wrong atom, wrong list or wrong list argument" sexp
+      "result_of_sexp: wrong atom, wrong list or wrong list argument" sexp
 
-let sexp_of_results results =
+let sexp_of_result result =
   let open Sexplib.Sexp in
-  match results with
+  match result with
   | Filelist files -> List [ Atom "Filelist"; sexp_of_string_list files ]
   | NA -> Atom "NA"
 
@@ -254,9 +254,49 @@ type script =
   metadata
   * (action_id * install_action) list
   * uninstall_action list
-with sexp
 
-type package = script * (action_id * results) list with sexp
+let sexp_of_script (metadata, install_actions, uninstall_actions) =
+  let open Sexplib.Sexp in
+  let f (action_id, install_action) =
+    List [ sexp_of_action_id action_id; sexp_of_install_action install_action ]
+  in
+  List [ sexp_of_metadata metadata; sexp_of_list f install_actions;
+  sexp_of_list sexp_of_uninstall_action uninstall_actions ]
+
+let script_of_sexp sexp =
+  let open Sexplib.Sexp in
+  let f = function
+    | List [ action_id; install_action ] ->
+        action_id_of_sexp action_id, install_action_of_sexp install_action
+    | _ -> of_sexp_error
+        "predicate_of_sexp: install_actions: atom or wrong list" sexp
+  in
+  match sexp with
+  | List [ metadata; install_actions; uninstall_actions ] ->
+      metadata_of_sexp metadata, list_of_sexp f install_actions, list_of_sexp
+      uninstall_action_of_sexp uninstall_actions
+  | _ -> of_sexp_error "predicate_of_sexp: atom or wrong list" sexp
+
+type package = script * (action_id * result) list
+
+let sexp_of_package (script, results) =
+  let open Sexplib.Sexp in
+  let f (action_id, result) =
+    List [ sexp_of_action_id action_id; sexp_of_result result ]
+  in
+  List [ sexp_of_script script; sexp_of_list f results ]
+
+let package_of_sexp sexp =
+  let open Sexplib.Sexp in
+  let f = function
+    | List [ action_id; result ] ->
+        action_id_of_sexp action_id, result_of_sexp result
+    | _ -> of_sexp_error "package_of_sexp: results: atom or wrong list" sexp
+  in
+  match sexp with
+  | List [ script; results ] ->
+      script_of_sexp script, list_of_sexp f results
+  | _ -> of_sexp_error "package_of_sexp: atom or wrong list" sexp
 
 type db = package list
 let db_of_sexp sexp = list_of_sexp package_of_sexp sexp
