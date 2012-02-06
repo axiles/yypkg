@@ -195,7 +195,7 @@ let sexp_of_predicate (name, values) =
   let open Sexplib.Sexp in
   List [ Atom name; sexp_of_string_list values ]
 
-type predicates = (string * string list) list
+type predicates = predicate list
 let predicates_of_sexp sexp = list_of_sexp predicate_of_sexp sexp
 let sexp_of_predicates predicates = sexp_of_list sexp_of_predicate predicates
 
