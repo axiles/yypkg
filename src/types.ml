@@ -234,7 +234,91 @@ type metadata = {
   target : string sexp_option;
   predicates : (string * string) list;
   comments : string list;
-} with sexp
+}
+
+let sexp_of_metadata m =
+  let open Sexplib.Sexp in
+  let f (s1, s2) = List [ sexp_of_string s1; sexp_of_string s2 ] in
+  List [
+    sexp_of_string m.name;
+    sexp_of_size m.size_expanded;
+    sexp_of_version m.version;
+    sexp_of_string m.packager_email;
+    sexp_of_string m.packager_name;
+    sexp_of_string m.description;
+    sexp_of_string m.host;
+    sexp_of_option sexp_of_string m.target;
+    sexp_of_list f m.predicates;
+    sexp_of_string_list m.comments
+  ]
+
+let record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~field_of_sexp ~res =
+  match !res with
+  | None -> res := Some (field_of_sexp f_sexp)
+  | Some _ -> duplicates := f_name :: !duplicates
+
+let record_undefined_elements ~name ~l ~sexp =
+  let f errs (field, missing) = if missing then field :: errs else errs in
+  let missings = List.fold_left f [] l in
+  let s = String.concat ": " (name :: "some fields are missing" :: missings) in
+  of_sexp_error s sexp
+
+let metadata_of_sexp sexp =
+  let open Sexplib.Sexp in
+  let n = ref None in
+  let name = n and size_expanded = ref None and version = ref None and
+  packager_email = n and packager_name = n and description = n and host = n and
+  target = n and predicates = ref None and comments = ref None in
+  let duplicates = ref [] in
+  let extra = ref [] in
+  let rec aux = function
+    | List [ f_name; f_sexp ] :: q ->
+        let f_name = string_of_sexp f_name in
+        let f ~field_of_sexp ~res =
+          record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~field_of_sexp ~res
+        in
+        let g = function
+          | List [ s1; s2 ] -> string_of_sexp s1, string_of_sexp s2
+          | _ -> of_sexp_error "" sexp
+        in
+        (match f_name with
+        | "name" -> f ~field_of_sexp:string_of_sexp ~res:name
+        | "size_expanded" -> f ~field_of_sexp:size_of_sexp ~res:size_expanded
+        | "version" -> f ~field_of_sexp:version_of_sexp ~res:version
+        | "package_email" -> f ~field_of_sexp:string_of_sexp ~res:packager_email
+        | "packager_name" -> f ~field_of_sexp:string_of_sexp ~res:packager_name
+        | "description" -> f ~field_of_sexp:string_of_sexp ~res:description
+        | "host" -> f ~field_of_sexp:string_of_sexp ~res:host
+        | "target" -> f ~field_of_sexp:string_of_sexp ~res:target
+        | "predicates" -> f ~field_of_sexp:(list_of_sexp g) ~res:predicates
+        | "comments" -> f ~field_of_sexp:string_list_of_sexp ~res:comments
+        | _ -> extra := f_name :: !extra);
+        aux q
+    | [] -> (
+        match (!name, !size_expanded, !version, !packager_email, !packager_name,
+        !description, !host, !target, !predicates, !comments) with
+        | Some name, Some size_expanded, Some version, Some packager_email,
+          Some packager_name, Some description, Some host, target,
+          Some predicates, Some comments ->
+            { name = name; size_expanded = size_expanded; version = version;
+              packager_email = packager_email; packager_name = packager_name;
+              description = description; host = host; target = target;
+              predicates = predicates; comments = comments }
+        | _ ->
+            record_undefined_elements ~name:"metadata_of_sexp" ~sexp ~l:[
+              "name", !name = None; "size_expanded", !size_expanded = None;
+              "version", !version = None; "packager_email", !packager_email =
+              None; "packager_name", !packager_name = None; "description",
+              !description = None; "host", !host = None; "predicates",
+              !predicates = None; "comments", !comments = None
+            ]
+      )
+    | _ :: _ ->
+        of_sexp_error "metadata_of_sexp: atom or wrong list element" sexp
+  in
+  match sexp with
+  | List l -> aux l
+  | _ -> of_sexp_error "metadata_of_sexp: atom argument" sexp
 
 let dummy_meta () =
   let version = dummy_version () in
