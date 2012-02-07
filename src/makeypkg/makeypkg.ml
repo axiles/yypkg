@@ -116,7 +116,7 @@ let meta ~metafile ~pkg_size =
   | "-" -> Sexplib.Sexp.input_sexp stdin
   | file -> Sexplib.Sexp.load_sexp file
   in
-  { metadata_of_sexp sexp with size_expanded = pkg_size }
+  { (metadata_of_sexp sexp) with size_expanded = pkg_size }
 
 let pkg_config_fixup ~folder ~prefix = 
   let fix ~file ~prefix ~new_prefix = 

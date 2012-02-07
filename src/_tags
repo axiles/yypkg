@@ -1,5 +1,4 @@
 <{args,makeypkg,yypkg,sherpa}>: include
 <*> or <{makeypkg,yypkg,sherpa}/*>: pkg_sexplib, pkg_fileutils.str, debug
-<makeypkg/makeypkg.ml>: syntax_camlp4o, pkg_sexplib.syntax
 <*gui*> or <sherpa/*gui*>: pkg_lablgtk2
 
