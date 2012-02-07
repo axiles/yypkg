@@ -1,4 +1,3 @@
-open Printf
 open Types
 
 let la : (string, string) Hashtbl.t = Hashtbl.create 20
@@ -12,9 +11,8 @@ let update_list l h id =
     if Hashtbl.mem h x then
       let e = Hashtbl.find h x in
       if e <> id then
-        let () = eprintf "%s can't provide %s: %s already does." id x e in
-        assert false
-      else ()
+        (Printf.eprintf "%s can't provide %s: %s already does." id x e;
+        assert false)
     else
       Hashtbl.add h x id
   ) l
@@ -90,7 +88,7 @@ let filename_of_libtool s =
        * "libfoo.so.1.2.0" or if something is appended to the library name, some
        * wildcards/regexps would probably be welcome, but when splitting the
        * filenames and adding to the hash tables, not here *)
-      sprintf "lib%s" (String.sub s 2 (String.length s - 2))
+      Printf.sprintf "lib%s" (String.sub s 2 (String.length s - 2))
     else
       if s.[1] = 'L' then (
         (* s is of the form -L/foo/bar: nothing to include, bail out *)

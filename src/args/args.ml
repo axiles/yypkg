@@ -23,7 +23,7 @@ exception Option_specification_is_ambiguous
 exception Incomplete_parsing of (opt list * string list)
 
 let rec print_spec n (name, subs, text) =
-  Printf.printf "%s%s : %s\n" (String.make n ' ') name text;
+  Printf.eprintf "%s%s : %s\n" (String.make n ' ') name text;
   List.iter (print_spec (n+1)) subs
 
 let usage_msg spec = 

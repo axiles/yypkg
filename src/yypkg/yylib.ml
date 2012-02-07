@@ -73,7 +73,7 @@ let command cmd =
  * so it can be registered and reversed upon uninstallation *)
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
-  let () = FileUtil.mkdir ~parent:true ~mode:0o755 path in
+  FileUtil.mkdir ~parent:true ~mode:0o755 path;
   [ path_unexpanded ]
 
 (* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
@@ -98,7 +98,7 @@ let rm path_unexpanded =
    * This means that if 'y' points to 'x' but 'x' doesn't exist, Sys.file_exists
    * will return false even though 'y' exists *)
   let exists path =
-    try let () = ignore (Unix.lstat path) in true with _ -> false
+    try ignore (Unix.lstat path); true with _ -> false
   in
   (* FIXME: env var souldn't be kept in the database, they have to be expanded
    * before *)
@@ -108,14 +108,14 @@ let rm path_unexpanded =
     if FileUtil.test FileUtil.Is_dir path then
       if [| |] = Sys.readdir path then
         let () = FileUtil.rm ~recurse:true [ path ] in
-        Printf.printf "Removed: %s\n" path
+        Printf.eprintf "Removed: %s\n" path
       else
-        Printf.printf "Not removed (directory not empty): %s\n" path
+        Printf.eprintf "Not removed (directory not empty): %s\n" path
     else
       let () = FileUtil.rm [ path ] in
-      Printf.printf "Removed: %s\n" path
+      Printf.eprintf "Removed: %s\n" path
   else
-    Printf.printf "Not removed (doesn't exist): %s\n" path
+    Printf.eprintf "Not removed (doesn't exist): %s\n" path
 
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =

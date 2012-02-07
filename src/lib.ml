@@ -241,8 +241,8 @@ let write_temp_file base_name contents =
   let dir = Filename.temp_dir_name in
   let path = Filename.concat dir base_name in
   let oc = open_out_bin path in
-  let () = output_string oc contents in
-  let () = close_out oc in
+  output_string oc contents;
+  close_out oc;
   dir, base_name
 
 (* reads 'package_script.el' from a package *)
@@ -258,8 +258,8 @@ let rev_uniq l =
     | [] -> accu
   in
   match l with
-    | t :: q -> rev_uniq_rc [ t ] t q
-    | [] -> []
+  | t :: q -> rev_uniq_rc [ t ] t q
+  | [] -> []
 
 let list_rev_map_exn f l =
   let rec aux f accu = function
@@ -282,7 +282,7 @@ let rev_may_value l =
   in
   List.rev_map f (List.filter ((<>) None) l)
 
-let guess_arch () =
+let guess_arch () = (* XXX: hmmmm; config.guess and a hardcoded triplet... *)
   match os_type with
   | `Unix -> 
       let host =
