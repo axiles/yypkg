@@ -2,10 +2,10 @@ open Types
 open Lib
 
 let read () =
-  Sexp.To.sherpa_conf_of_sexp (Disk.read Yylib.sherpa_conf_path)
+  TypesSexp.To.sherpa_conf (Disk.read Yylib.sherpa_conf_path)
 
 let write conf =
-  Disk.write Yylib.sherpa_conf_path (Sexp.Of.sexp_of_sherpa_conf conf)
+  Disk.write Yylib.sherpa_conf_path (TypesSexp.Of.sherpa_conf conf)
 
 let update f =
   write (f (read ()))
@@ -62,7 +62,7 @@ let get_deps pkglist packages =
   find_all_by_name pkglist names
 
 let repo_of_uri uri =
-  Sexp.To.repo_of_sexp (Sexplib.Sexp.of_string (get_uri_contents uri))
+  TypesSexp.To.repo (Sexplib.Sexp.of_string (get_uri_contents uri))
 
 let repo () =
   repo_of_uri (repo_uri ())

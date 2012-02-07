@@ -27,7 +27,7 @@ let uninstall_package db name =
   List.filter (fun s -> not (package_is_named name s)) db
 
 let read () =
-  Sexp.To.db_of_sexp (Disk.read db_path)
+  TypesSexp.To.db (Disk.read db_path)
 
 let write db =
   (* We sort the db because, err, no reason, it won't even be more readable
@@ -38,7 +38,7 @@ let write db =
    * We DO NOT WANT to sort the content of each package as it may (and actually
    * will) have unexpected consequences upon package removal *)
   let sorted_db = List.stable_sort compare db in
-  Disk.write db_path (Sexp.Of.sexp_of_db sorted_db)
+  Disk.write db_path (TypesSexp.Of.db sorted_db)
 
 (* read the database, run the function, write the database to disk
  * if fail raises an exception, nothing will be written :-) *)
