@@ -470,7 +470,44 @@ let pkg_of_sexp sexp =
 type repo = {
   repo_target : string;
   pkglist : pkg list;
-} with sexp
+}
+
+let sexp_of_repo repo =
+  let open Sexplib.Sexp in
+  List [
+    sexp_of_string repo.repo_target;
+    sexp_of_list sexp_of_pkg repo.pkglist
+  ]
+
+let repo_of_sexp sexp =
+  let open Sexplib.Sexp in
+  let repo_target = ref None and pkglist = ref None in
+  let duplicates = ref [] in
+  let extra = ref [] in
+  let rec aux = function
+    | List [ f_name; f_sexp ] :: q ->
+        let f_name = string_of_sexp f_name in
+        let f ~conv ~res =
+          record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
+        in
+        (match f_name with
+        | "repo_target" -> f ~conv:string_of_sexp ~res:repo_target
+        | "pkglist" -> f ~conv:(list_of_sexp pkg_of_sexp) ~res:pkglist
+        | _ -> extra := f_name :: !extra);
+        aux q
+    | [] -> (
+        match !repo_target, !pkglist with
+        | Some repo_target, Some pkglist ->
+            { repo_target = repo_target; pkglist = pkglist }
+        | _ -> 
+            record_undefined_fields ~name:"repo_of_sexp" ~sexp ~l:[
+              "repo_target", !repo_target = None; "pkglist", !pkglist = None ]
+      )
+    | _ -> of_sexp_error "repo_of_sexp: atom or wrong list element" sexp
+  in
+  match sexp with
+  | List l -> aux l
+  | _ -> of_sexp_error "repo_of_sexp: atom argument" sexp
 
 type sherpa_conf = {
   mirror : string;
