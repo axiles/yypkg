@@ -18,7 +18,6 @@
  *)
 
 open Printf
-open Sexplib.Conv
 
 type date =
   int (* year *)
@@ -90,20 +89,10 @@ type metadata = {
   packager_name : string;
   description : string;
   host : string;
-  target : string sexp_option;
+  target : string Sexplib.Conv.sexp_option;
   predicates : (string * string) list;
   comments : string list;
 }
-
-let record_undefined_fields ~name ~l ~sexp =
-  let f errs (field, missing) = if missing then field :: errs else errs in
-  let missing = List.fold_left f [] l in
-  let msg = [ name; "some fields are missing"; String.concat ", " missing ] in
-  of_sexp_error (String.concat ": " msg) sexp
-
-let record_extra_fields ~name ~extra ~sexp =
-  let msg = [ name; "there are extra fields"; String.concat ", " extra ] in
-  of_sexp_error (String.concat ": " msg) sexp
 
 type script =
   metadata
@@ -154,23 +143,41 @@ exception File_not_found of string
 exception Not_upgrading_not_installed_package of string
 
 module Sexp = struct
-  module Of = struct
+  open Sexplib.Sexp
+  open Sexplib.Conv
+
+  let record_undefined_fields ~name ~l ~sexp =
+    let f errs (field, missing) = if missing then field :: errs else errs in
+    let missing = List.fold_left f [] l in
+    let msg = [ name; "some fields are missing"; String.concat ", " missing ] in
+    of_sexp_error (String.concat ": " msg) sexp
+
+  let record_extra_fields ~name ~extra ~sexp =
+    let msg = [ name; "there are extra fields"; String.concat ", " extra ] in
+    of_sexp_error (String.concat ": " msg) sexp
+
+  module Of : sig
+    val sexp_of_metadata : metadata -> t
+    val sexp_of_conf : conf -> t
+    val sexp_of_db : db -> t
+    val sexp_of_sherpa_conf : sherpa_conf -> t
+    val sexp_of_script : script -> t
+    val sexp_of_repo : repo -> t
+  end = struct
     let sexp_of_date (year, month, day, hour, minute) =
       let f = Sexplib.Conv.sexp_of_int in
       Sexplib.Sexp.List [ f year; f month; f day; f hour; f minute ]
 
     let sexp_of_status status =
-      let open Sexplib.Sexp in
       match status with
       | Alpha i -> List [ Atom "Alpha"; sexp_of_int i ]
       | Beta i -> List [ Atom "Beta"; sexp_of_int i ]
       | RC i -> List [ Atom "RC"; sexp_of_int i ]
       | Snapshot_date date -> List [ Atom "Snapshot_date"; sexp_of_date date ]
-      | Snapshot_hash s -> List [ Atom "Snapshot_hash"; sexp_of_string s ]
+      | Snapshot_hash s -> List [ Atom "Snapshot_hash"; Atom s ]
       | Stable -> Atom "Stable"
 
     let sexp_of_version (version_components, status, build_number) =
-      let open Sexplib.Sexp in
       List [ sexp_of_list sexp_of_int version_components; sexp_of_status status;
       sexp_of_int build_number ]
 
@@ -179,7 +186,6 @@ module Sexp = struct
     let sexp_of_action_id = sexp_of_string
 
     let sexp_of_install_action install_action =
-      let open Sexplib.Sexp in
       match install_action with
       | AHK params -> List [ Atom "AHK"; sexp_of_string_list params ]
       | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
@@ -190,25 +196,21 @@ module Sexp = struct
           replace ]
 
     let sexp_of_uninstall_action uninstall_action =
-      let open Sexplib.Sexp in
       match uninstall_action with
       | RM dir -> List [ Atom "RM"; Atom dir ]
       | Reverse action_id -> List [ Atom "Reverse"; Atom action_id ]
 
     let sexp_of_result result =
-      let open Sexplib.Sexp in
       match result with
       | Filelist files -> List [ Atom "Filelist"; sexp_of_string_list files ]
       | NA -> Atom "NA"
 
     let sexp_of_predicate (name, values) =
-      let open Sexplib.Sexp in
       List [ Atom name; sexp_of_string_list values ]
 
     let sexp_of_size size =
       let p s i =
-        let module S = Sexplib.Sexp in
-        S.List [ S.Atom s; S.Atom (Int64.to_string i) ]
+        List [ Atom s; Atom (Int64.to_string i) ]
       in
       match size with
       | FileUtil.TB i -> p "TB" i
@@ -218,23 +220,20 @@ module Sexp = struct
       | FileUtil.B i -> p "B" i
 
     let sexp_of_metadata m =
-      let open Sexplib.Sexp in
-      let f (s1, s2) = List [ sexp_of_string s1; sexp_of_string s2 ] in
       List [
-        sexp_of_string m.name;
+        Atom m.name;
         sexp_of_size m.size_expanded;
         sexp_of_version m.version;
-        sexp_of_string m.packager_email;
-        sexp_of_string m.packager_name;
-        sexp_of_string m.description;
-        sexp_of_string m.host;
+        Atom m.packager_email;
+        Atom m.packager_name;
+        Atom m.description;
+        Atom m.host;
         sexp_of_option sexp_of_string m.target;
-        sexp_of_list f m.predicates;
+        sexp_of_list (fun (s1, s2) -> List [ Atom s1; Atom s2 ])  m.predicates;
         sexp_of_string_list m.comments
       ]
 
     let sexp_of_script (metadata, install_actions, uninstall_actions) =
-      let open Sexplib.Sexp in
       let f (action_id, install_action) =
         List [ sexp_of_action_id action_id; sexp_of_install_action install_action ]
       in
@@ -242,7 +241,6 @@ module Sexp = struct
       sexp_of_list sexp_of_uninstall_action uninstall_actions ]
 
     let sexp_of_package (script, results) =
-      let open Sexplib.Sexp in
       let f (action_id, result) =
         List [ sexp_of_action_id action_id; sexp_of_result result ]
       in
@@ -250,39 +248,42 @@ module Sexp = struct
 
     let sexp_of_db db = sexp_of_list sexp_of_package db
     let sexp_of_conf conf =
-      let open Sexplib.Sexp in
       List [ sexp_of_list sexp_of_predicate conf.preds ]
 
     let sexp_of_pkg pkg =
-      let open Sexplib.Sexp in
       List [
         sexp_of_metadata pkg.metadata;
         sexp_of_size pkg.size_compressed;
-        sexp_of_string pkg.filename;
+        Atom pkg.filename;
         sexp_of_option sexp_of_string pkg.signature;
         sexp_of_string_list pkg.files;
         sexp_of_string_list pkg.deps
       ]
 
     let sexp_of_repo repo =
-      let open Sexplib.Sexp in
       List [
-        sexp_of_string repo.repo_target;
+        Atom repo.repo_target;
         sexp_of_list sexp_of_pkg repo.pkglist
       ]
 
     let sexp_of_sherpa_conf sherpa_conf =
-      let open Sexplib.Sexp in
       List [
-        sexp_of_string sherpa_conf.mirror;
-        sexp_of_string sherpa_conf.sherpa_version;
-        sexp_of_string sherpa_conf.download_folder;
-        sexp_of_string sherpa_conf.arch;
+        Atom sherpa_conf.mirror;
+        Atom sherpa_conf.sherpa_version;
+        Atom sherpa_conf.download_folder;
+        Atom sherpa_conf.arch;
       ]
 
   end
 
-  module To = struct
+  module To : sig
+    val script_of_sexp : t -> script
+    val conf_of_sexp : t -> conf
+    val db_of_sexp : t -> db
+    val metadata_of_sexp : t -> metadata
+    val sherpa_conf_of_sexp : t -> sherpa_conf
+    val repo_of_sexp : t -> repo
+  end = struct
     let date_of_sexp sexp =
       let f = int_of_sexp in
       match sexp with
@@ -291,18 +292,16 @@ module Sexp = struct
       | _ -> of_sexp_error "data_of_sexp: list of 5 int atoms needed" sexp
 
     let status_of_sexp (sexp : Sexplib.Sexp.t) =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ Atom "Alpha"; i ] -> Alpha (int_of_sexp i)
       | List [ Atom "Beta"; i ] -> Beta (int_of_sexp i)
       | List [ Atom "RC"; i ] -> RC (int_of_sexp i)
       | List [ Atom "Snapshot_date"; date ] -> Snapshot_date (date_of_sexp date)
-      | List [ Atom "Snapshot_hash"; hash ] -> Snapshot_hash (string_of_sexp hash)
+      | List [ Atom "Snapshot_hash"; Atom hash ] -> Snapshot_hash hash
       | List [ Atom "Stable" ] -> Stable
       | _ -> of_sexp_error "status_of_sexp: wrong atom or wrong atom argument" sexp
 
     let version_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ version_components; status; build_number ] ->
           let version_components = list_of_sexp int_of_sexp version_components in
@@ -315,21 +314,18 @@ module Sexp = struct
     let action_id_of_sexp = string_of_sexp
 
     let install_action_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ Atom "AHK"; params ] -> AHK (string_list_of_sexp params)
       | List [ Atom "Exec"; argv ] -> Exec (string_list_of_sexp argv)
-      | List [ Atom "Expand"; List [ orig; dest ] ] ->
-          Expand (string_of_sexp orig, string_of_sexp dest)
-      | List [ Atom "MKdir"; dir ] -> MKdir (string_of_sexp dir)
-      | List [ Atom "SearchReplace"; List [ files; search; replace ] ] ->
-          SearchReplace (string_list_of_sexp files, string_of_sexp search,
-          string_of_sexp replace)
+      | List [ Atom "Expand"; List [ Atom orig; Atom dest ] ] ->
+          Expand (orig, dest)
+      | List [ Atom "MKdir"; Atom dir ] -> MKdir dir
+      | List [ Atom "SearchReplace"; List [ files; Atom search; Atom replace ] ] ->
+          SearchReplace (string_list_of_sexp files, search, replace)
       | _ -> of_sexp_error
           "install_action_of_sexp: wrong list or wrong list argument" sexp
 
     let uninstall_action_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ Atom "RM"; Atom dir ] -> RM dir
       | List [ Atom "Reverse"; Atom action_id ] -> Reverse action_id
@@ -337,7 +333,6 @@ module Sexp = struct
           "uninstall_action_of_sexp: wrong list or wrong list argument" sexp
 
     let result_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ Atom "Filelist"; files ] -> Filelist (string_list_of_sexp files)
       | Atom "NA" -> NA
@@ -345,9 +340,8 @@ module Sexp = struct
           "result_of_sexp: wrong atom, wrong list or wrong list argument" sexp
 
     let predicate_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
-      | List [ name; values ] -> string_of_sexp name, string_list_of_sexp values
+      | List [ Atom name; values ] -> name, string_list_of_sexp values
       | _ -> of_sexp_error
           "predicate_of_sexp: wrong list or wrong list argument" sexp
 
@@ -369,7 +363,6 @@ module Sexp = struct
       | Some _ -> duplicates := f_name :: !duplicates
 
     let metadata_of_sexp sexp =
-      let open Sexplib.Sexp in
       let n = ref None in
       let name = n and size_expanded = ref None and version = ref None and
       packager_email = n and packager_name = n and description = n and host = n and
@@ -377,13 +370,12 @@ module Sexp = struct
       let duplicates = ref [] in
       let extra = ref [] in
       let rec aux = function
-        | List [ f_name; f_sexp ] :: q ->
-            let f_name = string_of_sexp f_name in
+        | List [ Atom f_name; f_sexp ] :: q ->
             let f ~conv ~res =
               record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
             in
             let g = function
-              | List [ s1; s2 ] -> string_of_sexp s1, string_of_sexp s2
+              | List [ Atom s1; Atom s2 ] -> s1, s2
               | _ -> of_sexp_error "" sexp
             in
             (match f_name with
@@ -425,7 +417,6 @@ module Sexp = struct
       | _ -> of_sexp_error "metadata_of_sexp: atom argument" sexp
 
     let script_of_sexp sexp =
-      let open Sexplib.Sexp in
       let f = function
         | List [ action_id; install_action ] ->
             action_id_of_sexp action_id, install_action_of_sexp install_action
@@ -439,7 +430,6 @@ module Sexp = struct
       | _ -> of_sexp_error "predicate_of_sexp: atom or wrong list" sexp
 
     let package_of_sexp sexp =
-      let open Sexplib.Sexp in
       let f = function
         | List [ action_id; result ] ->
             action_id_of_sexp action_id, result_of_sexp result
@@ -453,20 +443,17 @@ module Sexp = struct
     let db_of_sexp sexp = list_of_sexp package_of_sexp sexp
 
     let conf_of_sexp sexp =
-      let open Sexplib.Sexp in
       match sexp with
       | List [ predicates ] -> { preds = list_of_sexp predicate_of_sexp predicates }
       | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
 
     let pkg_of_sexp sexp =
-      let open Sexplib.Sexp in
       let metadata = ref None and size_compressed = ref None and filename = ref None
       and signature = ref None and files = ref None and deps = ref None in
       let duplicates = ref [] in
       let extra = ref [] in
       let rec aux = function
-        | List [ f_name; f_sexp ] :: q ->
-            let f_name = string_of_sexp f_name in
+        | List [ Atom f_name; f_sexp ] :: q ->
             let f ~conv ~res =
               record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
             in
@@ -500,13 +487,11 @@ module Sexp = struct
       | _ -> of_sexp_error "pkg_of_sexp: atom argument" sexp
 
     let repo_of_sexp sexp =
-      let open Sexplib.Sexp in
       let repo_target = ref None and pkglist = ref None in
       let duplicates = ref [] in
       let extra = ref [] in
       let rec aux = function
-        | List [ f_name; f_sexp ] :: q ->
-            let f_name = string_of_sexp f_name in
+        | List [ Atom f_name; f_sexp ] :: q ->
             let f ~conv ~res =
               record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
             in
@@ -530,14 +515,12 @@ module Sexp = struct
       | _ -> of_sexp_error "repo_of_sexp: atom argument" sexp
 
     let sherpa_conf_of_sexp sexp =
-      let open Sexplib.Sexp in
-      let mirror = ref None and sherpa_version = ref None and download_folder = ref
-      None and arch = ref None in
+      let mirror = ref None and sherpa_version = ref None and download_folder =
+        ref None and arch = ref None in
       let duplicates = ref [] in
       let extra = ref [] in
       let rec aux = function
-        | List [ f_name; f_sexp ] :: q ->
-            let f_name = string_of_sexp f_name in
+        | List [ Atom f_name; f_sexp ] :: q ->
             let f ~conv ~res =
               record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
             in
