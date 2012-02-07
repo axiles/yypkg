@@ -514,7 +514,53 @@ type sherpa_conf = {
   sherpa_version : string;
   download_folder : string;
   arch : string;
-} with sexp
+}
+
+let sexp_of_sherpa_conf sherpa_conf =
+  let open Sexplib.Sexp in
+  List [
+    sexp_of_string sherpa_conf.mirror;
+    sexp_of_string sherpa_conf.sherpa_version;
+    sexp_of_string sherpa_conf.download_folder;
+    sexp_of_string sherpa_conf.arch;
+  ]
+
+let sherpa_conf_of_sexp sexp =
+  let open Sexplib.Sexp in
+  let mirror = ref None and sherpa_version = ref None and download_folder = ref
+  None and arch = ref None in
+  let duplicates = ref [] in
+  let extra = ref [] in
+  let rec aux = function
+    | List [ f_name; f_sexp ] :: q ->
+        let f_name = string_of_sexp f_name in
+        let f ~conv ~res =
+          record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
+        in
+        (match f_name with
+        | "mirror" -> f ~conv:string_of_sexp ~res:mirror
+        | "sherpa_version" -> f ~conv:string_of_sexp ~res:sherpa_version
+        | "download_folder" -> f ~conv:string_of_sexp ~res:download_folder
+        | "arch" -> f ~conv:string_of_sexp ~res:arch
+        | _ -> extra := f_name :: !extra);
+        aux q
+    | [] -> (
+        match !mirror, !sherpa_version, !download_folder, !arch with
+        | Some mirror, Some sherpa_version, Some download_folder, Some arch ->
+            { mirror = mirror; sherpa_version =  sherpa_version; download_folder
+            = download_folder; arch = arch }
+        | _ -> 
+            record_undefined_fields ~name:"sherpa_conf_of_sexp" ~sexp ~l:[
+              "mirror", !mirror = None; "sherpa_version", !sherpa_version =
+              None; "download_folder", !download_folder = None;
+              "arch", !arch = None
+            ]
+      )
+    | _ -> of_sexp_error "sherpa_conf_of_sexp: atom or wrong list element" sexp
+  in
+  match sexp with
+  | List l -> aux l
+  | _ -> of_sexp_error "sherpa_conf_of_sexp: atom argument" sexp
 
 type sherpa_conf_field =
   | Mirror of string
