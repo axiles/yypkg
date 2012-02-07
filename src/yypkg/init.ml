@@ -45,7 +45,7 @@ let init prefix =
     let module FU = FileUtil in
     let fl = FU.find FU.Is_file Lib.binary_path (Lib.prepend_if is_binary) [] in
     FU.cp fl (mk_absolute prefix "sbin"));
-  Disk.write db_path (sexp_of_db []);
+  Disk.write db_path (Sexp.Of.sexp_of_db []);
   let base_conf = { preds = [] } in
   let base_sherpa_conf = {
     mirror = "http://notk.org/~adrien/yypkg";
@@ -54,5 +54,5 @@ let init prefix =
     arch = Lib.guess_arch ();
   }
   in
-  Disk.write conf_path (sexp_of_conf base_conf);
-  Disk.write sherpa_conf_path (sexp_of_sherpa_conf base_sherpa_conf)
+  Disk.write conf_path (Sexp.Of.sexp_of_conf base_conf);
+  Disk.write sherpa_conf_path (Sexp.Of.sexp_of_sherpa_conf base_sherpa_conf)

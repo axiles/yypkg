@@ -249,7 +249,7 @@ let write_temp_file base_name contents =
 let open_package package =
   let l = from_tar (`get "package_script.el") package in
   let s = String.concat "\n" l in
-  script_of_sexp (Sexplib.Sexp.of_string s)
+  Sexp.To.script_of_sexp (Sexplib.Sexp.of_string s)
 
 let rev_uniq l =
   let rec rev_uniq_rc accu cur = function

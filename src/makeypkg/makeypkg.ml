@@ -116,7 +116,7 @@ let meta ~metafile ~pkg_size =
   | "-" -> Sexplib.Sexp.input_sexp stdin
   | file -> Sexplib.Sexp.load_sexp file
   in
-  { (metadata_of_sexp sexp) with size_expanded = pkg_size }
+  { (Sexp.To.metadata_of_sexp sexp) with size_expanded = pkg_size }
 
 let pkg_config_fixup ~folder ~prefix = 
   let fix ~file ~prefix ~new_prefix = 
@@ -227,7 +227,7 @@ let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.folder ]) in
   let meta, _, _ as script = package_script_el ~pkg_size settings in
-  let script = Sexplib.Sexp.to_string_hum (sexp_of_script script) in
+  let script = Sexplib.Sexp.to_string_hum (Sexp.Of.sexp_of_script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
   let output_file = compress settings meta script_dir_and_name in
   Printf.printf "Package created as: %s\n." output_file

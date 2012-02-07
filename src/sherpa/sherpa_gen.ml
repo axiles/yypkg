@@ -149,5 +149,5 @@ let () =
   (* Add deps during a second stage. *)
   let pkgs = List.rev_map (add_deps pkgs folder) pkgs in
   let repo = repo_metadata pkgs in
-  let repo = Sexplib.Sexp.to_string_hum (sexp_of_repo repo) in
+  let repo = Sexplib.Sexp.to_string_hum (Sexp.Of.sexp_of_repo repo) in
   print_string repo

@@ -29,7 +29,7 @@ let unset conf binding =
   { preds = List.remove_assoc binding conf.preds }
 
 let read () =
-  conf_of_sexp (Disk.read conf_path)
+  Sexp.To.conf_of_sexp (Disk.read conf_path)
 
 let write conf =
   (* Let's sort the configuration. Won't be faster but should be nicer to read
@@ -40,7 +40,7 @@ let write conf =
    * so why not stay safe? *)
   let sorted_preds = List.stable_sort compare conf.preds in
   let conf = { preds = sorted_preds } in
-  Disk.write conf_path (sexp_of_conf conf)
+  Disk.write conf_path (Sexp.Of.sexp_of_conf conf)
 
 (* read the conf, run the function, write the database to disk
  * if fail raises an exception, nothing will be written :-) *)
