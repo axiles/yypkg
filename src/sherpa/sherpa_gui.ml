@@ -278,7 +278,7 @@ let interface () =
     menubar = menubar }
 
 let () =
-  Yypkg.main ();
+  Yypkg_top.main ();
   ignore (GtkMain.Main.init ());
   let interface = interface () in
   interface.window#show ();
