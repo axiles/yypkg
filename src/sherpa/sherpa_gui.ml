@@ -61,18 +61,26 @@ let set_yypkg_conf_field prop ~parent =
 
 let cols = new GTree.column_list
 
-let columns = {
-  installed = "Selected", cols#add Gobject.Data.boolean;
-  with_deps = "Deps included", cols#add Gobject.Data.boolean;
-  name = "Name", cols#add Gobject.Data.string;
-  version_inst = "Version (installed)", cols#add Gobject.Data.string;
-  version_avail = "Version (available)", cols#add Gobject.Data.string;
-  size_installed = "Size (installed)", cols#add Gobject.Data.string;
-  size_package = "Size (package)", cols#add Gobject.Data.string;
-  description = "Description", cols#add Gobject.Data.string;
-}
-let x = columns
-let columns_l2 = [ x.name; x.version_inst; x.version_avail; x.size_installed; x.size_package; x.description ]
+let columns =
+  let module GD = Gobject.Data in
+  let f x = cols#add x in
+  {
+    installed = "Selected", f GD.boolean;
+    with_deps = "Deps included", f GD.boolean;
+    name = "Name", f GD.string;
+    version_inst = "Version (installed)", f GD.string;
+    version_avail = "Version (available)", f GD.string;
+    size_installed = "Size (installed)", f GD.string;
+    size_package = "Size (package)", f GD.string;
+    description = "Description", f GD.string;
+  }
+let columns_l2 =
+  let x = columns in
+  [ x.name; x.version_inst; x.version_avail; x.size_installed; x.size_package;
+  x.description ]
+
+let model_set ~(model:GTree.tree_store) ~iter (c, v) =
+  model#set ~row:iter ~column:(snd c) v
 
 let details_of_package pkg =
   let buffer = GText.buffer () in
@@ -83,17 +91,22 @@ let details_of_package pkg =
   buffer
 
 let textview () =
-  let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
-  let view = GText.view ~editable:false ~packing:scrolled#add_with_viewport () in
-  view, scrolled#coerce
+  let scroll = GBin.scrolled_window ~hpolicy ~vpolicy () in
+  let view = GText.view ~editable:false ~packing:scroll#add_with_viewport () in
+  view, scroll#coerce
 
-let rec partition model (vrai, faux) pred f g iter =
-  let accu = if pred model iter then
-    ((f model iter) :: vrai), faux
-  else
-    vrai, ((g model iter) :: faux)
+let rec partition model ~accu:(l1, l2) ~pred ~getter ~iter =
+  let v = getter model iter in
+  let accu =
+    if pred model iter then
+      (v :: l1), l2
+    else
+      l1, (v :: l2)
   in
-  if model#iter_next iter then partition model accu pred f g iter else accu
+  if model#iter_next iter then
+    partition model ~accu ~pred ~getter ~iter
+  else
+    accu
 
 let selection_changed_cb ~pkglist ~textview ~(model : GTree.tree_store) ~selection () =
   match selection#get_selected_rows with
@@ -116,41 +129,40 @@ let update_listview ~(model : GTree.tree_store) ~(treeview : GTree.view) ~textvi
     let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let size_pkg = FileUtil.string_of_size ~fuzzy:true pkg.size_compressed in
-    model#set ~row:iter ~column:(snd columns.name) name;
-    model#set ~row:iter ~column:(snd columns.size_installed) size;
-    model#set ~row:iter ~column:(snd columns.size_package) size_pkg;
-    model#set ~row:iter ~column:(snd columns.version_avail) sherpa_version;
-    model#set ~row:iter ~column:(snd columns.description) metadata.Types.description;
+    List.iter (model_set ~model ~iter) [
+      columns.name, name;
+      columns.size_installed, size;
+      columns.size_package, size_pkg;
+      columns.version_avail, sherpa_version;
+      columns.description, metadata.Types.description;
+    ];
     try
       let m = Yylib.metadata_of_pkg (Yylib.find_by_name db name) in
-      model#set ~row:iter ~column:(snd columns.installed) true;
-      model#set ~row:iter ~column:(snd columns.with_deps) true;
-      model#set ~row:iter ~column:(snd columns.version_inst) (string_of_version m.version)
+      let f c v = model_set ~model ~iter (c, v) in
+      f columns.installed true;
+      f columns.with_deps true;
+      f columns.version_inst (string_of_version m.version)
     with _ -> ()
   in
   List.iter (fill columns db) pkglist
 
 let selecteds_of ~model ~column =
+  let is_selected (model : GTree.tree_store) iter =
+    model#get ~row:iter ~column
+  in
+  let getter (model : GTree.tree_store) iter =
+    model#get ~row:iter ~column:(snd columns.name)
+  in
   match model#get_iter_first with
-  | Some iter ->
-      let is_selected (model : GTree.tree_store) iter =
-        model#get ~row:iter ~column
-      in
-      let f (model : GTree.tree_store) iter =
-        model#get ~row:iter ~column:(snd columns.name)
-      in
-      partition model ([], []) is_selected f f iter
+  | Some iter -> partition model ~accu:([], []) ~pred:is_selected ~getter ~iter
   | None -> [], []
 
 let avail_is_newer_than_installed db p =
-  let name = p.metadata.Types.name in
-  if Yylib.is_installed db name then
-    let pkg = Yylib.find_by_name db name in
-    let installed = (Yylib.metadata_of_pkg pkg).version in
-    let avail = p.metadata.Types.version in
-    avail > installed
-  else
-    true
+  try 
+    let pkg = Yylib.find_by_name db p.metadata.Types.name in
+    p.metadata.Types.version > (Yylib.metadata_of_pkg pkg).version
+  with Not_found ->
+    false
 
 let process ~model ~db () =
   let pkglist = !(Lazy.force pkglist) in
@@ -210,8 +222,8 @@ let listview () =
     GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
   in
   let f = update_listview_deps in
-  let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) x.installed in
-  let sel = column_toggle ~auto:true ~on_toggle:toggle x.with_deps in
+  let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) columns.installed in
+  let sel = column_toggle ~auto:true ~on_toggle:toggle columns.with_deps in
   let columns = inst :: sel :: List.map column_string columns_l2 in
   List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
   ignore (List.map treeview#append_column columns);
