@@ -38,7 +38,6 @@ let cmd_line_spec = [
     (* not handled currently: "-regen", []; *)
   ], "parent option for:";
   "-init", [], "setups a directory tree for yypkg (run once)";
-  "-sherpa", [], "run the sherpa gui";
 ]
 
 (* find the prefix from a command-line *)
@@ -63,9 +62,11 @@ let action_of_cmd_line cmd_line =
   let lt, _ = List.partition Args.is_opt cmd_line in
   match lt with
     (* exactly one action: everything ok *)
-    | [ Args.Opt (action, subopts) ] -> action, subopts
-    (* zero or several actions is forbidden: raise an exception that will be
-     * caught later on *)
+    | [ Args.Opt (action, subopts) ] -> Some action, subopts
+    (* no action: whatever the default will be *)
+    | [] -> None, []
+    (* several actions is forbidden: raise an exception that will be caught
+     * later on *)
     | _ -> raise (Args.Parsing_failed "Only one action is allowed at once.")
 
 let config opts =
@@ -112,7 +113,7 @@ let main b =
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
     let prefix, cmd_line = prefix_of_cmd_line cmd_line in
     let action, actionopts = action_of_cmd_line cmd_line in
-    if ("-init", []) = (action, actionopts) then
+    if action = Some "-init" && actionopts = [] then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
       Init.init prefix
     else
@@ -120,29 +121,30 @@ let main b =
       let old_cwd = Sys.getcwd () in
       Sys.chdir prefix;
       Yylib.sanity_checks ();
-      match action, actionopts with
-      (* install, accepts several packages at once *)
-      | "-install", l ->
-          let l = Args.to_string_list l in
-          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
-          Db.update (Install.install (Conf.read ()) l)
-      (* upgrade, accepts several packages at once *)
-      | "-upgrade", l -> upgrade old_cwd l
-      (* uninstall, accepts several packages at once *)
-      | "-uninstall", l ->
-          let l = Args.to_string_list l in
-          Db.update (Uninstall.uninstall l)
-      (* list the installed packages *)
-      | "-list", l ->
-          let l = Args.to_string_list l in
-          Yylist.list (Db.read ()) l
-      (* config does nothing on its own but has suboptions *)
-      | "-config", subopts -> config subopts
-      (* FIXME *)
-      | "-sherpa", [] -> ()
-      (* if an option was different, Args.parse would already have complained,
-       * so this final pattern will never be matched *)
-      | _ -> assert false
+      match action with
+      | None -> ()
+      | Some action ->
+          match action, actionopts with
+          (* install, accepts several packages at once *)
+          | "-install", l ->
+              let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
+                (Args.to_string_list l) in
+              Db.update (Install.install (Conf.read ()) l)
+          (* upgrade, accepts several packages at once *)
+          | "-upgrade", l -> upgrade old_cwd l
+          (* uninstall, accepts several packages at once *)
+          | "-uninstall", l ->
+              let l = Args.to_string_list l in
+              Db.update (Uninstall.uninstall l)
+          (* list the installed packages *)
+          | "-list", l ->
+              let l = Args.to_string_list l in
+              Yylist.list (Db.read ()) l
+          (* config does nothing on its own but has suboptions *)
+          | "-config", subopts -> config subopts
+          (* if an option was different, Args.parse would already have
+           * complained, so this final pattern will never be matched *)
+          | _ -> assert false
 
 let main_wrap b =
   (* FIXME: if an exception happens, no matter what it is, the error message
