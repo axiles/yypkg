@@ -95,16 +95,17 @@ end = struct
 
   let sexp_of_metadata m =
     List [
-      Atom m.name;
-      sexp_of_size m.size_expanded;
-      sexp_of_version m.version;
-      Atom m.packager_email;
-      Atom m.packager_name;
-      Atom m.description;
-      Atom m.host;
-      sexp_of_option sexp_of_string m.target;
-      sexp_of_list (fun (s1, s2) -> List [ Atom s1; Atom s2 ])  m.predicates;
-      sexp_of_string_list m.comments
+      List [ Atom "name"; Atom m.name ];
+      List [ Atom "size_expanded"; sexp_of_size m.size_expanded ];
+      List [ Atom "version"; sexp_of_version m.version ];
+      List [ Atom "packager_email"; Atom m.packager_email ];
+      List [ Atom "packager_name"; Atom m.packager_name ];
+      List [ Atom "description"; Atom m.description ];
+      List [ Atom "host"; Atom m.host ];
+      List [ Atom "target"; sexp_of_option sexp_of_string m.target ];
+      List [ Atom "predicates"; sexp_of_list (fun (s1, s2) ->
+          List [ Atom s1; Atom s2 ])  m.predicates ];
+      List [ Atom "comments"; sexp_of_string_list m.comments ];
     ]
 
   let sexp_of_script (metadata, install_actions, uninstall_actions) =
@@ -122,16 +123,16 @@ end = struct
 
   let sexp_of_db db = sexp_of_list sexp_of_package db
   let sexp_of_conf conf =
-    List [ sexp_of_list sexp_of_predicate conf.preds ]
+    List [ Atom "preds"; sexp_of_list sexp_of_predicate conf.preds ]
 
   let sexp_of_pkg pkg =
     List [
-      sexp_of_metadata pkg.metadata;
-      sexp_of_size pkg.size_compressed;
-      Atom pkg.filename;
-      sexp_of_option sexp_of_string pkg.signature;
-      sexp_of_string_list pkg.files;
-      sexp_of_string_list pkg.deps
+      List [ Atom "metadata"; sexp_of_metadata pkg.metadata ];
+      List [ Atom "size_compressed"; sexp_of_size pkg.size_compressed ];
+      List [ Atom "filename"; Atom pkg.filename ];
+      List [ Atom "signature"; sexp_of_option sexp_of_string pkg.signature ];
+      List [ Atom "files"; sexp_of_string_list pkg.files ];
+      List [ Atom "deps"; sexp_of_string_list pkg.deps ];
     ]
 
   let sexp_of_repo repo =
@@ -142,10 +143,10 @@ end = struct
 
   let sexp_of_sherpa_conf sherpa_conf =
     List [
-      Atom sherpa_conf.mirror;
-      Atom sherpa_conf.sherpa_version;
-      Atom sherpa_conf.download_folder;
-      Atom sherpa_conf.arch;
+      List [ Atom "mirror"; Atom sherpa_conf.mirror ];
+      List [ Atom "sherpa_version"; Atom sherpa_conf.sherpa_version ];
+      List [ Atom "download_folder"; Atom sherpa_conf.download_folder ];
+      List [ Atom "arch"; Atom sherpa_conf.arch ];
     ]
 
   let metadata = sexp_of_metadata
@@ -178,7 +179,7 @@ end = struct
     | List [ Atom "RC"; i ] -> RC (int_of_sexp i)
     | List [ Atom "Snapshot_date"; date ] -> Snapshot_date (date_of_sexp date)
     | List [ Atom "Snapshot_hash"; Atom hash ] -> Snapshot_hash hash
-    | List [ Atom "Stable" ] -> Stable
+    | Atom "Stable" -> Stable
     | _ -> of_sexp_error "status_of_sexp: wrong atom or wrong atom argument" sexp
 
   let version_of_sexp sexp =
@@ -324,7 +325,8 @@ end = struct
 
   let conf_of_sexp sexp =
     match sexp with
-    | List [ predicates ] -> { preds = list_of_sexp predicate_of_sexp predicates }
+    | List [ Atom "preds"; predicates ] ->
+        { preds = list_of_sexp predicate_of_sexp predicates }
     | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
 
   let pkg_of_sexp sexp =
