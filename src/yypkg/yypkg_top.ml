@@ -104,9 +104,9 @@ let upgrade old_cwd cmd_line =
   | [], l -> f l
   | _ -> assert false
 
-let main () =
+let main b =
   if Args.wants_help () || Args.nothing_given () then
-    Args.print_help cmd_line_spec
+     Args.bprint_help b cmd_line_spec
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
@@ -144,18 +144,27 @@ let main () =
        * so this final pattern will never be matched *)
       | _ -> assert false
 
-let main () =
+let main_wrap b =
   (* FIXME: if an exception happens, no matter what it is, the error message
    * will always be the same: the command-line is wrong, even if it was
-   * perfectly fine (a.g. -list but the database being corrupt *)
-  try main () with 
-  | Args.Incomplete_parsing (opts, sl) ->
-      Args.print_spec 0 (Args.usage_msg cmd_line_spec)
+   * perfectly fine (e.g. -list but the database being corrupt *)
+  try main b with 
+  | Args.Incomplete_parsing (opts, sl) as e ->
+      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec);
+      raise e
   | Args.Parsing_failed s as e -> raise e
-  | File_not_found p when Yylib.db_path = p || Yylib.conf_path = p ->
-      prerr_endline "You forgot to run -init or something got corrupted."
+  | File_not_found p as e when Yylib.db_path = p || Yylib.conf_path = p ->
+      Buffer.add_string b "You forgot to run -init or something got corrupted.";
+      raise e
   | File_not_found p as e -> raise e
-  | Unmatched_predicates l ->
-      let f (b, v) = Printf.eprintf "Predicate %s = %s doesn't hold.\n" b v in
-      List.iter f l
+  | Unmatched_predicates l as e ->
+      let f (p, v) = Printf.bprintf b "Predicate %s = %s doesn't hold.\n" p v in
+      List.iter f l;
+      raise e
 
+let main_wrap_wrap b =
+  try main_wrap b with e ->
+    Buffer.add_string b "\nFailure. An exception has been raised:\n";
+    Buffer.add_string b (Printexc.to_string e);
+    Buffer.add_string b "\n\nThe backtrace is as folllows:\n";
+    Buffer.add_string b (Printexc.get_backtrace ())

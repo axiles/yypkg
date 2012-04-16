@@ -278,8 +278,17 @@ let interface () =
     menubar = menubar }
 
 let () =
-  Yypkg_top.main ();
+  Printexc.record_backtrace true;
   ignore (GtkMain.Main.init ());
-  let interface = interface () in
-  interface.window#show ();
-  GMain.Main.main ()
+  let b = Buffer.create 1000 in
+  Yypkg_top.main_wrap_wrap b;
+  if Buffer.contents b <> ""  then
+    (let dialog = GWindow.dialog ~title:"Exception raised" () in
+    ignore (GMisc.label ~packing:dialog#vbox#add ~text:(Buffer.contents b) ());
+    dialog#add_button_stock `OK `DELETE_EVENT;
+    ignore (dialog#run ());
+    dialog#destroy ())
+  else
+    (let interface = interface () in
+    interface.window#show ();
+    GMain.Main.main ())

@@ -22,9 +22,9 @@ type opt =
 exception Option_specification_is_ambiguous
 exception Incomplete_parsing of (opt list * string list)
 
-let rec print_spec n (name, subs, text) =
-  Printf.eprintf "%s%s : %s\n" (String.make n ' ') name text;
-  List.iter (print_spec (n+1)) subs
+let rec bprint_spec b n (name, subs, text) =
+  Printf.bprintf b "%s%s : %s\n" (String.make n ' ') name text;
+  List.iter (bprint_spec b (n+1)) subs
 
 let usage_msg spec = 
   "Usage", spec, "command-line arguments to yypkg"
@@ -80,8 +80,8 @@ let wants_help () =
 let nothing_given () =
   1 = Array.length Sys.argv
 
-let print_help cmd_line_spec =
-  print_spec 0 (usage_msg cmd_line_spec)
+let bprint_help b cmd_line_spec =
+  bprint_spec b 0 (usage_msg cmd_line_spec)
 
 (* this is a little test:
   let spec = [ "-install", []; "-uninstall", []]

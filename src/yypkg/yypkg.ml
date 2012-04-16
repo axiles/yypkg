@@ -2,4 +2,9 @@
  * command-line mode (as opposed to GUI). *)
 
 let () =
-  Yypkg_top.main ()
+  Printexc.record_backtrace true;
+  let b = Buffer.create 1000 in
+  Yypkg_top.main_wrap_wrap b;
+  Buffer.output_buffer stderr b;
+  if Buffer.contents b <> "" then
+    exit 1
