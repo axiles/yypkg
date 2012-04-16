@@ -27,15 +27,12 @@ let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
 
 let set_dialog ~text ~callback ~parent () =
-  let dialog = GWindow.dialog ~parent ~destroy_with_parent:true ~show:true () in
-  let textfield = GEdit.entry ~width:400 ~text () in
-  let hbox = GPack.hbox () in
-  let ok = GButton.button ~stock:`OK ~packing:hbox#add ~show:true () in
-  let cancel = GButton.button ~stock:`CANCEL ~packing:hbox#add ~show:true () in
-  ignore (ok#connect#clicked ~callback:(callback dialog textfield));
-  ignore (cancel#connect#clicked ~callback:dialog#destroy);
-  dialog#vbox#pack ~expand:false textfield#coerce;
-  dialog#vbox#pack ~expand:false hbox#coerce
+  let dlg = GWindow.dialog ~parent ~destroy_with_parent:true ~show:true () in
+  let textfield = GEdit.entry ~width:400 ~text ~packing:dlg#vbox#pack () in
+  let ok = GButton.button ~stock:`OK ~packing:dlg#action_area#add () in
+  let cancel = GButton.button ~stock:`CANCEL ~packing:dlg#action_area#add () in
+  ignore (ok#connect#clicked ~callback:(callback dlg textfield));
+  ignore (cancel#connect#clicked ~callback:dlg#destroy)
 
 let set_conf_field ~read ~update ~text ~f ~parent =
   let conf = read () in
