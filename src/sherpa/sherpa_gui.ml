@@ -52,7 +52,7 @@ let set_sherpa_conf_field prop ~parent =
 
 let set_yypkg_conf_field prop ~parent =
   let pred_text pred c =
-    try String.concat "," (List.assoc pred c.preds) with Not_found -> ""
+    String.concat "," (try (List.assoc pred c.preds) with Not_found -> [])
   in
   let text, f = match prop with
   | `pred p -> pred_text p, fun s c -> Config.setpred c (p ^ "=" ^ s)
@@ -188,15 +188,14 @@ let update_listview_deps ~(model : GTree.tree_store) =
   let pkglist = !(Lazy.force pkglist) in
   let db = Db.read () in
   let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.installed) in
-  match model#get_iter_first with
-  | Some iter ->
-      let selecteds = find_all_by_name pkglist selecteds in
-      let unselecteds = find_all_by_name pkglist unselecteds in
-      let deps = get_deps pkglist selecteds in
-      let deps = List.filter (fun p -> not (should_be_uninstalled unselecteds db p)) deps in
-      let deps = List.map (fun p -> p.metadata.Types.name) deps in
-      update columns deps iter
-  | None -> ()
+  Gaux.may (model#get_iter_first) ~f:(fun iter ->
+    let selecteds = find_all_by_name pkglist selecteds in
+    let unselecteds = find_all_by_name pkglist unselecteds in
+    let deps = get_deps pkglist selecteds in
+    let deps = List.filter (fun p -> not (should_be_uninstalled unselecteds db p)) deps in
+    let deps = List.map (fun p -> p.metadata.Types.name) deps in
+    update columns deps iter
+  )
 
 let listview () =
   let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
