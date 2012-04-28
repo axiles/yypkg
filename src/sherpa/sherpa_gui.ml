@@ -269,7 +269,9 @@ let mk_interface () =
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
   let vbox = GPack.vbox ~packing:window#add () in
   UI.menu ~packing:(vbox#pack ~expand:false);
-  ignore (new UI.core ~packing:(vbox#pack ~expand:true));
+  ignore (GMain.Timeout.add ~ms:100 ~callback:(fun () ->
+    ignore (new UI.core ~packing:(vbox#pack ~expand:true));
+    false));
   window#show ()
 
 let () =
