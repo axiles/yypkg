@@ -16,7 +16,7 @@ type col = {
 let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
 
-let get_pkglist () =
+let get_pkglist ~conf =
   let d = GWindow.message_dialog ~message:"Sherpa is currently fetching the \
   package list. This takes a few seconds." ~title:"Fetching package list"
   ~modal:true ~deletable:false ~message_type:`INFO ~buttons:GWindow.Buttons.ok
@@ -24,7 +24,7 @@ let get_pkglist () =
   (* puke, but this makes sure the dialog contents are always shown *)
   ignore (Unix.select [] [] [] 0.010);
   while Glib.Main.pending () do ignore (Glib.Main.iteration true) done;
-  let pkglist = pkglist () in
+  let pkglist = pkglist ~conf in
   d#destroy ();
   pkglist
 
@@ -167,7 +167,8 @@ module UI = struct
   class core ~packing ~update_btn ~process_btn =
     let paned = GPack.paned ~packing `VERTICAL () in
     let textview = textview ~packing:(paned#pack2 ~shrink:true) in
-    let pkglist = get_pkglist () in
+    let conf = read () in
+    let pkglist = get_pkglist ~conf in
     let db = Db.read () in
     object(self)
       initializer
@@ -186,7 +187,6 @@ module UI = struct
             false)))
 
       method process ~model ~db =
-        let conf = read () in
         let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
         let selecteds = find_all_by_name pkglist selecteds in
         let uninst = List.filter (Yylib.is_installed db) unselecteds in

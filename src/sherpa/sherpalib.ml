@@ -66,16 +66,15 @@ let repo_of_uri uri =
 let repo ~conf () =
   repo_of_uri (repo_uri ~conf ())
 
-let pkglist () =
-  let conf = read () in
+let pkglist ~conf =
   let repo = repo ~conf () in
   let runon = conf.arch in
   find_all_applicable ~pkglist:repo.pkglist ~runfor:repo.repo_target ~runon
 
 let get_packages ~conf ~with_deps ~output_folder ~package = 
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
-  let pkglist = pkglist () in
   let pkglist =
+    let pkglist = pkglist ~conf in
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist [ p ] else [ p ]
   in 

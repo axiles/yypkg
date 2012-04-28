@@ -41,8 +41,8 @@ let os_type =
 (* it would have been too dull if all OSes had the same directory separators *)
 let dir_sep =
   match os_type with
-    | `Unix -> "/"
-    | `Windows -> "\\"
+  | `Unix -> "/"
+  | `Windows -> "\\"
 
 let read pid ~accumulate ~output =
   (* We'll be reading at most 160 characters at a time, I don't know if there's
