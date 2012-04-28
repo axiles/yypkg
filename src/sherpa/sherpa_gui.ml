@@ -13,51 +13,41 @@ type col = {
   description : string * string GTree.column;
 }
 
-type interface = {
-  window : GWindow.window;
-  paned : GPack.paned;
-  listview : GTree.tree_store;
-  textview : GText.view;
-  menubar : GMenu.menu_shell;
-}
-
-let pkglist = lazy (ref (pkglist ()))
-
 let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
 
-let set_dialog ~text ~callback ~parent () =
-  let dlg = GWindow.dialog ~parent ~destroy_with_parent:true ~show:true () in
+let set_dialog ~text ~callback () =
+  let dlg = GWindow.dialog ~modal:true ~destroy_with_parent:true ~show:true () in
   let textfield = GEdit.entry ~width:400 ~text ~packing:dlg#vbox#pack () in
   let ok = GButton.button ~stock:`OK ~packing:dlg#action_area#add () in
   let cancel = GButton.button ~stock:`CANCEL ~packing:dlg#action_area#add () in
   ignore (ok#connect#clicked ~callback:(callback dlg textfield));
   ignore (cancel#connect#clicked ~callback:dlg#destroy)
 
-let set_conf_field ~read ~update ~text ~f ~parent =
+let set_conf_field ~read ~update ~text ~f =
   let conf = read () in
   let text = text conf in
   let ok_callback dialog textfield () =
     update (f textfield#text); dialog#destroy ()
   in
-  set_dialog ~text ~callback:ok_callback ~parent
+  set_dialog ~text ~callback:ok_callback
 
-let set_sherpa_conf_field prop ~parent =
+let set_sherpa_conf_field prop =
   let text, f = match prop with
   | `mirror -> (fun c -> c.mirror), fun mirror c -> { c with mirror = mirror }
   | `version -> (fun c -> c.sherpa_version), fun version c -> { c with sherpa_version = version }
   | `downloadfolder -> (fun c -> c.download_folder), fun folder c -> { c with download_folder = folder }
   in
-  set_conf_field ~read ~update ~text ~f ~parent
+  set_conf_field ~read ~update ~text ~f
 
-let set_yypkg_conf_field prop ~parent =
+let set_yypkg_conf_field prop =
   let pred_text pred c =
     String.concat "," (try (List.assoc pred c.preds) with Not_found -> [])
   in
   let text, f = match prop with
   | `pred p -> pred_text p, fun s c -> Config.setpred c (p ^ "=" ^ s)
   in
-  set_conf_field ~read:Conf.read ~update:Conf.update ~text ~f ~parent
+  set_conf_field ~read:Conf.read ~update:Conf.update ~text ~f
 
 let cols = new GTree.column_list
 
@@ -90,10 +80,9 @@ let details_of_package pkg =
   buffer#insert pkg.metadata.Types.description;
   buffer
 
-let textview () =
-  let scroll = GBin.scrolled_window ~hpolicy ~vpolicy () in
-  let view = GText.view ~editable:false ~packing:scroll#add_with_viewport () in
-  view, scroll#coerce
+let textview ~packing =
+  let scroll = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
+  GText.view ~editable:false ~packing:scroll#add_with_viewport ()
 
 let rec partition model ~accu:(l1, l2) ~pred ~getter ~iter =
   let v = getter model iter in
@@ -164,126 +153,122 @@ let avail_is_newer_than_installed db p =
   with Not_found ->
     false
 
-let process ~model ~db () =
-  let pkglist = !(Lazy.force pkglist) in
-  let conf = read () in
-  let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
-  let selecteds = find_all_by_name pkglist selecteds in
-  let uninst = List.filter (Yylib.is_installed db) unselecteds in
-  let inewer = List.filter (avail_is_newer_than_installed db) selecteds in
-  let ipkgs = List.map (download_to_folder conf.download_folder) inewer in
-  Db.update (Uninstall.uninstall uninst);
-  Db.update (Install.install (Conf.read ()) ipkgs)
+module UI = struct
+  class core ~packing =
+    let paned = GPack.paned ~packing `VERTICAL () in
+    let pkglist = pkglist () in
+    object(self)
+      initializer
+        let textview = textview ~packing:(paned#pack2 ~shrink:true) in
+        let model, treeview = self#listview ~packing:(paned#pack1 ~shrink:false) in
+        ()
+      method process ~model ~(db : db) =
+        let conf = read () in
+        let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
+        let selecteds = find_all_by_name pkglist selecteds in
+        let uninst = List.filter (Yylib.is_installed db) unselecteds in
+        let inewer = List.filter (avail_is_newer_than_installed db) selecteds in
+        let ipkgs = List.map (download_to_folder conf.download_folder) inewer in
+        Db.update (Uninstall.uninstall uninst);
+        Db.update (Install.install (Conf.read ()) ipkgs)
+      method update_listview_deps ~(model : GTree.tree_store) =
+        let rec update columns selecteds iter =
+          let name = model#get ~row:iter ~column:(snd columns.name) in
+          let selected = List.mem name selecteds in
+          model#set ~row:iter ~column:(snd columns.with_deps) selected;
+          if model#iter_next iter then update columns selecteds iter else ()
+        in
+        let should_be_uninstalled unselecteds db p =
+          Yylib.is_installed db p.metadata.Types.name && List.mem p unselecteds
+        in
+        let db = Db.read () in
+        let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.installed) in
+        Gaux.may (model#get_iter_first) ~f:(fun iter ->
+          let selecteds = find_all_by_name pkglist selecteds in
+          let unselecteds = find_all_by_name pkglist unselecteds in
+          let deps = get_deps pkglist selecteds in
+          let deps = List.filter (fun p -> not (should_be_uninstalled unselecteds db p)) deps in
+          let deps = List.map (fun p -> p.metadata.Types.name) deps in
+          update columns deps iter
+        )
+      method listview ~packing =
+        let scrolled = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
+        let model = GTree.tree_store cols in
+        let treeview = GTree.view ~model ~reorderable:true ~packing:scrolled#add_with_viewport () in
+        let renderer_text = GTree.cell_renderer_text [] in
+        let toggle ?f col treepath =
+          let iter = model#get_iter treepath in
+          model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col));
+          match f with
+          | None -> ()
+          | Some f -> f ~model
+        in
+        let column_toggle ~auto ~on_toggle (title, col) =
+          let renderer_toggle = GTree.cell_renderer_toggle [] in
+          (if auto then
+            ignore (renderer_toggle#connect#toggled ~callback:(on_toggle col))
+          else
+            ());
+          GTree.view_column ~title ~renderer:(renderer_toggle, [ "active", col ]) ()
+        in
+        let column_string (title, col) =
+          GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
+        in
+        let f = self#update_listview_deps in
+        let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) columns.installed in
+        let sel = column_toggle ~auto:true ~on_toggle:toggle columns.with_deps in
+        let columns = inst :: sel :: List.map column_string columns_l2 in
+        List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
+        ignore (List.map treeview#append_column columns);
+        model, treeview
+    end
 
-let update_listview_deps ~(model : GTree.tree_store) =
-  let rec update columns selecteds iter =
-    let name = model#get ~row:iter ~column:(snd columns.name) in
-    let selected = List.mem name selecteds in
-    model#set ~row:iter ~column:(snd columns.with_deps) selected;
-    if model#iter_next iter then update columns selecteds iter else ()
-  in
-  let should_be_uninstalled unselecteds db p =
-    Yylib.is_installed db p.metadata.Types.name && List.mem p unselecteds
-  in
-  let pkglist = !(Lazy.force pkglist) in
-  let db = Db.read () in
-  let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.installed) in
-  Gaux.may (model#get_iter_first) ~f:(fun iter ->
-    let selecteds = find_all_by_name pkglist selecteds in
-    let unselecteds = find_all_by_name pkglist unselecteds in
-    let deps = get_deps pkglist selecteds in
-    let deps = List.filter (fun p -> not (should_be_uninstalled unselecteds db p)) deps in
-    let deps = List.map (fun p -> p.metadata.Types.name) deps in
-    update columns deps iter
-  )
-
-let listview () =
-  let scrolled = GBin.scrolled_window ~hpolicy ~vpolicy () in
-  let model = GTree.tree_store cols in
-  let treeview = GTree.view ~model ~reorderable:true ~packing:scrolled#add_with_viewport () in
-  let renderer_text = GTree.cell_renderer_text [] in
-  let toggle ?f col treepath =
-    let iter = model#get_iter treepath in
-    model#set ~row:iter ~column:col (not (model#get ~row:iter ~column:col));
-    match f with
-    | None -> ()
-    | Some f -> f ~model
-  in
-  let column_toggle ~auto ~on_toggle (title, col) =
-    let renderer_toggle = GTree.cell_renderer_toggle [] in
-    (if auto then
-      ignore (renderer_toggle#connect#toggled ~callback:(on_toggle col))
-    else
-      ());
-    GTree.view_column ~title ~renderer:(renderer_toggle, [ "active", col ]) ()
-  in
-  let column_string (title, col) =
-    GTree.view_column ~title ~renderer:(renderer_text, [ "text", col ]) ()
-  in
-  let f = update_listview_deps in
-  let inst = column_toggle ~auto:true ~on_toggle:(toggle ~f) columns.installed in
-  let sel = column_toggle ~auto:true ~on_toggle:toggle columns.with_deps in
-  let columns = inst :: sel :: List.map column_string columns_l2 in
-  List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
-  ignore (List.map treeview#append_column columns);
-  model, treeview, scrolled#coerce
-
-let menu ~window ~model ~treeview ~textview =
-  let update () =
-    update_listview ~model ~treeview ~textview (Db.read ()) !(Lazy.force pkglist)
-  in
-  let file = [
-    `I ("Process", process ~model ~db:(Db.read ()));
-    `I ("Quit", GMain.Main.quit);
+  let menu ~packing =
+    (* let update () =
+      update_listview ~model ~treeview ~textview (Db.read ()) !(Lazy.force pkglist)
+    in
+    let file = [
+      `I ("Process", core#process ~model ~db:(Db.read ()));
+      `I ("Quit", GMain.Main.quit);
+      ]
+    in
+    let package_list = [
+      `I ("Force update", update);
     ]
-  in
-  let package_list = [
-    `I ("Force update", update);
-  ]
-  in
-  let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch") ~parent:window); ] in
-  let settings = [
-    `I ("Mirror", set_sherpa_conf_field `mirror ~parent:window);
-    `I ("Version", set_sherpa_conf_field `version ~parent:window);
-    `I ("Download folder", set_sherpa_conf_field `downloadfolder ~parent:window);
-    `M ("Predicates", predicates);
-  ]
-  in
-  let help = [ `I ("Help", (fun () -> ())) ] in
-  let menu = [
-    "File", file;
-    "Package list", package_list;
-    "Settings", settings;
-    "Help", help;
-  ]
-  in
-  let create_menu ~packing (label, entries) =
-    let item = GMenu.menu_item ~label ~packing () in
-    let menu = GMenu.menu ~packing:item#set_submenu () in
-    GToolbox.build_menu menu ~entries
-  in
-  let menubar = GMenu.menu_bar () in
-  ignore (List.map (create_menu ~packing:menubar#append) menu);
-  menubar
+    in *)
+    let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch")); ] in
+    let settings = [
+      `I ("Mirror", set_sherpa_conf_field `mirror);
+      `I ("Version", set_sherpa_conf_field `version);
+      `I ("Download folder", set_sherpa_conf_field `downloadfolder);
+      `M ("Predicates", predicates);
+    ]
+    in
+    (* let help = [ `I ("Help", (fun () -> ())) ] in *)
+    let menu = [
+      "File", [ `I ("Quit", GMain.Main.quit) ];
+      (* "Package list", package_list; *)
+      "Settings", settings;
+      (* "Help", help; *)
+    ]
+    in
+    let create_menu ~packing (label, entries) =
+      let item = GMenu.menu_item ~label ~packing () in
+      let menu = GMenu.menu ~packing:item#set_submenu () in
+      GToolbox.build_menu menu ~entries
+    in
+    let menubar = GMenu.menu_bar ~packing () in
+    ignore (List.map (create_menu ~packing:menubar#append) menu);
+    menubar
+end
 
-let window () =
+let mk_interface () =
   let window = GWindow.window ~allow_shrink:true ~width:800 ~height:480 () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
-  window
-
-let interface () =
-  let window = window () in
   let vbox = GPack.vbox ~packing:window#add () in
-  let paned = GPack.paned `VERTICAL () in
-  let textview, textview_scrolled = textview () in
-  let model, treeview, listview_scrolled = listview () in
-  let menubar = menu ~window ~model ~treeview ~textview in
-  paned#pack1 ~shrink:false listview_scrolled;
-  paned#pack2 ~shrink:true textview_scrolled;
-  vbox#pack ~expand:false menubar#coerce;
-  vbox#pack ~expand:true paned#coerce;
-  { window = window; paned = paned; listview = model; textview = textview;
-    menubar = menubar }
+  let menubar = UI.menu ~packing:(vbox#pack ~expand:false) in
+  let core = new UI.core ~packing:(vbox#pack ~expand:true) in
+  window#show ()
 
 let () =
   Printexc.record_backtrace true;
@@ -297,6 +282,5 @@ let () =
     ignore (dialog#run ());
     dialog#destroy ())
   else
-    (let interface = interface () in
-    interface.window#show ();
+    (let interface = mk_interface () in
     GMain.Main.main ())
