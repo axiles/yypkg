@@ -82,7 +82,7 @@ let details_of_package pkg =
 
 let textview ~packing =
   let scroll = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
-  GText.view ~editable:false ~packing:scroll#add_with_viewport ()
+  ignore (GText.view ~editable:false ~packing:scroll#add_with_viewport ())
 
 let rec partition model ~accu:(l1, l2) ~pred ~getter ~iter =
   let v = getter model iter in
@@ -156,12 +156,13 @@ let avail_is_newer_than_installed db p =
 module UI = struct
   class core ~packing =
     let paned = GPack.paned ~packing `VERTICAL () in
+    let () = textview ~packing:(paned#pack2 ~shrink:true) in
     let pkglist = pkglist () in
     object(self)
       initializer
-        let textview = textview ~packing:(paned#pack2 ~shrink:true) in
-        let model, treeview = self#listview ~packing:(paned#pack1 ~shrink:false) in
+        let _model = self#listview ~packing:(paned#pack1 ~shrink:false) in
         ()
+
       method process ~model ~(db : db) =
         let conf = read () in
         let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
@@ -171,6 +172,7 @@ module UI = struct
         let ipkgs = List.map (download_to_folder conf.download_folder) inewer in
         Db.update (Uninstall.uninstall uninst);
         Db.update (Install.install (Conf.read ()) ipkgs)
+
       method update_listview_deps ~(model : GTree.tree_store) =
         let rec update columns selecteds iter =
           let name = model#get ~row:iter ~column:(snd columns.name) in
@@ -191,6 +193,7 @@ module UI = struct
           let deps = List.map (fun p -> p.metadata.Types.name) deps in
           update columns deps iter
         )
+
       method listview ~packing =
         let scrolled = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
         let model = GTree.tree_store cols in
@@ -220,7 +223,7 @@ module UI = struct
         let columns = inst :: sel :: List.map column_string columns_l2 in
         List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
         ignore (List.map treeview#append_column columns);
-        model, treeview
+        model
     end
 
   let menu ~packing =
@@ -258,16 +261,15 @@ module UI = struct
       GToolbox.build_menu menu ~entries
     in
     let menubar = GMenu.menu_bar ~packing () in
-    ignore (List.map (create_menu ~packing:menubar#append) menu);
-    menubar
+    ignore (List.map (create_menu ~packing:menubar#append) menu)
 end
 
 let mk_interface () =
   let window = GWindow.window ~allow_shrink:true ~width:800 ~height:480 () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
   let vbox = GPack.vbox ~packing:window#add () in
-  let menubar = UI.menu ~packing:(vbox#pack ~expand:false) in
-  let core = new UI.core ~packing:(vbox#pack ~expand:true) in
+  UI.menu ~packing:(vbox#pack ~expand:false);
+  ignore (new UI.core ~packing:(vbox#pack ~expand:true));
   window#show ()
 
 let () =
@@ -282,5 +284,5 @@ let () =
     ignore (dialog#run ());
     dialog#destroy ())
   else
-    (let interface = mk_interface () in
+    (mk_interface ();
     GMain.Main.main ())
