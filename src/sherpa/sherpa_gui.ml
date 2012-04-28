@@ -191,7 +191,7 @@ module UI = struct
         let selecteds = find_all_by_name pkglist selecteds in
         let uninst = List.filter (Yylib.is_installed db) unselecteds in
         let inewer = List.filter (avail_is_newer_than_installed db) selecteds in
-        let ipkgs = List.map (download_to_folder conf.download_folder) inewer in
+        let ipkgs = List.map (download_to_folder ~conf conf.download_folder) inewer in
         Db.update (Uninstall.uninstall uninst);
         Db.update (Install.install (Conf.read ()) ipkgs)
 

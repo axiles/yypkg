@@ -22,7 +22,8 @@ let main () =
     if "" = !package then
       (x_must_be_provided spec "package name"; 1)
     else
-      (ignore (Sherpalib.get_packages ~with_deps:!with_deps
+      let conf = Sherpalib.read () in
+      (ignore (Sherpalib.get_packages ~conf ~with_deps:!with_deps
         ~output_folder:!output_folder ~package:!package); 0)
 
 let () = 
