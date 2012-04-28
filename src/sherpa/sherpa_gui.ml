@@ -16,6 +16,18 @@ type col = {
 let hpolicy = `AUTOMATIC
 let vpolicy = `AUTOMATIC
 
+let get_pkglist () =
+  let d = GWindow.message_dialog ~message:"Sherpa is currently fetching the \
+  package list. This takes a few seconds." ~title:"Fetching package list"
+  ~modal:true ~deletable:false ~message_type:`INFO ~buttons:GWindow.Buttons.ok
+  ~show:true () in
+  (* puke, but this makes sure the dialog contents are always shown *)
+  ignore (Unix.select [] [] [] 0.010);
+  while Glib.Main.pending () do ignore (Glib.Main.iteration true) done;
+  let pkglist = pkglist () in
+  d#destroy ();
+  pkglist
+
 let set_dialog ~text ~callback () =
   let dlg = GWindow.dialog ~modal:true ~destroy_with_parent:true ~show:true () in
   let textfield = GEdit.entry ~width:400 ~text ~packing:dlg#vbox#pack () in
@@ -155,7 +167,7 @@ module UI = struct
   class core ~packing ~update_btn ~process_btn =
     let paned = GPack.paned ~packing `VERTICAL () in
     let textview = textview ~packing:(paned#pack2 ~shrink:true) in
-    let pkglist = pkglist () in
+    let pkglist = get_pkglist () in
     let db = Db.read () in
     object(self)
       initializer
