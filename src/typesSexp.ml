@@ -244,10 +244,10 @@ end = struct
     | Some _ -> duplicates := f_name :: !duplicates
 
   let metadata_of_sexp sexp =
-    let n = ref None in
-    let name = n and size_expanded = ref None and version = ref None and
-    packager_email = n and packager_name = n and description = n and host = n and
-    target = n and predicates = ref None and comments = ref None in
+    let name = ref None and size_expanded = ref None and version = ref None and
+    packager_email = ref None and packager_name = ref None and description = ref
+    None and host = ref None and target = ref None and predicates = ref None and
+    comments = ref None in
     let duplicates = ref [] in
     let extra = ref [] in
     let rec aux = function
@@ -263,7 +263,7 @@ end = struct
           | "name" -> f ~conv:string_of_sexp ~res:name
           | "size_expanded" -> f ~conv:size_of_sexp ~res:size_expanded
           | "version" -> f ~conv:version_of_sexp ~res:version
-          | "package_email" -> f ~conv:string_of_sexp ~res:packager_email
+          | "packager_email" -> f ~conv:string_of_sexp ~res:packager_email
           | "packager_name" -> f ~conv:string_of_sexp ~res:packager_name
           | "description" -> f ~conv:string_of_sexp ~res:description
           | "host" -> f ~conv:string_of_sexp ~res:host
