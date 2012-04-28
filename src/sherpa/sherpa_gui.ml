@@ -159,16 +159,19 @@ module UI = struct
     let db = Db.read () in
     object(self)
       initializer
-        let model, treeview = self#listview ~packing:(paned#pack1 ~shrink:false) in
-        let selection = treeview#selection in
-        let selection_changed_cb = selection_changed_cb ~pkglist ~textview ~model ~selection in
-        update_listview ~model ~selection_changed_cb ~selection ~pkglist db;
+        let tree = self#tree ~packing:(paned#pack1 ~shrink:false) in
+        let selection = tree#treeview#selection in
+        let selection_changed_cb = selection_changed_cb ~pkglist ~textview ~model:tree#model ~selection in
+        update_listview ~model:tree#model ~selection_changed_cb ~selection ~pkglist db;
         ignore (process_btn#connect#clicked ~callback:(fun () ->
-          self#process ~model ~db));
-        ignore (update_btn#connect#clicked ~callback:self#destroy)
-
-      method destroy () =
-        ()
+          self#process ~model:tree#model ~db));
+        update_btn ~callback:(fun () ->
+          tree#destroy ();
+          textview#destroy ();
+          paned#destroy ();
+          ignore (GMain.Timeout.add ~ms:50 ~callback:(fun () ->
+            ignore (new core ~process_btn ~update_btn ~packing);
+            false)))
 
       method process ~model ~db =
         let conf = read () in
@@ -200,7 +203,7 @@ module UI = struct
           update columns deps iter
         )
 
-      method listview ~packing =
+      method tree ~packing =
         let scrolled = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
         let model = GTree.tree_store cols in
         let treeview = GTree.view ~model ~reorderable:true ~packing:scrolled#add_with_viewport () in
@@ -229,7 +232,11 @@ module UI = struct
         let columns = inst :: sel :: List.map column_string columns_l2 in
         List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
         ignore (List.map treeview#append_column columns);
-        model, treeview
+        object
+          method model = model
+          method treeview = treeview
+          method destroy () = treeview#destroy (); scrolled#destroy ()
+        end
     end
 
   let menu ~packing =
@@ -262,9 +269,15 @@ let mk_interface () =
   UI.menu ~packing:vbox#pack;
   let button_box = GButton.toolbar ~packing:vbox#pack () in
   let process_btn = button_box#insert_button ~text:"Process" () in
-  let update_btn = button_box#insert_button ~text:"Update" () in
-  ignore (GMain.Timeout.add ~ms:100 ~callback:(fun () ->
-    ignore (new UI.core ~process_btn ~update_btn ~packing:(vbox#pack ~expand:true));
+  let update_btn =
+    let btn = button_box#insert_button ~text:"Update" () in
+    let cb_id = ref None in
+    fun ~callback ->
+      Gaux.may (GtkSignal.disconnect btn#as_widget) !cb_id;
+      cb_id := Some (btn#connect#clicked ~callback)
+  in
+  ignore (GMain.Timeout.add ~ms:50 ~callback:(fun () ->
+    ignore (new UI.core ~update_btn ~process_btn ~packing:(vbox#pack ~expand:true));
     false));
   window#show ()
 
