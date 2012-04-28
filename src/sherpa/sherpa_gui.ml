@@ -82,7 +82,7 @@ let details_of_package pkg =
 
 let textview ~packing =
   let scroll = GBin.scrolled_window ~packing ~hpolicy ~vpolicy () in
-  ignore (GText.view ~editable:false ~packing:scroll#add_with_viewport ())
+  GText.view ~editable:false ~packing:scroll#add_with_viewport ()
 
 let rec partition model ~accu:(l1, l2) ~pred ~getter ~iter =
   let v = getter model iter in
@@ -107,14 +107,12 @@ let selection_changed_cb ~pkglist ~textview ~(model : GTree.tree_store) ~selecti
       textview#set_buffer buffer
   | [] -> ()
 
-let update_listview ~(model : GTree.tree_store) ~(treeview : GTree.view) ~textview db pkglist =
+let update_listview ~(model : GTree.tree_store) ~selection_changed_cb ~selection ~pkglist db =
   let fill columns db pkg =
     let metadata = pkg.metadata in
     let name = metadata.Types.name in
     let iter = model#append () in
-    let selection = treeview#selection in
-    let callback = selection_changed_cb ~pkglist ~textview ~model ~selection in
-    ignore (selection#connect#changed ~callback);
+    ignore (selection#connect#changed ~callback:selection_changed_cb);
     let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let size_pkg = FileUtil.string_of_size ~fuzzy:true pkg.size_compressed in
@@ -154,16 +152,25 @@ let avail_is_newer_than_installed db p =
     false
 
 module UI = struct
-  class core ~packing =
+  class core ~packing ~update_btn ~process_btn =
     let paned = GPack.paned ~packing `VERTICAL () in
-    let () = textview ~packing:(paned#pack2 ~shrink:true) in
+    let textview = textview ~packing:(paned#pack2 ~shrink:true) in
     let pkglist = pkglist () in
+    let db = Db.read () in
     object(self)
       initializer
-        let _model = self#listview ~packing:(paned#pack1 ~shrink:false) in
+        let model, treeview = self#listview ~packing:(paned#pack1 ~shrink:false) in
+        let selection = treeview#selection in
+        let selection_changed_cb = selection_changed_cb ~pkglist ~textview ~model ~selection in
+        update_listview ~model ~selection_changed_cb ~selection ~pkglist db;
+        ignore (process_btn#connect#clicked ~callback:(fun () ->
+          self#process ~model ~db));
+        ignore (update_btn#connect#clicked ~callback:self#destroy)
+
+      method destroy () =
         ()
 
-      method process ~model ~(db : db) =
+      method process ~model ~db =
         let conf = read () in
         let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.with_deps) in
         let selecteds = find_all_by_name pkglist selecteds in
@@ -183,7 +190,6 @@ module UI = struct
         let should_be_uninstalled unselecteds db p =
           Yylib.is_installed db p.metadata.Types.name && List.mem p unselecteds
         in
-        let db = Db.read () in
         let selecteds, unselecteds = selecteds_of ~model ~column:(snd columns.installed) in
         Gaux.may (model#get_iter_first) ~f:(fun iter ->
           let selecteds = find_all_by_name pkglist selecteds in
@@ -223,22 +229,10 @@ module UI = struct
         let columns = inst :: sel :: List.map column_string columns_l2 in
         List.iter (fun vc -> vc#set_resizable true; vc#set_min_width 5) columns;
         ignore (List.map treeview#append_column columns);
-        model
+        model, treeview
     end
 
   let menu ~packing =
-    (* let update () =
-      update_listview ~model ~treeview ~textview (Db.read ()) !(Lazy.force pkglist)
-    in
-    let file = [
-      `I ("Process", core#process ~model ~db:(Db.read ()));
-      `I ("Quit", GMain.Main.quit);
-      ]
-    in
-    let package_list = [
-      `I ("Force update", update);
-    ]
-    in *)
     let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch")); ] in
     let settings = [
       `I ("Mirror", set_sherpa_conf_field `mirror);
@@ -247,12 +241,9 @@ module UI = struct
       `M ("Predicates", predicates);
     ]
     in
-    (* let help = [ `I ("Help", (fun () -> ())) ] in *)
     let menu = [
       "File", [ `I ("Quit", GMain.Main.quit) ];
-      (* "Package list", package_list; *)
       "Settings", settings;
-      (* "Help", help; *)
     ]
     in
     let create_menu ~packing (label, entries) =
@@ -268,9 +259,12 @@ let mk_interface () =
   let window = GWindow.window ~allow_shrink:true ~width:800 ~height:480 () in
   ignore (window#connect#destroy ~callback:GMain.Main.quit);
   let vbox = GPack.vbox ~packing:window#add () in
-  UI.menu ~packing:(vbox#pack ~expand:false);
+  UI.menu ~packing:vbox#pack;
+  let button_box = GButton.toolbar ~packing:vbox#pack () in
+  let process_btn = button_box#insert_button ~text:"Process" () in
+  let update_btn = button_box#insert_button ~text:"Update" () in
   ignore (GMain.Timeout.add ~ms:100 ~callback:(fun () ->
-    ignore (new UI.core ~packing:(vbox#pack ~expand:true));
+    ignore (new UI.core ~process_btn ~update_btn ~packing:(vbox#pack ~expand:true));
     false));
   window#show ()
 
