@@ -21,11 +21,6 @@ open Types
 open Lib
 open Types
 
-let host_prefix = [
-  "i686-w64-mingw32", "i686-w64-mingw32";
-  "x86_64-w64-mingw32", "x86_64-w64-mingw32";
-]
-
 let xz_call size =
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
   let four_kb = 1 lsl 12 in (* min xz dictionnary size *)
@@ -54,8 +49,6 @@ let rec strip_trailing_slash s =
     strip_trailing_slash (String.sub s 0 (String.length s - 1))
   else
     s
-
-exception Package_name_must_end_in_txz (* XXX: not used currently *)
 
 type settings = {
   output : string;
