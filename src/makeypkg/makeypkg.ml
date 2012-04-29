@@ -38,7 +38,7 @@ let xz_call size =
     let p = sprintf "%s=%s" in
     String.concat "," [ p "dict" dict; p "mf" mf; p "mode" mode; p "nice" nice ]
   in
-  (* yylowcompress is mostly a quick hack, no need to make it very clean *)
+  (* YYLOWCOMPRESS is mostly a quick hack, no need to make it very clean *)
   let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
   let lzma_settings = lzma_settings ~fastest size in
   [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" lzma_settings |]
@@ -101,7 +101,7 @@ let parse_command_line () =
   let lst = [
     (* the output file*name* will be built from the other param values *)
     "-o", Arg.Set_string output, "output folder (defaults to current dir)";
-    "-meta", Arg.Set_string meta, "package metadata file";
+    "-meta", Arg.Set_string meta, "package metadata file (- for stdin)";
     "-template", Arg.Set template, "write a template meta on stdout";
   ]
   in
