@@ -55,46 +55,6 @@ let rec strip_trailing_slash s =
   else
     s
 
-module PrefixFix = struct
-  (* Some files (.pc for pkgconfig and .la for libtool for instance) contain
-   * hard-coded paths. We find them and replace them with a variable which value
-   * will be set during package install. Not perfect but usually works. *)
-  let find_files folder ext =
-    FileUtil.find (FileUtil.Has_extension ext) folder (fun x y -> y :: x) []
-
-  let install_actions folder file =
-    (* we need to find the path relative to the package root
-     * actual example:
-       * file is /tmp/package-gettext/i686-w64-mingw32/lib/libintl.la
-       * folder is /tmp/package-gettext *)
-    let file = split_path file in
-    let folder = split_path folder in
-    let file = chop_list file (List.length folder) in
-    let file = String.concat "/" file in
-    "dummy", SearchReplace ([file], "__YYPREFIX", "${YYPREFIX}")
-
-  let find_prefix prefix_re file =
-    let contents = read_file file in
-    let l = Queue.fold (fun l x -> x :: l) [] contents in
-    let prefix = List.find (fun s -> Str.string_match prefix_re s 0) l in
-    (* matched_group will get the match from the List.find line before *)
-    Str.matched_group 1 prefix
-
-  let fix_file prefix prefix_re fix file =
-    (* it's possible that we don't find the prefix, raising an exception *)
-    try
-      let prefix = find_prefix prefix_re file in
-      (* We always want '/' as a path separator *)
-      let new_prefix = "__YYPREFIX/" ^ prefix in
-      fix ~file ~prefix ~new_prefix
-    with Not_found -> ()
-
-  let fix_files ~prefix ~folder ~ext ~search_re ~fix =
-    let files = find_files folder ext in
-    List.iter (fix_file prefix search_re fix) files;
-    List.map (install_actions folder) files
-end
-
 exception Package_name_must_end_in_txz (* XXX: not used currently *)
 
 type settings = {
@@ -118,63 +78,12 @@ let meta ~metafile ~pkg_size =
   in
   { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
 
-let pkg_config_fixup ~folder ~prefix = 
-  let fix ~file ~prefix ~new_prefix = 
-    search_and_replace_in_file file prefix "${prefix}";
-    search_and_replace_in_file file "^prefix=\\${prefix}" ("prefix="^new_prefix)
-  in
-  let search_re = Str.regexp "^prefix=\\(.*\\)" in
-  PrefixFix.fix_files ~prefix ~folder ~ext:"pc" ~search_re ~fix
-
-let libtool_fixup ~folder ~prefix =
-  let fix ~file ~prefix ~new_prefix =
-    (* Replace "foo///////bar///" with only "foor/bar/" *)
-    let strip_slashes_re, strip_slashes_repl = "/+", "/" in
-    (* Replace "foo/../bar" with "bar" *)
-    let simplify_path_re, simplify_path_repl = "\\([^/']+/+\\.\\.\\)", "" in
-    (* We set prefix to /foo/bar/x86_64-w64-mingw32/ during compilation but want
-     * to replace it with ${YYPREFIX}/x86_64-w64-mingw32/ : we have to include
-     * the "/foo/bar/" part too in the match expression *)
-    let prefix_re = "\\([ '=]\\)" ^ prefix in
-    (* When the installation prefix is /i686-w64-mingw32, we can get strings
-     * like /i686-w64-mingw32/i686-w64-mingw32/lib32 and we need to make them
-     * independant of the installation prefix so we change the first occurence
-     * of "/i686-w64-mingw32" with "__YYPREFIX" *)
-    (* XXX: when the installation prefix is *NOT* that, we still have to do
-      * something, like: ${FOO}/i686-w64-mingw32/lib32 -> s/${FOO/__YYPREFIX/ *)
-    let install_prefix_is_prefix_re = prefix_re ^ prefix in
-    let change_prefix = "\\1__YYPREFIX" ^ prefix in
-    (* With the previous step done, the strings we still have (can) change are
-     * of the form "/i686-w64-mingw32/lib32" and for these, we prefix __YYPREFIX
-     * to them *)
-    let prepend_prefix = "\\1" ^ new_prefix in
-    search_and_replace_in_file file simplify_path_re simplify_path_repl;
-    search_and_replace_in_file file strip_slashes_re strip_slashes_repl;
-    search_and_replace_in_file file install_prefix_is_prefix_re change_prefix;
-    search_and_replace_in_file file prefix_re prepend_prefix
-  in
-  let search_re = Str.regexp "libdir='\\(.*\\)/+lib.*'" in
-  PrefixFix.fix_files ~prefix ~folder ~ext:"la" ~search_re ~fix
-
-let path_fixups folder host fixups =
-  (* If the host is unknown or is "noarch", we have to disable auto-fixes *)
-  if List.mem_assoc host host_prefix then
-    let prefix = List.assoc host host_prefix in
-    let dispatch folder prefix = function
-      | `PkgConfig -> pkg_config_fixup ~folder ~prefix
-      | `Libtool -> libtool_fixup ~folder ~prefix
-    in
-    List.concat (List.map (dispatch folder prefix) fixups)
-  else
-    []
-
 let package_script_el ~pkg_size settings =
   let folder = settings.folder_basename in
   let meta = meta ~metafile:settings.metafile ~pkg_size in
   (* we want to expand the content of folder so we suffix it with '/' *)
   let expand = folder, Expand (folder ^ "/", ".") in
-  let path_fixups = path_fixups settings.folder meta.host [ `PkgConfig; `Libtool ] in
-  meta, (expand :: path_fixups), [ Reverse folder ]
+  meta, [ expand ], [ Reverse folder ]
 
 let compress settings meta (script_dir, script_name) =
   let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in

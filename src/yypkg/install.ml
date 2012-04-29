@@ -26,10 +26,6 @@ let execute_install_action package (id, action) =
   | Expand (i, p) -> id, Filelist (expand package i p)
   | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
   | MKdir p -> id, Filelist (mkdir p)
-  | SearchReplace (p, s, r) ->
-      let p = Lib.filename_concat p in
-      let r = expand_environment_variables r in
-      Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
   let (metadata, install_actions, _ as script) = Lib.open_package package in

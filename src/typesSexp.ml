@@ -65,9 +65,6 @@ end = struct
     | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
     | Expand (orig, dest) -> List [ Atom "Exec"; Atom orig; Atom dest ]
     | MKdir dir -> List [ Atom "Exec"; Atom dir ]
-    | SearchReplace (files, search, replace) ->
-        List [ Atom "SearchReplace"; sexp_of_string_list files; Atom search; Atom
-        replace ]
 
   let sexp_of_uninstall_action uninstall_action =
     match uninstall_action with
@@ -201,8 +198,6 @@ end = struct
     | List [ Atom "Expand"; List [ Atom orig; Atom dest ] ] ->
         Expand (orig, dest)
     | List [ Atom "MKdir"; Atom dir ] -> MKdir dir
-    | List [ Atom "SearchReplace"; List [ files; Atom search; Atom replace ] ] ->
-        SearchReplace (string_list_of_sexp files, search, replace)
     | _ -> of_sexp_error
         "install_action_of_sexp: wrong list or wrong list argument" sexp
 

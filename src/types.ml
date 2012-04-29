@@ -60,9 +60,6 @@ type install_action =
   | Exec of string list (* argv *)
   | Expand of string * string (* extract from X to Y: from archive to system *)
   | MKdir of string (* mkdir X, path on the system *)
-  (* TODO: the string list below should be 'outside_path
-   * have to clean up the {in,out}side_path mess *)
-  | SearchReplace of string list * string * string
 
 type result = 
   | Filelist of string list
