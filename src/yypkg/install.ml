@@ -22,25 +22,25 @@ open Yylib
 
 let execute_install_action package (id, action) =
   match action with
-    | AHK p -> id, Filelist (command ((String.concat " " (ahk_bin :: p)))) (* quote *)
-    | Expand (i, p) -> id, Filelist (expand package i p)
-    | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
-    | MKdir p -> id, Filelist (mkdir p)
-    | SearchReplace (p, s, r) ->
-        let p = Lib.filename_concat p in
-        let r = expand_environment_variables r in
-        Lib.search_and_replace_in_file p s r; id, NA
+  | AHK p -> id, Filelist (command ((String.concat " " (ahk_bin :: p)))) (* quote *)
+  | Expand (i, p) -> id, Filelist (expand package i p)
+  | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
+  | MKdir p -> id, Filelist (mkdir p)
+  | SearchReplace (p, s, r) ->
+      let p = Lib.filename_concat p in
+      let r = expand_environment_variables r in
+      Lib.search_and_replace_in_file p s r; id, NA
 
 let install_package package conf db =
   let (metadata, install_actions, _ as script) = Lib.open_package package in
   let pred_holds = Config.predicate_holds conf.preds in
   match List.partition pred_holds metadata.predicates with
-  | _, [] -> 
+  | _, [] ->
       let func = execute_install_action package in
       let results = List.rev_map func install_actions in
       let updated_db = Db.install_package db (script, results) in
       updated_db
-  | _, f_preds -> 
+  | _, f_preds ->
       raise (Unmatched_predicates f_preds)
 
 let install conf db p =
@@ -48,7 +48,7 @@ let install conf db p =
   Lib.assert_file_exists p;
   (* if the line above didn't abort, go on and instal the package *)
   install_package p conf db
-  
+
 let install yypkg_conf l db =
   List.fold_left (install yypkg_conf) db l
 
