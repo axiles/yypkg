@@ -60,9 +60,6 @@ let filter_bsdtar_output x =
   else
     x
 
-let reduce_path path =
-  FilePath.DefaultPath.reduce path
-
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
   (* XXX: pid! *)
@@ -102,7 +99,8 @@ let rm path_unexpanded =
   in
   (* FIXME: env var souldn't be kept in the database, they have to be expanded
    * before *)
-  let path = reduce_path (expand_environment_variables path_unexpanded) in
+  let path_expanded = expand_environment_variables path_unexpanded in
+  let path = FilePath.DefaultPath.reduce path_expanded in
   if exists path then
     (* Sys.file_exists follows symlink and is therefore not usable *)
     if FileUtil.test FileUtil.Is_dir path then
