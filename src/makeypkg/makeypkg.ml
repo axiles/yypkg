@@ -50,11 +50,16 @@ let rec strip_trailing_slash s =
   else
     s
 
+type dir = {
+  path : string;
+  dirname : string;
+  basename : string;
+}
+
 type settings = {
   output : string;
-  folder : string;
-  folder_dirname : string;
-  folder_basename : string;
+  package : dir;
+  install_scripts : dir;
   metafile : string;
 }
 
@@ -72,14 +77,14 @@ let meta ~metafile ~pkg_size =
   { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
 
 let package_script_el ~pkg_size settings =
-  let folder = settings.folder_basename in
+  let dir = settings.package.basename in
   let meta = meta ~metafile:settings.metafile ~pkg_size in
-  (* we want to expand the content of folder so we suffix it with '/' *)
-  let expand = folder, Expand (folder ^ "/", ".") in
-  meta, [ expand ], [ Reverse folder ]
+  (* we want to expand the content of dir so we suffix it with '/' *)
+  let expand = dir, Expand (dir ^ "/", ".") in
+  meta, [ expand ], [ Reverse dir ]
 
 let compress settings meta (script_dir, script_name) =
-  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.folder_dirname; settings.folder_basename |] in
+  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.package.dirname; settings.package.basename |] in
   let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
   let output_file = output_file meta in
   let output_path = Filename.concat settings.output output_file in
@@ -96,48 +101,55 @@ let dummy_meta () =
   in
   Sexplib.Sexp.to_string_hum (TypesSexp.Of.metadata meta)
 
+let dir_of_path path =
+  let module FDP = FilePath.DefaultPath in
+  let abs_path =
+    let dir = strip_trailing_slash path in
+    if FDP.is_relative dir then
+      FDP.make_absolute (Sys.getcwd ()) dir
+    else
+      dir
+  in
+  { path = path; dirname = FDP.dirname abs_path; basename = FDP.basename path }
+
 let parse_command_line () = 
-  let output, folder, meta, template = ref "", ref "", ref "", ref false in
+  let output, dir, iscripts, meta, template =
+    ref "", ref "", ref "", ref "", ref false in
   let lst = [
     (* the output file*name* will be built from the other param values *)
-    "-o", Arg.Set_string output, "output folder (defaults to current dir)";
+    "-o", Arg.Set_string output, "output directory (defaults to current dir)";
     "-meta", Arg.Set_string meta, "package metadata file (- for stdin)";
+    "-iscripts", Arg.Set_string iscripts, "directory of install scripts";
     "-template", Arg.Set template, "write a template meta on stdout";
   ]
   in
   let usage_msg = "\
-Create a yypkg package from a folder.
-Use either (-o, -meta and a folder) XOR -template (see -help). Examples:
-  $ makeypkg -o /some/folder -meta pcre.META pcre-1.2.3
+Create a yypkg package from a directory.
+Use either (-o, -meta, -iscripts and a directory) XOR -template (see -help).
+Examples:
+  $ makeypkg -o /some/dir -meta pcre.META -iscripts iscripts-atk package-atk
   $ makeypkg -template"
     in
-  (* the last argument is the folder to package *)
-  Arg.parse lst ((:=) folder) usage_msg;
+  (* the last argument is the directory to package *)
+  Arg.parse lst ((:=) dir) usage_msg;
   if !template then
     (print_endline (dummy_meta ()); exit 0)
   else
     (* check if any argument has not been set (missing from the command-line *)
-    if List.mem "" [ !output; !folder; !meta ] then
+    if List.mem "" [ !output; !dir; !meta ] then
       let () = prerr_endline usage_msg in
       exit (-1)
     else
-      let folder = strip_trailing_slash !folder in
-      (* make 'folder' an absolute path *)
-      let dirname = FilePath.DefaultPath.dirname (
-        if not (FilePath.DefaultPath.is_relative folder) then folder
-        else FilePath.DefaultPath.make_absolute (Sys.getcwd ()) folder )
-      in
       {
         output = !output;
-        folder = folder;
-        folder_dirname = dirname;
-        folder_basename = FilePath.DefaultPath.basename folder;
+        package = dir_of_path !dir;
+        install_scripts = dir_of_path !iscripts;
         metafile = !meta;
       }
 
 let () =
   let settings = parse_command_line () in
-  let pkg_size = fst (FileUtil.du [ settings.folder ]) in
+  let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
   let meta, _, _ as script = package_script_el ~pkg_size settings in
   let script = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
