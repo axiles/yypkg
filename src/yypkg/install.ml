@@ -30,14 +30,14 @@ let execute_install_action package (id, action) =
 let install_package package conf db =
   let (metadata, install_actions, _ as script) = Lib.open_package package in
   let pred_holds = Config.predicate_holds conf.preds in
-  let _, false_preds = List.partition pred_holds metadata.predicates with
+  let _, false_preds = List.partition pred_holds metadata.predicates in
   if false_preds = [] then
     let func = execute_install_action package in
     let results = List.rev_map func install_actions in
     let updated_db = Db.install_package db (script, results) in
     updated_db
   else
-    raise (Unmatched_predicates f_preds)
+    raise (Unmatched_predicates false_preds)
 
 let install conf db p =
   (* check the file exists, may raise 'File_not_found p' : caught in yypkg.ml *)
