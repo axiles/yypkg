@@ -59,7 +59,7 @@ type dir = {
 type settings = {
   output : string;
   package : dir;
-  install_scripts : dir;
+  install_scripts : dir option;
   metafile : string;
 }
 
@@ -84,14 +84,18 @@ let package_script_el ~pkg_size settings =
   meta, [ expand ], [ Reverse dir ]
 
 let compress settings meta (script_dir, script_name) =
-  let tar_args = [|
-    "-C"; script_dir; script_name;
-    "-C"; settings.package.dirname; settings.package.basename
-  |]
+  let install_scripts = function 
+    | Some dir -> [| "-C"; dir.dirname; dir.basename |]
+    | None -> [| |]
+  in
+  let tar_args = Array.concat [
+    [| "-C"; script_dir; script_name |];
+    install_scripts settings.install_scripts;
+    [| "-C"; settings.package.dirname; settings.package.basename |]
+  ]
   in
   let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
-  let output_file = output_file meta in
-  let output_path = Filename.concat settings.output output_file in
+  let output_path = Filename.concat settings.output (output_file meta) in
   tar_compress tar_args snd output_path;
   output_path
 
@@ -147,7 +151,8 @@ Examples:
       {
         output = !output;
         package = dir_of_path !dir;
-        install_scripts = dir_of_path !iscripts;
+        install_scripts =
+          if !iscripts != "" then Some (dir_of_path !iscripts) else None;
         metafile = !meta;
       }
 
