@@ -193,8 +193,8 @@ let chop_list list i =
  * never finished *)
 let strip_component ?prefix ?dir_sep n path =
   match prefix with
-    | None -> filename_concat (chop_list (split_path ?dir_sep path) n)
-    | Some prefix -> filename_concat (prefix :: (chop_list (split_path ?dir_sep path) n))
+  | None -> filename_concat (chop_list (split_path ?dir_sep path) n)
+  | Some prefix -> filename_concat (prefix :: (chop_list (split_path ?dir_sep path) n))
 
 (* read a file line-by-line and return its contents in a string Queue.t *)
 let read_file file =

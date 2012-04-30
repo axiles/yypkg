@@ -84,7 +84,11 @@ let package_script_el ~pkg_size settings =
   meta, [ expand ], [ Reverse dir ]
 
 let compress settings meta (script_dir, script_name) =
-  let tar_args = [| "-C"; script_dir; script_name; "-C"; settings.package.dirname; settings.package.basename |] in
+  let tar_args = [|
+    "-C"; script_dir; script_name;
+    "-C"; settings.package.dirname; settings.package.basename
+  |]
+  in
   let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
   let output_file = output_file meta in
   let output_path = Filename.concat settings.output output_file in
