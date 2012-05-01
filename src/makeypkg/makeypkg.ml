@@ -88,7 +88,7 @@ module Package_script_el = struct
         (* FIXME: handle .ahk scripts *)
         let accumulate l e =
           let path = FilePath.concat dir.path e in
-          let path_in = FilePath.DefaultPath.concat dir.basename e in
+          let path_in = FilePath.UnixPath.concat dir.basename e in
           if FilePath.get_extension path = "sh"
             && FileUtil.test FileUtil.Is_file path
             && FileUtil.test FileUtil.Is_exec path
