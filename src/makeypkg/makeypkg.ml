@@ -16,10 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-open Printf
 open Types
 open Lib
 open Types
+
+let sp = Printf.sprintf
 
 let xz_call size =
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
@@ -35,13 +36,13 @@ let xz_call size =
     else
       string_of_int dict, "bt4", "normal", "128"
     in
-    let p = sprintf "%s=%s" in
+    let p = sp "%s=%s" in
     String.concat "," [ p "dict" dict; p "mf" mf; p "mode" mode; p "nice" nice ]
   in
   (* YYLOWCOMPRESS is mostly a quick hack, no need to make it very clean *)
   let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
   let lzma_settings = lzma_settings ~fastest size in
-  [| xz; "-vv"; "--x86"; sprintf "--lzma2=%s" lzma_settings |]
+  [| xz; "-vv"; "--x86"; sp "--lzma2=%s" lzma_settings |]
 
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
@@ -66,8 +67,8 @@ type settings = {
 let output_file meta =
   let version = string_of_version meta.version in
   match meta.target with
-  | None -> sprintf "%s-%s-%s.txz" meta.name version meta.host
-  | Some target -> sprintf "%s-%s-%s-%s.txz" meta.name version target meta.host
+  | None -> sp "%s-%s-%s.txz" meta.name version meta.host
+  | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
 let meta ~metafile ~pkg_size =
   let sexp = match metafile with
