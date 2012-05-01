@@ -169,7 +169,7 @@ Examples:
         output = !output;
         package = dir_of_path !dir;
         install_scripts =
-          if !iscripts != "" then Some (dir_of_path !iscripts) else None;
+          if !iscripts <> "" then Some (dir_of_path !iscripts) else None;
         metafile = !meta;
       }
 
