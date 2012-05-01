@@ -83,12 +83,24 @@ module Package_script_el = struct
     in
     { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
 
+  let run_iscripts = function
+    | Some dir ->
+        (* FIXME: handle .ahk scripts *)
+        let accumulate l e =
+          if FilePath.get_extension e = "sh"
+            && FileUtil.test FileUtil.Is_file e
+            && FileUtil.test FileUtil.Is_exec e
+          then (e, Exec [ e ]) :: l else l
+        in
+        List.sort compare (Array.fold_left accumulate [] (Sys.readdir dir.path))
+    | None -> []
+
   let make ~pkg_size settings =
     let dir = settings.package.basename in
     let meta = meta ~metafile:settings.metafile ~pkg_size in
     (* we want to expand the content of dir so we suffix it with '/' *)
     let expand = dir, Expand (dir ^ "/", ".") in
-    meta, [ expand ], [ Reverse dir ]
+    meta, expand :: (run_iscripts settings.install_scripts), [ Reverse dir ]
 end
 
 let output_file meta =
