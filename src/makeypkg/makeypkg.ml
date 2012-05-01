@@ -70,19 +70,21 @@ let output_file meta =
   | None -> sp "%s-%s-%s.txz" meta.name version meta.host
   | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
-let meta ~metafile ~pkg_size =
-  let sexp = match metafile with
-  | "-" -> Sexplib.Sexp.input_sexp stdin
-  | file -> Sexplib.Sexp.load_sexp file
-  in
-  { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
+module Package_script_el = struct
+  let meta ~metafile ~pkg_size =
+    let sexp = match metafile with
+    | "-" -> Sexplib.Sexp.input_sexp stdin
+    | file -> Sexplib.Sexp.load_sexp file
+    in
+    { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
 
-let package_script_el ~pkg_size settings =
-  let dir = settings.package.basename in
-  let meta = meta ~metafile:settings.metafile ~pkg_size in
-  (* we want to expand the content of dir so we suffix it with '/' *)
-  let expand = dir, Expand (dir ^ "/", ".") in
-  meta, [ expand ], [ Reverse dir ]
+  let make ~pkg_size settings =
+    let dir = settings.package.basename in
+    let meta = meta ~metafile:settings.metafile ~pkg_size in
+    (* we want to expand the content of dir so we suffix it with '/' *)
+    let expand = dir, Expand (dir ^ "/", ".") in
+    meta, [ expand ], [ Reverse dir ]
+end
 
 let compress settings meta (script_dir, script_name) =
   let install_scripts = function 
@@ -160,7 +162,7 @@ Examples:
 let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
-  let meta, _, _ as script = package_script_el ~pkg_size settings in
+  let meta, _, _ as script = Package_script_el.make ~pkg_size settings in
   let script = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
   let output_file = compress settings meta script_dir_and_name in
