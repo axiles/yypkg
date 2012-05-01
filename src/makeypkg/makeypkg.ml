@@ -64,11 +64,16 @@ type settings = {
   metafile : string;
 }
 
-let output_file meta =
-  let version = string_of_version meta.version in
-  match meta.target with
-  | None -> sp "%s-%s-%s.txz" meta.name version meta.host
-  | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
+let dir_of_path path =
+  let module FDP = FilePath.DefaultPath in
+  let abs_path =
+    let dir = strip_trailing_slash path in
+    if FDP.is_relative dir then
+      FDP.make_absolute (Sys.getcwd ()) dir
+    else
+      dir
+  in
+  { path = path; dirname = FDP.dirname abs_path; basename = FDP.basename path }
 
 module Package_script_el = struct
   let meta ~metafile ~pkg_size =
@@ -85,6 +90,12 @@ module Package_script_el = struct
     let expand = dir, Expand (dir ^ "/", ".") in
     meta, [ expand ], [ Reverse dir ]
 end
+
+let output_file meta =
+  let version = string_of_version meta.version in
+  match meta.target with
+  | None -> sp "%s-%s-%s.txz" meta.name version meta.host
+  | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
 let compress settings meta (script_dir, script_name) =
   let install_scripts = function 
@@ -111,17 +122,6 @@ let dummy_meta () =
     predicates = []; comments = [] }
   in
   Sexplib.Sexp.to_string_hum (TypesSexp.Of.metadata meta)
-
-let dir_of_path path =
-  let module FDP = FilePath.DefaultPath in
-  let abs_path =
-    let dir = strip_trailing_slash path in
-    if FDP.is_relative dir then
-      FDP.make_absolute (Sys.getcwd ()) dir
-    else
-      dir
-  in
-  { path = path; dirname = FDP.dirname abs_path; basename = FDP.basename path }
 
 let parse_command_line () = 
   let output, dir, iscripts, meta, template =
