@@ -51,8 +51,8 @@ end = struct
     | Snapshot_hash s -> List [ Atom "Snapshot_hash"; Atom s ]
     | Stable -> Atom "Stable"
 
-  let sexp_of_version (version_components, status, build_number) =
-    List [ sexp_of_list sexp_of_int version_components; sexp_of_status status;
+  let sexp_of_version (version_cmpnts, status, build_number) =
+    List [ sexp_of_list sexp_of_string version_cmpnts; sexp_of_status status;
     sexp_of_int build_number ]
 
   let sexp_of_string_list params = sexp_of_list sexp_of_string params
@@ -181,9 +181,9 @@ end = struct
 
   let version_of_sexp sexp =
     match sexp with
-    | List [ version_components; status; build_number ] ->
-        let version_components = list_of_sexp int_of_sexp version_components in
-        (version_components, status_of_sexp status, int_of_sexp build_number)
+    | List [ version_cmpnts; status; build_number ] ->
+        let version_cmpnts = list_of_sexp string_of_sexp version_cmpnts in
+        (version_cmpnts, status_of_sexp status, int_of_sexp build_number)
     | List _ -> of_sexp_error
         "version_of_sexp: list must contain exactly three elements" sexp
     | Atom _ -> of_sexp_error "version_of_sexp: list needed" sexp

@@ -42,16 +42,16 @@ let string_of_status = function
   | Snapshot_hash s -> Printf.sprintf "snapshot-%s" s
   | Stable -> "stable"
 
-type version = (int list * status * int)
+type version = (string list * status * int)
 
 (* create a string from a version *)
 let string_of_version (version, status, iteration) =
-  let version = String.concat "." (List.map string_of_int version) in
+  let version = String.concat "." version in
   let status = string_of_status status in
   String.concat "-" [ version; status; string_of_int iteration ]
 
 let dummy_version () =
-  [ 0; 0; 17 ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 1
+  [ "0"; "0"; "17" ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 1
 
 (* this is only a name, an identifier *)
 type action_id = string
