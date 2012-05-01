@@ -63,7 +63,7 @@ end = struct
     match install_action with
     | AHK params -> List [ Atom "AHK"; sexp_of_string_list params ]
     | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
-    | Expand (orig, dest) -> List [ Atom "Exec"; Atom orig; Atom dest ]
+    | Expand (orig, dest) -> List [ Atom "Expand"; Atom orig; Atom dest ]
     | MKdir dir -> List [ Atom "Exec"; Atom dir ]
 
   let sexp_of_uninstall_action uninstall_action =
