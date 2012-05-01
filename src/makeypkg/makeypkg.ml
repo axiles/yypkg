@@ -65,15 +65,15 @@ type settings = {
 }
 
 let dir_of_path path =
-  let module FDP = FilePath.DefaultPath in
+  let module FP = FilePath in
   let abs_path =
     let dir = strip_trailing_slash path in
-    if FDP.is_relative dir then
-      FDP.make_absolute (Sys.getcwd ()) dir
+    if FP.is_relative dir then
+      FP.make_absolute (Sys.getcwd ()) dir
     else
       dir
   in
-  { path = path; dirname = FDP.dirname abs_path; basename = FDP.basename path }
+  { path = path; dirname = FP.dirname abs_path; basename = FP.basename path }
 
 module Package_script_el = struct
   let meta ~metafile ~pkg_size =
