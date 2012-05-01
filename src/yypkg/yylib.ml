@@ -55,7 +55,7 @@ let expand_environment_variables s =
 
 (* bsdtar writes 'x some/path/foo' during extraction *)
 let filter_bsdtar_output x =
-  if x.[0] = 'x' && x.[1] = ' ' then
+  if String.length x >= 2 && x.[0] = 'x' && x.[1] = ' ' then
     String.sub x 2 (String.length x - 2)
   else
     x
