@@ -137,7 +137,7 @@ let dummy_meta () =
 
 let parse_command_line () = 
   let output, dir, iscripts, meta, template =
-    ref "", ref "", ref "", ref "", ref false in
+    ref (Sys.getcwd ()), ref "", ref "", ref "", ref false in
   let lst = [
     (* the output file*name* will be built from the other param values *)
     "-o", Arg.Set_string output, "output directory (defaults to current dir)";
