@@ -87,10 +87,12 @@ module Package_script_el = struct
     | Some dir ->
         (* FIXME: handle .ahk scripts *)
         let accumulate l e =
-          if FilePath.get_extension e = "sh"
-            && FileUtil.test FileUtil.Is_file e
-            && FileUtil.test FileUtil.Is_exec e
-          then (e, Exec [ e ]) :: l else l
+          let path = FilePath.concat dir.path e in
+          let path_in = FilePath.DefaultPath.concat dir.basename e in
+          if FilePath.get_extension path = "sh"
+            && FileUtil.test FileUtil.Is_file path
+            && FileUtil.test FileUtil.Is_exec path
+          then (e, Exec [ path_in ]) :: l else l
         in
         List.sort compare (Array.fold_left accumulate [] (Sys.readdir dir.path))
     | None -> []
