@@ -262,7 +262,7 @@ end = struct
           | "packager_name" -> f ~conv:string_of_sexp ~res:packager_name
           | "description" -> f ~conv:string_of_sexp ~res:description
           | "host" -> f ~conv:string_of_sexp ~res:host
-          | "target" -> f ~conv:string_of_sexp ~res:target
+          | "target" -> f ~conv:(option_of_sexp string_of_sexp) ~res:target
           | "predicates" -> f ~conv:(list_of_sexp g) ~res:predicates
           | "comments" -> f ~conv:string_list_of_sexp ~res:comments
           | _ -> extra := f_name :: !extra);
@@ -271,7 +271,7 @@ end = struct
           match (!name, !size_expanded, !version, !packager_email, !packager_name,
           !description, !host, !target, !predicates, !comments) with
           | Some name, Some size_expanded, Some version, Some packager_email,
-            Some packager_name, Some description, Some host, target,
+            Some packager_name, Some description, Some host, Some target,
             Some predicates, Some comments ->
               { name = name; size_expanded = size_expanded; version = version;
                 packager_email = packager_email; packager_name = packager_name;
