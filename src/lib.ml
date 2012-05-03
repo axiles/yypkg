@@ -192,9 +192,10 @@ let chop_list list i =
  * That sounds a bit weird because I started changing how yypkg handled this but
  * never finished *)
 let strip_component ?prefix ?dir_sep n path =
+  let common = chop_list (split_path ?dir_sep path) n in
   match prefix with
-  | None -> filename_concat (chop_list (split_path ?dir_sep path) n)
-  | Some prefix -> filename_concat (prefix :: (chop_list (split_path ?dir_sep path) n))
+  | None -> filename_concat common
+  | Some prefix -> filename_concat (prefix :: common)
 
 (* read a file line-by-line and return its contents in a string Queue.t *)
 let read_file file =
