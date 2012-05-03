@@ -59,9 +59,8 @@ let filter_bsdtar_output x =
 
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
-  (* XXX: pid! *)
-  (* FIXME: read_ic 0 (Unix.open_process_in cmd) *)
-  []
+  (* TODO: quote the commands? *)
+  Lib.split_by_line (Lib.run_and_read (Array.of_list cmd) `stdout)
 
 (* mkdir for use in installation scripts: it returns the path that got created
  * so it can be registered and reversed upon uninstallation *)

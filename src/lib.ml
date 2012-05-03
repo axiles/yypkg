@@ -155,13 +155,13 @@ let tar_compress tar_args compress out =
  *   'bsdtar xv' outputs the list of files expanded to stderr
  *   'bsdtar t' outputs the list of files to stdout *)
 let from_tar action input =
-  let tar_argv, read_from = match action with
+  let tar_argv, which_fd = match action with
   | `extract (pq, strip, iq) ->
       [| tar; "xvf"; input; "--strip-components"; strip |], `stderr
   | `get file -> [| tar; "xf"; input; "-qO"; file |], `stdout
   | `list -> [| tar; "tf"; input |], `stdout
   in
-  split_by_line (run_and_read tar_argv read_from)
+  split_by_line (run_and_read tar_argv which_fd)
 
 let split_path ?(dir_sep=dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path

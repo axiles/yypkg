@@ -22,9 +22,9 @@ open Yylib
 
 let execute_install_action package (id, action) =
   match action with
-  | AHK p -> id, Filelist (command ((String.concat " " (ahk_bin :: p)))) (* quote *)
+  | AHK p -> id, Filelist (command (ahk_bin :: p))
   | Expand (i, p) -> id, Filelist (expand package i p)
-  | Exec p -> id, Filelist (command (String.concat " " p)) (* quote *)
+  | Exec p -> id, Filelist (command p)
   | MKdir p -> id, Filelist (mkdir p)
 
 let install_package package conf db =
