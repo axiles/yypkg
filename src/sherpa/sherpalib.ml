@@ -17,7 +17,7 @@ let repo_uri ~conf () =
   pkg_uri ~conf "repo"
 
 let get_uri_contents uri =
-  run_and_read_stdout [| wget; "-O"; "-"; "-nv"; uri |]
+  run_and_read [| wget; "-O"; "-"; "-nv"; uri |] `stdout
 
 let get_uri uri output =
   let a = [| wget; "-O"; output; uri |] in

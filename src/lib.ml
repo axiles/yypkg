@@ -86,21 +86,20 @@ let accumulate ~stdout ~stderr f accu =
   f stdout accu.stdout;
   f stderr accu.stderr
 
-let run_and_read a =
+let run_and_read argv which_fd =
   let stdout_out, stdout_in = Unix.pipe () in
   let stderr_out, stderr_in = Unix.pipe () in
   let output = { stdout = Buffer.create 10000; stderr = Buffer.create 10000 } in
   let accumulate = accumulate ~stdout:stdout_out ~stderr:stderr_out in
-  let pid = Unix.create_process a.(0) a Unix.stdin stdout_in stderr_in in
+  let pid = Unix.create_process argv.(0) argv Unix.stdin stdout_in stderr_in in
   let status = read pid ~accumulate ~output in
   List.iter Unix.close [ stdout_out; stdout_in; stderr_out; stderr_in ];
-  status, output
-
-let run_and_read_stdout a =
-  let status, output = run_and_read a in
   match status with
-  | Unix.WEXITED 0 -> Buffer.contents output.stdout
-  | _ -> process_failed ~stderr:(Buffer.contents output.stderr) a
+  | Unix.WEXITED 0 ->
+      (match which_fd with
+      | `stdout -> Buffer.contents output.stdout
+      | `stderr -> Buffer.contents output.stderr)
+  | _ -> process_failed ~stderr:(Buffer.contents output.stderr) argv
 
 let split_by_line s =
   Str.split (Str.regexp "\n") s
@@ -156,19 +155,13 @@ let tar_compress tar_args compress out =
  *   'bsdtar xv' outputs the list of files expanded to stderr
  *   'bsdtar t' outputs the list of files to stdout *)
 let from_tar action input =
-  (* as per the comment before the function, we have to read stdout or stderr *)
-  let stdout o = Buffer.contents o.stdout in
-  let stderr o = Buffer.contents o.stderr in
-  let tar_args, read_from = match action with
+  let tar_argv, read_from = match action with
   | `extract (pq, strip, iq) ->
-      [| tar; "xvf"; input; "--strip-components"; strip |], stderr
-  | `get file -> [| tar; "xf"; input; "-qO"; file |], stdout
-  | `list -> [| tar; "tf"; input |], stdout
+      [| tar; "xvf"; input; "--strip-components"; strip |], `stderr
+  | `get file -> [| tar; "xf"; input; "-qO"; file |], `stdout
+  | `list -> [| tar; "tf"; input |], `stdout
   in
-  let status, output = run_and_read tar_args in
-  match status with
-  | Unix.WEXITED 0 -> split_by_line (read_from output)
-  | _ -> process_failed ~stderr:(stderr output) tar_args
+  split_by_line (run_and_read tar_argv read_from)
 
 let split_path ?(dir_sep=dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path
@@ -287,8 +280,8 @@ let guess_arch () = (* XXX: hmmmm; config.guess and a hardcoded triplet... *)
   match os_type with
   | `Unix -> 
       let host =
-        try run_and_read_stdout [| config_guess1 |] with
-        | ProcessFailed _ -> run_and_read_stdout [| config_guess2 |]
+        try run_and_read [| config_guess1 |] `stdout with
+        | ProcessFailed _ -> run_and_read [| config_guess2 |] `stdout
       in
       (* This gets the first line of input and remove any trailing newline:
         * # Scanf.sscanf "truc\n" "%s" (fun s -> s);;  
