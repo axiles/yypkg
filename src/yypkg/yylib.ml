@@ -118,8 +118,8 @@ let rm path_unexpanded =
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =
   let f = function
-    | _, NA -> false
-    | _, Filelist l -> List.exists ((=) file) l
+    | _, Filelist l -> List.mem file l
+    | _ -> false
   in
   List.exists f result_list
 
