@@ -83,18 +83,31 @@ module Package_script_el = struct
     in
     { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
 
-  let run_iscripts = function
-    | Some dir ->
-        (* FIXME: handle .ahk scripts *)
-        let accumulate l e =
-          let path = FilePath.concat dir.path e in
-          let path_in = FilePath.UnixPath.concat dir.basename e in
-          if try (FilePath.get_extension path = "sh") with Not_found -> false
-            && FileUtil.test FileUtil.Is_file path
-            && FileUtil.test FileUtil.Is_exec path
-          then (e, Exec [ path_in ]) :: l else l
-        in
-        List.sort compare (Array.fold_left accumulate [] (Sys.readdir dir.path))
+  let run_install_scripts dir =
+    let aux dir =
+      (* FIXME: handle .ahk scripts *)
+      let accumulate l e =
+        let path = FilePath.concat dir.path e in
+        if
+          try (FilePath.get_extension path = "sh") with Not_found -> false
+          && FileUtil.test FileUtil.Is_file path
+          && FileUtil.test FileUtil.Is_exec path
+        then
+          let path_in = Lib.filename_concat [ dir.basename; e ] in
+          let dir_out = Lib.filename_concat [ Yylib.db_folder; dir.basename ] in
+          let path_out = Lib.filename_concat [ dir_out; e ] in
+          (e ^ "_pre", Expand (path_in, dir_out))
+          :: (e, Exec [ path_out ])
+          :: l
+        else
+          l
+      in
+      let scripts = Sys.readdir dir.path in
+      Array.sort compare scripts;
+      Array.fold_left accumulate [] scripts
+    in
+    match dir with
+    | Some dir -> aux dir
     | None -> []
 
   let make ~pkg_size settings =
@@ -102,7 +115,8 @@ module Package_script_el = struct
     let meta = meta ~metafile:settings.metafile ~pkg_size in
     (* we want to expand the content of dir so we suffix it with '/' *)
     let expand = dir, Expand (dir ^ "/", ".") in
-    meta, expand :: (run_iscripts settings.install_scripts), [ Reverse dir ]
+    let install_scripts = run_install_scripts settings.install_scripts in
+    meta, expand :: install_scripts, [ Reverse dir ]
 end
 
 let output_file meta =
