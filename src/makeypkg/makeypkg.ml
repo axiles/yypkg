@@ -89,7 +89,7 @@ module Package_script_el = struct
         let accumulate l e =
           let path = FilePath.concat dir.path e in
           let path_in = FilePath.UnixPath.concat dir.basename e in
-          if FilePath.get_extension path = "sh"
+          if try (FilePath.get_extension path = "sh") with Not_found -> false
             && FileUtil.test FileUtil.Is_file path
             && FileUtil.test FileUtil.Is_exec path
           then (e, Exec [ path_in ]) :: l else l
