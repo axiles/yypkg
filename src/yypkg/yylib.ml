@@ -41,9 +41,6 @@ let conf_path =
 let sherpa_conf_path =
   Lib.filename_concat [ "etc"; "yypkg.d"; "sherpa.conf" ]
 
-let rev_list_of_queue q =
-  Queue.fold (fun l e -> e::l) [] q
-
 (* replace env var of the form ${windir} *)
 let expand_environment_variables s =
   let env_var_re = Str.regexp "\\${\\([0-9A-Za-z_]+\\)}" in
