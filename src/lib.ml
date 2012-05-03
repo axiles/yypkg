@@ -24,12 +24,14 @@ module U = Unix
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
 
+let may f = function
+  | None -> ()
+  | Some v -> f v
+
 let process_failed ?stderr a =
   let s = String.concat " " (Array.to_list a) in
   Printf.eprintf "Command `%s' failed.\n%!" s;
-  (match stderr with
-  | Some stderr -> Printf.eprintf "Here is the content of stderr:\n%s%!" stderr
-  | None -> ());
+  may (Printf.eprintf "Here is the content of stderr:\n%s%!") stderr;
   raise (ProcessFailed (s, stderr))
 
 let os_type =
