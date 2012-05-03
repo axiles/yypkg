@@ -69,13 +69,13 @@ let mkdir path_unexpanded =
   FileUtil.mkdir ~parent:true ~mode:0o755 path;
   [ path_unexpanded ]
 
-(* tar xf the folder 'i' in the package 'pkg' to the folder 'p' *)
-let expand pkg i p =
+(* tar xf the folder 'in_' in the package 'pkg' to the folder 'p' *)
+let expand pkg in_ p =
   (* XXX: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
-  let l = (List.length (Lib.split_path ~dir_sep:"/" i)) - 1 in
+  let l = (List.length (Lib.split_path ~dir_sep:"/" in_)) - 1 in
   let pkg = expand_environment_variables pkg in
-  let iq = expand_environment_variables i in
+  let iq = expand_environment_variables in_ in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let x = Lib.from_tar (`extract (pq, string_of_int l, iq)) pkg in

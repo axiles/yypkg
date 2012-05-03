@@ -159,7 +159,7 @@ let tar_compress tar_args compress out =
 let from_tar action input =
   let tar_argv, which_fd = match action with
   | `extract (pq, strip, iq) ->
-      [| tar; "xvf"; input; "--strip-components"; strip |], `stderr
+      [| tar; "xvf"; input; "--strip-components"; strip; "-C"; pq; iq |],`stderr
   | `get file -> [| tar; "xf"; input; "-qO"; file |], `stdout
   | `list -> [| tar; "tf"; input |], `stdout
   in
