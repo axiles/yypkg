@@ -195,8 +195,7 @@ end = struct
     match sexp with
     | List [ Atom "AHK"; params ] -> AHK (string_list_of_sexp params)
     | List [ Atom "Exec"; argv ] -> Exec (string_list_of_sexp argv)
-    | List [ Atom "Expand"; List [ Atom orig; Atom dest ] ] ->
-        Expand (orig, dest)
+    | List [ Atom "Expand"; Atom orig; Atom dest ] -> Expand (orig, dest)
     | List [ Atom "MKdir"; Atom dir ] -> MKdir dir
     | _ -> of_sexp_error
         "install_action_of_sexp: wrong list or wrong list argument" sexp
