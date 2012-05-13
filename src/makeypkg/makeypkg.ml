@@ -131,6 +131,7 @@ let compress settings meta (script_dir, script_name) =
     | None -> [| |]
   in
   let tar_args = Array.concat [
+    [| "--exclude=*.la" |];
     [| "-C"; script_dir; script_name |];
     install_scripts settings.install_scripts;
     [| "-C"; settings.package.dirname; settings.package.basename |]
