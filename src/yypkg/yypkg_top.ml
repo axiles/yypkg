@@ -115,6 +115,7 @@ let main b =
     let action, actionopts = action_of_cmd_line cmd_line in
     if action = Some "-init" && actionopts = [] then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
+      let prefix = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) prefix in
       Init.init prefix
     else
       (* Some operations are relative to the prefix so chdir to it *)
@@ -147,9 +148,6 @@ let main b =
           | _ -> assert false
 
 let main_wrap b =
-  (* FIXME: if an exception happens, no matter what it is, the error message
-   * will always be the same: the command-line is wrong, even if it was
-   * perfectly fine (e.g. -list but the database being corrupt *)
   try main b with 
   | Args.Incomplete_parsing (opts, sl) as e ->
       Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec);
