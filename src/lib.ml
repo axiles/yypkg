@@ -53,29 +53,30 @@ let read pid ~accumulate ~output =
   let s = String.make 160 '_' in
   (* This function reads everything available from a descriptor and returns
    * when there's nothing more available (yet) *)
-  let rec read_once descr buf =
+  let rec read_once ((fd_out, buf_out) as out) ((fd_err, buf_err) as err) =
     (* check if there's something to read: a timeout of 0.02 to minimize
      * latency, shouldn't cost anything *)
-    match Unix.select [ descr ] [] [] 0.02 with
-      | [ _ ],  _, _ -> begin
-          let l = Unix.read descr s 0 160 in
-          Buffer.add_substring buf s 0 l;
-          if l = 160 then read_once descr buf else ()
-        end
-          (* ok, we got a timeout: return *)
-      | _ -> ()
+    let lst_read, _, _ = Unix.select [ fd_out; fd_err ] [] [ ] 0.02 in
+    let f fd buf =
+      let l = Unix.read fd s 0 160 in
+      Buffer.add_substring buf s 0 l;
+      l
+    in
+    let l_out = if List.mem fd_out lst_read then f fd_out buf_out else 0 in
+    let l_err = if List.mem fd_err lst_read then f fd_err buf_err else 0 in
+    if l_out = 160 || l_err = 160 then read_once out err else ()
   in
   let rec read_rc pid accumulate accu =
     (* As long as the process is alive, we have to wait for it to send more data
      * even if nothing is available yet, but when it dies, it becomes unable to
      * write more and we can read everything available in one big pass *)
     match Unix.waitpid [ Unix.WNOHANG ] pid with
-      (* still alive: read and start again, '0' because no child had its state
-       * changed (we're using WNOHANG) *)
-      | 0, _ -> accumulate read_once accu; read_rc pid accumulate accu
-      (* we know there won't be anything added now: we eat the remaining
-       * characters and return right after that *)
-      | pid, status -> accumulate read_once accu; status
+    (* still alive: read and start again, '0' because no child had its state
+     * changed (we're using WNOHANG) *)
+    | 0, _ -> accumulate read_once accu; read_rc pid accumulate accu
+    (* we know there won't be anything added now: we eat the remaining
+     * characters and return right after that *)
+    | pid, status -> accumulate read_once accu; status
   in
   read_rc pid accumulate output
 
@@ -85,8 +86,7 @@ type process_output = {
 }
 
 let accumulate ~stdout ~stderr f accu =
-  f stdout accu.stdout;
-  f stderr accu.stderr
+  f (stdout, accu.stdout) (stderr, accu.stderr)
 
 let run_and_read argv which_fd =
   let stdout_out, stdout_in = Unix.pipe () in
