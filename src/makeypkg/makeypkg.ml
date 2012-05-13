@@ -97,7 +97,7 @@ module Package_script_el = struct
           let dir_out = Lib.filename_concat [ Yylib.db_folder; dir.basename ] in
           let path_out = Lib.filename_concat [ dir_out; e ] in
           (e ^ "_pre", Expand (path_in, dir_out))
-          :: (e, Exec [ path_out ])
+          :: (e, Exec [ "bash"; path_out ])
           :: l
         else
           l
