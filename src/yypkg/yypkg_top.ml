@@ -54,7 +54,7 @@ let prefix_of_cmd_line cmd_line =
       prefix, lf
   (* all other combinations are invalid: raise an exception that will be
    * caught later on *)
-  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix specified")
+  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix not specified")
 
 (* find the action from a command-line, only one allowed at a time *)
 let action_of_cmd_line cmd_line = 
