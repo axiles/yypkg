@@ -299,3 +299,13 @@ let assert_file_exists f =
   if not (Sys.file_exists f) then
     raise (File_not_found f)
 
+exception Skip
+
+let list_rev_map_skip f l =
+  let rec aux f accu = function
+    | hd :: tl ->
+        let accu = try (f hd) :: accu with Skip -> accu in
+        aux f accu tl
+    | [] -> accu
+  in
+  aux f [] l

@@ -52,10 +52,15 @@ let expand_environment_variables s =
 
 (* bsdtar writes 'x some/path/foo' during extraction *)
 let filter_bsdtar_output x =
-  if String.length x >= 2 && x.[0] = 'x' && x.[1] = ' ' then
-    String.sub x 2 (String.length x - 2)
+  if String.length x >= 7 && x.[0] = 'b' && x.[1] = 's' && x.[2] = 'd'
+    && x.[3] = 't' && x.[4] = 'a' && x.[5] = 'r' && x.[6] = ':' then
+      (prerr_endline x;
+      raise Lib.Skip)
   else
-    x
+    if String.length x >= 2 && x.[0] = 'x' && x.[1] = ' ' then
+      String.sub x 2 (String.length x - 2)
+    else
+      x
 
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
@@ -71,7 +76,7 @@ let mkdir path_unexpanded =
 
 (* tar xf the folder 'in_' in the package 'pkg' to the folder 'p' *)
 let expand pkg in_ p =
-  (* XXX: package_script.el should always use "/" separators, otherwise we have
+  (* NOTE: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
   let l = (List.length (Lib.split_path ~dir_sep:"/" in_)) - 1 in
   let pkg = expand_environment_variables pkg in
@@ -80,7 +85,7 @@ let expand pkg in_ p =
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let x = Lib.from_tar (`extract (pq, string_of_int l, iq)) pkg in
   (* bsdtar already strips the beginning of the path *)
-  let xx = List.rev_map filter_bsdtar_output x in
+  let xx = Lib.list_rev_map_skip filter_bsdtar_output x in
   List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
 
 (* rm with verbose output
