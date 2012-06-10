@@ -134,8 +134,8 @@ end = struct
 
   let sexp_of_repo repo =
     List [
-      Atom repo.repo_target;
-      sexp_of_list sexp_of_pkg repo.pkglist
+      List [ Atom "repo_target"; Atom repo.repo_target ];
+      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repo.pkglist ]
     ]
 
   let sexp_of_sherpa_conf sherpa_conf =
