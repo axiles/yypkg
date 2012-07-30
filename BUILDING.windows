@@ -1,9 +1,9 @@
-# Building on windows is a bit different but not harder: run the following (yes, you can +x this script and run in in sh).
+# Building on windows is a bit different but not harder: run the following
+# (yes, you can +x this script and run it in sh).
 
-(cd preprocessed_src && ocamlbuild -cflags -rectypes -cflags '-I +lablgtk2' -lflags '-I +lablgtk2' -Is makeypkg,yypkg,args,sherpa -libs unix,bigarray,nums,str,sexplib,fileutils,lablgtk yypkg.native makeypkg.native sherpa.native sherpa_gen.native sherpa_gui.native)
+cd src
+ocamlbuild yypkg.native makeypkg.native sherpa.native sherpa_gen.native sherpa_gui.native
 
-(cd preprocessed_src && mv yypkg.native yypkg.exe)
-(cd preprocessed_src && mv makeypkg.native makeypkg.exe)
-(cd preprocessed_src && mv sherpa.native sherpa.exe)
-(cd preprocessed_src && mv sherpa_gen.native sherpa_gen.exe)
-(cd preprocessed_src && mv sherpa_gui.native sherpa_gui.exe)
+for bin in yypkg makeypkg sherpa sherpa_gen sherpa_gui; do
+  mv ${bin}.native ${bin}.exe
+done
