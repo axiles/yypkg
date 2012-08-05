@@ -44,20 +44,21 @@ We can also uninstall packages:
 
 
 
-The sherpa frontend to yypkg is able to fetch packages from repositories. It also handles dependencies.
-It comes as a command-line program (sherpa) and a web-based graphical interface (sherpa_web).
-
-
-sherpa_gui is is currently in early development and while working well, its use could be more intuitive. You should run it from command-line as several things will be written on stdout and stderr.
-
-You first need to yypkg -init as described earlier on.
-
-Now, start sherpa_gui:
-  YYPREFIX=$(pwd)/test sherpa_gui.native -sherpa
-
-You first need to get the list of packages: click on the "Package list" menu and select any item.
-Now, select Settings -> Predicates -> Arch. Typically, you'd put "i686-w64-mingw32,noarch" or "x86_64-w64-mingw32,noarch". The rules are the same as explained earlier in this document.
-Then, click on "gtk+2" in the "Selected" column. The corresponding dependencies will be ticked in the "Deps included" column. That's how dependencies work in sherpa: they're suggested but nothing more. If you want to prevent the installation of one package, unselect it from the "Deps included" column.
-The rule here is that the "Selected" (first) column is never modified by the GUI while the "Deps included" (second) column always is. If you change the first column, the second column will be changed accordingly and anything you changed in it will be lost: use the first column to quickly set what you want and the second one to tune your wishes.
-
-Once the selection fits your will, go to File -> Process. You'll see the downloads progress in the console. You'll also see uninstallation messages.
+# Sherpa is also still working but not tested.
+# The sherpa frontend to yypkg is able to fetch packages from repositories. It also handles dependencies.
+# It comes as a command-line program (sherpa) and a web-based graphical interface (sherpa_web).
+# 
+# 
+# sherpa_gui is is currently in early development and while working well, its use could be more intuitive. You should run it from command-line as several things will be written on stdout and stderr.
+# 
+# You first need to yypkg -init as described earlier on.
+# 
+# Now, start sherpa_gui:
+#   YYPREFIX=$(pwd)/test sherpa_gui.native -sherpa
+# 
+# You first need to get the list of packages: click on the "Package list" menu and select any item.
+# Now, select Settings -> Predicates -> Arch. Typically, you'd put "i686-w64-mingw32,noarch" or "x86_64-w64-mingw32,noarch". The rules are the same as explained earlier in this document.
+# Then, click on "gtk+2" in the "Selected" column. The corresponding dependencies will be ticked in the "Deps included" column. That's how dependencies work in sherpa: they're suggested but nothing more. If you want to prevent the installation of one package, unselect it from the "Deps included" column.
+# The rule here is that the "Selected" (first) column is never modified by the GUI while the "Deps included" (second) column always is. If you change the first column, the second column will be changed accordingly and anything you changed in it will be lost: use the first column to quickly set what you want and the second one to tune your wishes.
+# 
+# Once the selection fits your will, go to File -> Process. You'll see the downloads progress in the console. You'll also see uninstallation messages.
