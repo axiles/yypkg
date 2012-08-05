@@ -3,7 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 
-\pdfimageresolution=108
+% \pdfimageresolution=108
 
 \author{Adrien Nader}
 \title{Introduction tutorial to Yellow Yeti Pkg, a fast, portable and inobtrusive package manager}
@@ -53,49 +53,49 @@ On windows, it will also copy binaries to sbin/ so these can always be found (wg
 -rw-r--r-- 1 tux users   2 Dec 26 22:17 prefix/var/log/packages/yypkg_db
 \end{verbatim}
 
-\subsection{-config -setpreds}
-Now, you have to tell yypkg which architectures it should accept for the packages. For instance, for win32 packages, you'll use 'i686-w64-mingw32'.
-\begin{verbatim}
-~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,i686-w64-mingw32
-\end{verbatim}
-
-And for win64 packages (there are no win64 packages currently so don't use yet):
-
-\begin{verbatim}
-~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,x86_64-w64-mingw32
-\end{verbatim}
-
-\section{sherpa-gui}
-All the functions in yypkg are accessible from command-line and a graphical interface named sherpa (the sherpa carries packages to the yeti...).
-
-\begin{center}
-  \includegraphics{../screenshots/sherpa_gui_1.png}
-\end{center}
-
-\subsection{Starting}
-Currently, you should always start sherpa\_gui from a terminal since it'll write a lot to stdout/stderr. Also, you have to start it with the -sherpa parameter:
-\begin{verbatim}
-sherpa_gui -sherpa
-\end{verbatim}
-
-\subsection{Getting the package list}
-Once it is started, go to Package List -> Force Update. You will be presented with a list of packages in a column layout. Most things are obvious so we'll only explain what goes with the 'Selected' and 'Deps included' columns.
-
-\subsection{One word about package selection and dependencies}
-YYPkg uses a very simple algorithm to manage dependencies.  Here, 'Selected' means that {\bf you} selected a package. When you do, the 'Deps included' column is update to reflect which packages the items that you selected depend on.\\
-If you do not want a package that is ticked in the 'Deps included' column, simply untick it.\\
-
-The dependencies are merely suggested, there is nothing to guarantee that all dependencies are met and nothing to 'force' one of them.
-
-During uninstallation, the dependencies are simply not involved at all.
-
-\subsection{Processing}
-Once you are done, with the selection, go to File -> Process. Packages will be downloaded, installed for the ones that are selected and uninstalled for those that have to be.
-
-There is currently no support for updating a package: uninstall the old one and install the new one. This will be fixed shortly.
+% \subsection{-config -setpreds}
+% Now, you have to tell yypkg which architectures it should accept for the packages. For instance, for win32 packages, you'll use 'i686-w64-mingw32'.
+% \begin{verbatim}
+% ~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,i686-w64-mingw32
+% \end{verbatim}
+% 
+% And for win64 packages (there are no win64 packages currently so don't use yet):
+% 
+% \begin{verbatim}
+% ~/yypkg % ./src/yypkg.native -config -setpreds arch=noarch,x86_64-w64-mingw32
+% \end{verbatim}
+% 
+% \section{sherpa-gui}
+% All the functions in yypkg are accessible from command-line and a graphical interface named sherpa (the sherpa carries packages to the yeti...).
+% 
+% \begin{center}
+%   \includegraphics{../screenshots/sherpa_gui_1.png}
+% \end{center}
+% 
+% \subsection{Starting}
+% Currently, you should always start sherpa\_gui from a terminal since it'll write a lot to stdout/stderr. Also, you have to start it with the -sherpa parameter:
+% \begin{verbatim}
+% sherpa_gui -sherpa
+% \end{verbatim}
+% 
+% \subsection{Getting the package list}
+% Once it is started, go to Package List -> Force Update. You will be presented with a list of packages in a column layout. Most things are obvious so we'll only explain what goes with the 'Selected' and 'Deps included' columns.
+% 
+% \subsection{One word about package selection and dependencies}
+% YYPkg uses a very simple algorithm to manage dependencies.  Here, 'Selected' means that {\bf you} selected a package. When you do, the 'Deps included' column is update to reflect which packages the items that you selected depend on.\\
+% If you do not want a package that is ticked in the 'Deps included' column, simply untick it.\\
+% 
+% The dependencies are merely suggested, there is nothing to guarantee that all dependencies are met and nothing to 'force' one of them.
+% 
+% During uninstallation, the dependencies are simply not involved at all.
+% 
+% \subsection{Processing}
+% Once you are done, with the selection, go to File -> Process. Packages will be downloaded, installed for the ones that are selected and uninstalled for those that have to be.
+% 
+% There is currently no support for updating a package: uninstall the old one and install the new one. This will be fixed shortly.
 
 \section{Command-line tools: yypkg and sherpa}
-These tools are not described in this document: see the 'USAGE' file for their usage.
-
+These tools are not described in this document: see the 'USAGE' file:
+<a href="http://git.ocamlcore.org/cgi-bin/gitweb.cgi?p=yypkg/yypkg.git;a=blob;f=USAGE">pouet</a>.
 \end{document}
 
