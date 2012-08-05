@@ -26,11 +26,8 @@ Currently, yypkg depends on:
 \subsection{Windows}
 \subparagraph{} It is advised to build under windows with the 'preprocessed\_src' folder and the 'BUILDING.windows' script (chmod +x it).
 
-\subparagraph{} Support for windows is a bit "dirty". That doesn't mean it's bad, it only means that fileutils and sexplib (and type-conv) have to be put in \$(ocamlc -where) and lablgtk2 in \$(ocamlc -where)/lablgtk.\\
+\subparagraph{} Support for windows is a bit "dirty". That doesn't mean it's bad, it only means that fileutils and sexplib have to be put in \$(ocamlc -where) and lablgtk2 in \$(ocamlc -where)/lablgtk.\\
 Also, findlib is not supported (the usual 'make' should work if you have everything setup, including camlp4, of course).
-
-\subparagraph{} Note that there is a script ('preprocess.sh') to process the source files through camlp4 without compiling them, therefore producing files which can be compiled without camlp4 (mostly useful for windows).\\
-You don't have to run it to use or compile yypkg but if you make changes to the src/ folder, they won't be propagated into preprocessed\_src automatically, and won't be seen when running BUILDING.windows.
 
 \section{YYPREFIX and -prefix}
 Since yypkg works in its own prefix, you need to tell it its value. This can be done in two ways: the YYPREFIX environment variable, or the -prefix switch to command-line arguments. It is advised to use YYPREFIX.
