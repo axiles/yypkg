@@ -135,6 +135,23 @@ let repo_metadata pkglist =
         (String.concat ", " target);
       assert false
 
+let sprint_pkg { deps; size_compressed; metadata = m } =
+  let of_size = FileUtil.string_of_size ~fuzzy:true in
+  sp "%s - %s (%s -> %s); Depends: %s<br>"
+  m.name (string_of_version m.version) (of_size size_compressed)
+  (of_size m.size_expanded) (String.concat " - " deps)
+
+let write_output ~output ~repo =
+  FileUtil.mkdir ~parent:true (FilePath.concat output "cache");
+  let el_oc = FilePath.concat output "package_list.el" in
+  let el_oc = open_out_bin el_oc in
+  Sexplib.Sexp.output_hum el_oc (TypesSexp.Of.repo repo);
+  close_out el_oc;
+  let html_oc = FilePath.concat output "package_list.html" in
+  let html_oc = open_out_bin html_oc in
+  List.iter (fun p -> output_string html_oc (sprint_pkg p)) repo.pkglist;
+  close_out html_oc
+
 let () =
   let folder = Sys.argv.(1) in
   let files = Array.to_list (Sys.readdir folder) in
