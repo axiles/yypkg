@@ -71,16 +71,16 @@ let pkglist ~conf =
   let runon = conf.arch in
   find_all_applicable ~pkglist:repo.pkglist ~runfor:repo.repo_target ~runon
 
-let get_packages ~conf ~with_deps ~output_folder ~package = 
+let get_packages ~conf ~with_deps ~download_folder ~package = 
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist =
     let pkglist = pkglist ~conf in
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist [ p ] else [ p ]
   in 
-  List.map (download_to_folder ~conf output_folder) pkglist
+  List.map (download_to_folder ~conf download_folder) pkglist
 
-let default_output_folder =
+let default_download_folder =
   try
     let prefix = Unix.getenv "YYPREFIX" in
     Lib.filename_concat [ prefix; "var"; "cache"; "packages" ]
