@@ -4,6 +4,9 @@ let la : (string, string) Hashtbl.t = Hashtbl.create 20
 let pc : (string, string) Hashtbl.t = Hashtbl.create 20
 let libs : (string, string) Hashtbl.t = Hashtbl.create 20
 
+let sp = Printf.sprintf
+let ep = Printf.eprintf
+
 (* Update the hashtables to mention with the names of the packages containing
  * the various files *)
 let update_list l h id =
@@ -11,7 +14,7 @@ let update_list l h id =
     if Hashtbl.mem h x then
       let e = Hashtbl.find h x in
       if e <> id then
-        (Printf.eprintf "%s can't provide %s: %s already does." id x e;
+        (ep "%s can't provide %s: %s already does." id x e;
         assert false)
     else
       Hashtbl.add h x id
