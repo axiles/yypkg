@@ -61,24 +61,6 @@ let x_provides name filelist ext h =
   let provides = List.rev_map f provides in
   update_list provides h name
 
-(* create Types.pkg record given a yypkg package. Without listing deps *)
-let pkg_of_file folder file = 
-  let file_absolute = Filename.concat folder file in
-  let metadata = Yylib.metadata_of_script (Lib.open_package file_absolute) in
-  let filelist = Lib.from_tar `list file_absolute in
-  (* When a .pc file is found, add it to the global list of .pc files.
-   * Same for .la, .dll, .so, .a, ... files *)
-  let rels = [ "pc", pc; "la", la; "dll", libs; "so", libs; "a", libs ] in
-  List.iter (fun (a, b) -> x_provides metadata.name filelist a b) rels;
-  {
-    metadata = metadata;
-    size_compressed = (FileUtil.stat file_absolute).FileUtil.size;
-    filename = file;
-    signature = None;
-    files = filelist;
-    deps = [];
-  }
-
 class ['a] memoizer ~output ~name =
   let memo_file = FilePath.concat output name in
   object(self)
@@ -104,17 +86,46 @@ class ['a] memoizer ~output ~name =
       with _ -> ()
   end
 
+(* create Types.pkg record given a yypkg package. Without listing deps *)
+let pkg_of_file ~memoizer file =
+  if memoizer#exists file then
+    memoizer#get file
+  else
+    let metadata = Yylib.metadata_of_script (Lib.open_package file) in
+    let filelist = Lib.from_tar `list file in
+    (* When a .pc file is found, add it to the global list of .pc files.
+     * Same for .dll, .so, .a, ... files *)
+    let rels = [ "pc", pc; "dll", libs; "so", libs; "a", libs ] in
+    List.iter (fun (a, b) -> x_provides metadata.name filelist a b) rels;
+    let pkg = {
+      metadata = metadata;
+      size_compressed = (FileUtil.stat file).FileUtil.size;
+      filename = (FilePath.basename file);
+      signature = None;
+      files = filelist;
+      deps = [];
+    } in
+    memoizer#add file pkg;
+    pkg
 
 (* Take Types.pkg record and fill the "deps" field.
  * For that, we need the list of packages so we can see which one provides the
  * files we require. *)
-let add_deps packages folder pkg = 
+let add_deps packages ~memoizer folder pkg =
   let list_deps h name deps =
     let deps = List.find_all (fun s -> s <> name && Hashtbl.mem h s) deps in
     List.rev_map (Hashtbl.find h) deps
   in
   let file_absolute = Filename.concat folder pkg.filename in
-  let pc_requires = tar_grep pkg.files "Requires:" "pc" file_absolute in
+  (* List libraries a package depends on as written in its .pc files *)
+  let pc_requires =
+    if memoizer#exists file_absolute then
+      memoizer#get file_absolute
+    else
+      let pc_requires = tar_grep pkg.files "Requires:" "pc" file_absolute in
+      memoizer#add file_absolute pc_requires;
+      pc_requires
+  in
   (* Filter the "version" part of a .pc's "Requires" field, see:
     * libgphoto2.pc:Requires: libgphoto2_port >= 0.6.2, libexif >= 0.6.13 *)
   let pc_requires = pc_split pc_requires in
@@ -156,12 +167,17 @@ let () =
   let folder = Sys.argv.(1) in
   let output = Sys.argv.(2) in
   FileUtil.mkdir ~parent:true output;
+  let memoizer_pkgs = new memoizer ~output ~name:"pkg" in
+  let memoizer_deps = new memoizer ~output ~name:"deps" in
   let files = Array.to_list (Sys.readdir folder) in
   let files = List.filter (filename_check_suffix "txz") files in
   let files = List.fast_sort compare files in
+  let files = List.rev_map (FilePath.concat folder) files in
   (* Build the list without deps first. *)
-  let pkgs = List.rev_map (pkg_of_file folder) files in
+  let pkgs = List.rev_map (pkg_of_file ~memoizer:memoizer_pkgs) files in
   (* Add deps during a second stage. *)
-  let pkgs = List.rev_map (add_deps pkgs folder) pkgs in
+  let pkgs = List.rev_map (add_deps ~memoizer:memoizer_deps pkgs folder) pkgs in
+  memoizer_pkgs#commit ();
+  memoizer_deps#commit ();
   let repo = repo_metadata pkgs in
   write_output ~output ~repo
