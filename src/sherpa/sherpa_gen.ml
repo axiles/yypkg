@@ -78,6 +78,31 @@ let pkg_of_file folder file =
     deps = [];
   }
 
+class ['a] memoizer ~output ~name =
+  let memo_file = FilePath.concat output name in
+  object(self)
+    val mutable memo : (string * 'a) list = []
+    method exists file =
+      let cs = Digest.file file in
+      List.exists (fun (key, _value) -> key = cs) memo
+    method get file =
+      let cs = Digest.file file in
+      List.assoc cs memo
+    method add file data =
+      let cs = Digest.file file in
+      memo <- ((cs, data) :: memo)
+    method commit () =
+      let oc = open_out_bin memo_file in
+      Marshal.to_channel oc memo [];
+      close_out oc
+    initializer
+      try
+        let ic = open_in_bin memo_file in
+        memo <- Marshal.from_channel ic;
+        close_in ic;
+      with _ -> ()
+  end
+
 (* Best effort to get back the filename corresponding to a value in a .la
  * dependency_libs field *)
 let filename_of_libtool s =
