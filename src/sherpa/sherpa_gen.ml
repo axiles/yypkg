@@ -132,18 +132,16 @@ let add_deps packages ~memoizer folder pkg =
   (* We find packages that provide the needed .pc files *)
   let pc_requires = list_deps pc pkg.metadata.name pc_requires in
   (* Found the deps: concat them, sort them and remove duplicates. *)
-  let requires = Lib.rev_uniq (List.fast_sort compare pc_requires) in
+  let requires = Lib.rev_uniq (List.sort compare pc_requires) in
   { pkg with deps = requires }
 
 let repo_metadata pkglist =
   let targets = List.rev_map (fun p -> p.metadata.target) pkglist in
-  let targets = Lib.rev_may_value targets in
-  let target = Lib.rev_uniq (List.fast_sort compare targets) in
-  match target with
+  let targets = List.sort compare (Lib.rev_may_value targets) in
+  match Lib.rev_uniq targets with
   | [ target ] -> { repo_target = target; pkglist = pkglist }
-  | _ ->
-      ep "Error: several targets seen: [ %s ]\n"
-        (String.concat ", " target);
+  | targets ->
+      ep "Error: several targets seen: %s\n" (String.concat ", " targets);
       assert false
 
 let sprint_pkg { deps; size_compressed; metadata = m } =
@@ -171,13 +169,13 @@ let () =
   let memoizer_deps = new memoizer ~output ~name:"deps" in
   let files = Array.to_list (Sys.readdir folder) in
   let files = List.filter (filename_check_suffix "txz") files in
-  let files = List.fast_sort compare files in
-  let files = List.rev_map (FilePath.concat folder) files in
   (* Build the list without deps first. *)
-  let pkgs = List.rev_map (pkg_of_file ~memoizer:memoizer_pkgs) files in
+  let pkgs = ListLabels.rev_map files ~f:(fun f ->
+    pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat folder f)) in
   (* Add deps during a second stage. *)
   let pkgs = List.rev_map (add_deps ~memoizer:memoizer_deps pkgs folder) pkgs in
+  let pkg_compare a b = compare a.metadata.name b.metadata.name in
+  let repo = repo_metadata (List.sort pkg_compare pkgs) in
+  write_output ~output ~repo;
   memoizer_pkgs#commit ();
-  memoizer_deps#commit ();
-  let repo = repo_metadata pkgs in
-  write_output ~output ~repo
+  memoizer_deps#commit ()
