@@ -151,16 +151,21 @@ module Output = struct
     m.name (string_of_version m.version) (of_size size_compressed)
     (of_size m.size_expanded) (String.concat " - " deps)
 
-  let write_output ~output ~repo =
-    FileUtil.mkdir ~parent:true (FilePath.concat output "cache");
+  let package_list ~output ~repo =
     let el_oc = FilePath.concat output "package_list.el" in
     let el_oc = open_out_bin el_oc in
     Sexplib.Sexp.output_hum el_oc (TypesSexp.Of.repo repo);
-    close_out el_oc;
+    close_out el_oc
+
+  let html ~output ~repo =
     let html_oc = FilePath.concat output "package_list.html" in
     let html_oc = open_out_bin html_oc in
     List.iter (fun p -> output_string html_oc (sprint_pkg p)) repo.pkglist;
     close_out html_oc
+
+  let write ~output ~repo =
+    package_list ~output ~repo;
+    html ~output ~repo
 end
 
 let () =
@@ -178,6 +183,6 @@ let () =
   let pkgs = List.rev_map (add_deps ~memoizer:memoizer_deps pkgs folder) pkgs in
   let pkg_compare a b = compare a.metadata.name b.metadata.name in
   let repo = repo_metadata (List.sort pkg_compare pkgs) in
-  Output.write_output ~output ~repo;
+  Output.write ~output ~repo;
   memoizer_pkgs#commit ();
   memoizer_deps#commit ()
