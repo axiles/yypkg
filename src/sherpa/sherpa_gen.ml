@@ -1,6 +1,5 @@
 open Types
 
-let la : (string, string) Hashtbl.t = Hashtbl.create 20
 let pc : (string, string) Hashtbl.t = Hashtbl.create 20
 let libs : (string, string) Hashtbl.t = Hashtbl.create 20
 
@@ -45,17 +44,17 @@ let tar_grep filelist expr ext file =
     List.concat (List.rev_map (Str.split split_re) l)
   else
     []
-    
+
 (* We want to filter the "version" part of a .pc's "Requires" field, see:
   * libgphoto2.pc:Requires: libgphoto2_port >= 0.6.2, libexif >= 0.6.13 *)
-let pc_split l = 
+let pc_split l =
   ListLabels.filter l ~f:(fun s ->
     s <> "" && match s.[0] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false)
 
 (* Check that a library is provided by one and only one package *)
 let x_provides name filelist ext h =
   (* Get a shortname from a filename *)
-  let f s = 
+  let f s =
     Filename.basename (Filename.chop_extension s)
   in
   let provides = List.find_all (filename_check_suffix ext) filelist in
@@ -105,27 +104,6 @@ class ['a] memoizer ~output ~name =
       with _ -> ()
   end
 
-(* Best effort to get back the filename corresponding to a value in a .la
- * dependency_libs field *)
-let filename_of_libtool s =
-  if s.[0] = '-' then
-    if s.[1] = 'l' then
-      (* XXX: this will fail when..., hmmm, when... well, it's pretty brittle
-       * this can fail for several reasons: if we only strip ".0" out of
-       * "libfoo.so.1.2.0" or if something is appended to the library name, some
-       * wildcards/regexps would probably be welcome, but when splitting the
-       * filenames and adding to the hash tables, not here *)
-      Printf.sprintf "lib%s" (String.sub s 2 (String.length s - 2))
-    else
-      if s.[1] = 'L' then (
-        (* s is of the form -L/foo/bar: nothing to include, bail out *)
-        Printf.eprintf "Can't get a library name from `%s'\n%!" s;
-        invalid_arg "filename_of_libtool")
-      else (
-        Printf.eprintf "Don't know what to do with `%s'\n%!" s;
-        invalid_arg "filename_of_libtool")
-  else
-    Filename.basename (Filename.chop_extension s) 
 
 (* Take Types.pkg record and fill the "deps" field.
  * For that, we need the list of packages so we can see which one provides the
@@ -136,24 +114,14 @@ let add_deps packages folder pkg =
     List.rev_map (Hashtbl.find h) deplst
   in
   let file_absolute = Filename.concat folder pkg.filename in
-  (* Get the list of library a package depends on as written in its .la and .pc
-   * files *)
   let pc_requires = tar_grep pkg.files "Requires:" "pc" file_absolute in
-  let la_requires = tar_grep pkg.files "dependency_libs=" "la" file_absolute in
   (* Filter the "version" part of a .pc's "Requires" field, see:
     * libgphoto2.pc:Requires: libgphoto2_port >= 0.6.2, libexif >= 0.6.13 *)
   let pc_requires = pc_split pc_requires in
-  (* Get the library names from the content of the dependency_libs field in .la
-   * files: some subvalues aren't lib names and some forms are unhandled so skip
-   * them, at least for now. *)
-  let la_requires = Lib.list_rev_map_exn filename_of_libtool la_requires in
-  (* We find packages that provide the needed .pc, .la or .so/.a files *)
+  (* We find packages that provide the needed .pc files *)
   let pc_requires = list_deps pc pkg.metadata.name pc_requires in
-  let la_requires = list_deps la pkg.metadata.name la_requires in
-  let la_libs_requires = list_deps libs pkg.metadata.name la_requires in
   (* Found the deps: concat them, sort them and remove duplicates. *)
-  let requires = List.concat [ pc_requires; la_requires; la_libs_requires ] in
-  let requires = Lib.rev_uniq (List.fast_sort compare requires) in
+  let requires = Lib.rev_uniq (List.fast_sort compare pc_requires) in
   { pkg with deps = requires }
 
 let repo_metadata pkglist =
