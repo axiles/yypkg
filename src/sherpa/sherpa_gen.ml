@@ -154,6 +154,8 @@ let write_output ~output ~repo =
 
 let () =
   let folder = Sys.argv.(1) in
+  let output = Sys.argv.(2) in
+  FileUtil.mkdir ~parent:true output;
   let files = Array.to_list (Sys.readdir folder) in
   let files = List.filter (filename_check_suffix "txz") files in
   let files = List.fast_sort compare files in
@@ -162,5 +164,4 @@ let () =
   (* Add deps during a second stage. *)
   let pkgs = List.rev_map (add_deps pkgs folder) pkgs in
   let repo = repo_metadata pkgs in
-  let repo = Sexplib.Sexp.to_string_hum (TypesSexp.Of.repo repo) in
-  print_string repo
+  write_output ~output ~repo
