@@ -160,7 +160,10 @@ let repo_metadata pkglist =
   let target = Lib.rev_uniq (List.fast_sort compare targets) in
   match target with
   | [ target ] -> { repo_target = target; pkglist = pkglist }
-  | _ -> assert false
+  | _ ->
+      ep "Error: several targets seen: [ %s ]\n"
+        (String.concat ", " target);
+      assert false
 
 let () =
   let folder = Sys.argv.(1) in
