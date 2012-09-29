@@ -109,9 +109,9 @@ class ['a] memoizer ~output ~name =
  * For that, we need the list of packages so we can see which one provides the
  * files we require. *)
 let add_deps packages folder pkg = 
-  let list_deps h name deplst =
-    let deplst = List.find_all (fun s -> s <> name && Hashtbl.mem h s) deplst in
-    List.rev_map (Hashtbl.find h) deplst
+  let list_deps h name deps =
+    let deps = List.find_all (fun s -> s <> name && Hashtbl.mem h s) deps in
+    List.rev_map (Hashtbl.find h) deps
   in
   let file_absolute = Filename.concat folder pkg.filename in
   let pc_requires = tar_grep pkg.files "Requires:" "pc" file_absolute in
