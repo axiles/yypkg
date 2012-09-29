@@ -49,9 +49,8 @@ let tar_grep filelist expr ext file =
 (* We want to filter the "version" part of a .pc's "Requires" field, see:
   * libgphoto2.pc:Requires: libgphoto2_port >= 0.6.2, libexif >= 0.6.13 *)
 let pc_split l = 
-  let pred s =
-    s <> "" && match s.[0] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false in
-  List.filter pred l
+  ListLabels.filter l ~f:(fun s ->
+    s <> "" && match s.[0] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false)
 
 (* Check that a library is provided by one and only one package *)
 let x_provides name filelist ext h =
