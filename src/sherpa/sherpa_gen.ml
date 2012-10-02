@@ -62,7 +62,7 @@ let x_provides name filelist ext h =
   update_list provides h name
 
 class ['a] memoizer ~output ~name =
-  let memo_file = FilePath.concat output name in
+  let memo_file = FilePath.concat output ("memo_" ^ name) in
   object(self)
     val mutable memo : (string * 'a) list = []
     method exists file =
@@ -145,11 +145,41 @@ let repo_metadata pkglist =
       assert false
 
 module Output = struct
-  let sprint_pkg { deps; size_compressed; metadata = m } =
-    let of_size = FileUtil.string_of_size ~fuzzy:true in
-    sp "%s - %s (%s -> %s); Depends: %s<br>"
-    m.name (string_of_version m.version) (of_size size_compressed)
-    (of_size m.size_expanded) (String.concat " - " deps)
+  module HTML = struct
+    let tds l =
+      let td = function
+        | `Left s -> [ "<td>"; s; "</td>" ]
+        | `Right s -> [ "<td align=\"right\">"; s; "</td>" ]
+      in
+      String.concat " " (List.concat (List.rev (List.rev_map td l)))
+    let tr l =
+      String.concat " " [ "<tr>"; tds l; "</tr>" ]
+    let tr_header =
+      tr [
+        `Left "Package name";
+        `Right "Version";
+        `Right "Size compressed";
+        `Right "Size expanded";
+        `Left "Dependencies";
+      ]
+    let tr_pkg { deps; size_compressed; metadata = m } =
+      let of_size = FileUtil.string_of_size ~fuzzy:true in
+      tr [
+        `Left (m.name);
+        `Right (string_of_version m.version);
+        `Right (of_size size_compressed);
+        `Right (of_size m.size_expanded);
+        `Left ((String.concat ", " deps))
+      ]
+
+    let table pkgs =
+      String.concat "\n" (List.concat [
+        [ "<table border=\"1\">" ];
+        [ tr_header ];
+        List.sort compare (List.rev_map tr_pkg pkgs);
+        [ "</table>" ]
+      ])
+  end
 
   let package_list ~output ~repo =
     let el_oc = FilePath.concat output "package_list.el" in
@@ -160,7 +190,7 @@ module Output = struct
   let html ~output ~repo =
     let html_oc = FilePath.concat output "package_list.html" in
     let html_oc = open_out_bin html_oc in
-    List.iter (fun p -> output_string html_oc (sprint_pkg p)) repo.pkglist;
+    output_string html_oc (HTML.table repo.pkglist);
     close_out html_oc
 
   let write ~output ~repo =
