@@ -132,13 +132,6 @@ let tar, xz, wget =
       filename_concat [ binary_path; "xz.exe" ],
       filename_concat [ binary_path; "wget.exe" ]
 
-let config_guess1, config_guess2 =
-  match os_type with
-  | `Unix ->
-      "/usr/share/libtool/config/config.guess",
-      "/usr/share/libtool/config.guess"
-  | `Windows -> "", ""
-
 (* tar + compress on unix, piping the output of tar to the compressor *)
 let tar_compress tar_args compress out =
   let tar_args = Array.concat [ [| tar; "cvf"; "-" |]; tar_args ] in
@@ -277,21 +270,6 @@ let rev_may_value l =
     | None -> assert false
   in
   List.rev_map f (List.filter ((<>) None) l)
-
-let guess_arch () = (* XXX: hmmmm; config.guess and a hardcoded triplet... *)
-  match os_type with
-  | `Unix -> 
-      let host =
-        try run_and_read [| config_guess1 |] `stdout with
-        | ProcessFailed _ -> run_and_read [| config_guess2 |] `stdout
-      in
-      (* This gets the first line of input and remove any trailing newline:
-        * # Scanf.sscanf "truc\n" "%s" (fun s -> s);;  
-        * - : string = "truc"
-        * # Scanf.sscanf "truc\naaaaaaaa" "%s" (fun s -> s);;
-        * - : string = "truc" *)
-      Scanf.sscanf host "%s" (fun s -> s)
-  | `Windows -> "i686-w64-mingw32"
 
 (* check a file exists: raises an exception with the name of the missing file if
   * it doesn't *)

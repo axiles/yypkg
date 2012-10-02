@@ -24,7 +24,7 @@ let get_pkglist ~conf =
   (* puke, but this makes sure the dialog contents are always shown *)
   ignore (Unix.select [] [] [] 0.010);
   while Glib.Main.pending () do ignore (Glib.Main.iteration true) done;
-  let pkglist = pkglist ~conf in
+  let pkglist = pkglist ~sherpa_conf:conf ~yypkg_conf:(Conf.read ()) in
   d#destroy ();
   pkglist
 

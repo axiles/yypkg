@@ -32,7 +32,7 @@ let cmd_line_spec = [
   "-uninstall", [], "uninstall a package by name";
   "-list", [], "list the packages installed";
   "-config", [
-    "-setpreds", [], "set a predicate: \"arch=x86_64-w64-mingw32\"";
+    "-setpreds", [], "set a predicate: \"host=x86_64-w64-mingw32\"";
     "-delpreds", [], "remove a predicate";
     "-listpreds", [], "list predicates";
     (* not handled currently: "-regen", []; *)

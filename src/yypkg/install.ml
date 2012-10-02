@@ -28,7 +28,7 @@ let execute_install_action package (id, action) =
   | MKdir p -> id, Filelist (mkdir p)
 
 let install_package package conf db =
-  let (metadata, install_actions, _ as script) = Lib.open_package package in
+  let metadata, install_actions, _ as script = Lib.open_package package in
   let pred_holds = Config.predicate_holds conf.preds in
   let _, false_preds = List.partition pred_holds metadata.predicates in
   if false_preds = [] then
