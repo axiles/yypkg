@@ -161,3 +161,20 @@ let is_installed_regex db re =
 let sanity_checks () =
   let required_files = [ db_path; conf_path; sherpa_conf_path ] in
   List.iter Lib.assert_file_exists required_files
+
+(* find the prefix from a command-line *)
+let prefix_of_cmd_line cmd_line =
+  let lt, lf = List.partition (Args.is_opt ~s:"-prefix") cmd_line in
+  match lt with
+  (* we've not been given -prefix, maybe ${YYPREFIX} ? *)
+  | [] when (try ignore (Sys.getenv "YYPREFIX");true with Not_found -> false) ->
+      Sys.getenv "YYPREFIX", lf
+  (* we've been given the -prefix with a string argument
+   * we also set it as an env var so it can be used in install scripts *)
+  | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
+      Unix.putenv "YYPREFIX" prefix;
+      prefix, lf
+  (* all other combinations are invalid: raise an exception that will be
+   * caught later on *)
+  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix not specified")
+

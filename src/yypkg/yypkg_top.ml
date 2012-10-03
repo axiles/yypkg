@@ -40,22 +40,6 @@ let cmd_line_spec = [
   "-init", [], "setups a directory tree for yypkg (run once)";
 ]
 
-(* find the prefix from a command-line *)
-let prefix_of_cmd_line cmd_line =
-  let lt, lf = List.partition (Args.is_opt ~s:"-prefix") cmd_line in
-  match lt with
-  (* we've not been given -prefix, maybe ${YYPREFIX} ? *)
-  | [] when (try ignore (Sys.getenv "YYPREFIX");true with Not_found -> false) ->
-      Sys.getenv "YYPREFIX", lf
-  (* we've been given the -prefix with a string argument
-   * we also set it as an env var so it can be used in install scripts *)
-  | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
-      Unix.putenv "YYPREFIX" prefix;
-      prefix, lf
-  (* all other combinations are invalid: raise an exception that will be
-   * caught later on *)
-  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix not specified")
-
 (* find the action from a command-line, only one allowed at a time *)
 let action_of_cmd_line cmd_line = 
   (* we want all options (Args.Opt _) and discard all values *)
@@ -111,7 +95,7 @@ let main b =
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
-    let prefix, cmd_line = prefix_of_cmd_line cmd_line in
+    let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
     let action, actionopts = action_of_cmd_line cmd_line in
     if action = Some "-init" && actionopts = [] then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
