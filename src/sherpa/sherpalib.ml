@@ -10,12 +10,6 @@ let write conf =
 let update f =
   write (f (read ()))
 
-let pkg_uri ~conf filename =
-  String.concat "/" [ conf.mirror; conf.sherpa_version; "packages"; filename ]
-
-let repo_uri ~conf () =
-  pkg_uri ~conf "package_list.el"
-
 let get_uri_contents uri =
   run_and_read [| wget; "-O"; "-"; "-nv"; uri |] `stdout
 
@@ -25,7 +19,7 @@ let get_uri uri output =
   ignore (Unix.waitpid [] pid)
 
 let download_to_folder ~conf folder p =
-  let uri = pkg_uri ~conf p.filename in
+  let uri = String.concat "/" [ conf.mirror; p.filename ] in
   let output = filename_concat [ folder; p.filename ] in
   FileUtil.mkdir ~parent:true ~mode:0o755 folder;
   get_uri uri output;
@@ -64,13 +58,13 @@ let pkglist ~sherpa_conf ~yypkg_conf  =
   let repo = repo ~conf:sherpa_conf () in
   List.filter (package_is_applicable ~yypkg_conf) repo.pkglist
 
-let get_packages ~yypkg_conf ~sherpa_conf ~with_deps ~download_folder ~package = 
+let get_packages ~yypkg_conf ~sherpa_conf ~with_deps ~download_folder ~package =
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist =
     let pkglist = pkglist ~sherpa_conf ~yypkg_conf in
     let p = List.find (fun p -> p.metadata.name = package) pkglist in
     if with_deps then get_deps pkglist [ p ] else [ p ]
-  in 
+  in
   List.map (download_to_folder ~conf:sherpa_conf download_folder) pkglist
 
 let default_download_folder =

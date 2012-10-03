@@ -47,7 +47,6 @@ let set_conf_field ~read ~update ~text ~f =
 let set_sherpa_conf_field prop =
   let text, f = match prop with
   | `mirror -> (fun c -> c.mirror), fun mirror c -> { c with mirror = mirror }
-  | `version -> (fun c -> c.sherpa_version), fun version c -> { c with sherpa_version = version }
   | `downloadfolder -> (fun c -> c.download_folder), fun folder c -> { c with download_folder = folder }
   in
   set_conf_field ~read ~update ~text ~f
@@ -125,14 +124,12 @@ let update_listview ~(model : GTree.tree_store) ~selection_changed_cb ~selection
     let name = metadata.Types.name in
     let iter = model#append () in
     ignore (selection#connect#changed ~callback:selection_changed_cb);
-    let sherpa_version = string_of_version metadata.version in
     let size = FileUtil.string_of_size ~fuzzy:true metadata.size_expanded in
     let size_pkg = FileUtil.string_of_size ~fuzzy:true pkg.size_compressed in
     List.iter (model_set ~model ~iter) [
       columns.name, name;
       columns.size_installed, size;
       columns.size_package, size_pkg;
-      columns.version_avail, sherpa_version;
       columns.description, metadata.Types.description;
     ];
     try
@@ -255,7 +252,6 @@ module UI = struct
     let predicates = [ `I ("Arch", set_yypkg_conf_field (`pred "arch")); ] in
     let settings = [
       `I ("Mirror", set_sherpa_conf_field `mirror);
-      `I ("Version", set_sherpa_conf_field `version);
       `I ("Download folder", set_sherpa_conf_field `downloadfolder);
       `M ("Predicates", predicates);
     ]

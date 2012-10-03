@@ -141,7 +141,6 @@ end = struct
   let sexp_of_sherpa_conf sherpa_conf =
     List [
       List [ Atom "mirror"; Atom sherpa_conf.mirror ];
-      List [ Atom "sherpa_version"; Atom sherpa_conf.sherpa_version ];
       List [ Atom "download_folder"; Atom sherpa_conf.download_folder ];
     ]
 
@@ -390,8 +389,7 @@ end = struct
     | _ -> of_sexp_error "repo_of_sexp: atom argument" sexp
 
   let sherpa_conf_of_sexp sexp =
-    let mirror = ref None and sherpa_version = ref None and download_folder =
-      ref None in
+    let mirror = ref None and download_folder = ref None in
     let duplicates = ref [] in
     let extra = ref [] in
     let rec aux = function
@@ -401,19 +399,17 @@ end = struct
           in
           (match f_name with
           | "mirror" -> f ~conv:string_of_sexp ~res:mirror
-          | "sherpa_version" -> f ~conv:string_of_sexp ~res:sherpa_version
           | "download_folder" -> f ~conv:string_of_sexp ~res:download_folder
           | _ -> extra := f_name :: !extra);
           aux q
       | [] -> (
-          match !mirror, !sherpa_version, !download_folder with
-          | Some mirror, Some sherpa_version, Some download_folder ->
-              { mirror = mirror; sherpa_version = sherpa_version;
-                download_folder = download_folder }
+          match !mirror, !download_folder with
+          | Some mirror, Some download_folder ->
+              { mirror = mirror; download_folder = download_folder }
           | _ -> 
               record_undefined_fields ~name:"sherpa_conf_of_sexp" ~sexp ~l:[
-                "mirror", !mirror = None; "sherpa_version", !sherpa_version =
-                None; "download_folder", !download_folder = None
+                "mirror", !mirror = None; "download_folder", !download_folder =
+                  None
               ]
         )
       | _ -> of_sexp_error "sherpa_conf_of_sexp: atom or wrong list element" sexp
