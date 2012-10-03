@@ -20,8 +20,6 @@
 open Types
 open Yylib
 
-exception Bad_prefix_specification of Args.opt list
-
 (* all the options we accept *)
 let cmd_line_spec = [
   "-prefix", [], "prefix yypkg will be working in";
