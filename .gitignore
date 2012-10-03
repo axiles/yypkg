@@ -2,3 +2,5 @@ _build
 *.native
 *~
 *.sw[po]
+*.haux
+*.htoc
