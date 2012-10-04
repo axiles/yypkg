@@ -1,34 +1,56 @@
 open Types
 
-let usage_msg = ""
+let cmd_line_spec = [
+  "-prefix", [], "prefix sherpa will be working in";
+  "-follow-dependencies", [], "also fetch and install dependencies";
+  "-download-folder", [],
+    "download files there (instead of " ^ Yylib.default_download_path ^ ")";
+  "-install", [], "install packages";
+  "-download", [], "downlaod packages";
+]
 
-let x_must_be_provided spec x =
-  Printf.eprintf "%s must be provided\n" x;
-  Arg.usage spec usage_msg
+let settings_of_cmd_line cmd_line =
+  let pred x = List.exists (fun s -> Args.is_opt ~s x) [
+    "-follow-dependencies"; "-download-folder"] in
+  let lt, lf = List.partition pred cmd_line in
+  let follow = List.exists (Args.is_opt ~s:"-follow-dependencies") lt in
+  let dest =
+    try
+      match List.find (Args.is_opt ~s:"-download-folder") lt with
+      | Args.Opt (_, [ Args.Val dest ]) -> dest
+      | Args.Opt _ -> raise (Args.Parsing_failed "Bad download folder")
+      | _ -> assert false
+    with Not_found -> Yylib.default_download_path
+  in
+  (follow, dest), lf
 
 let main () =
-  let with_deps = ref false in
-  let download_folder = ref Sherpalib.default_download_folder in
-  let package = ref "" in
-  let spec = [
-    "-with-deps", Arg.Set with_deps, "get the package dependencies too";
-    "-download-folder", Arg.Set_string download_folder,
-      "folder to download packages to";
-  ]
-  in
-  Arg.parse spec ((:=) package) usage_msg;
-  if "" = !download_folder then
-    (x_must_be_provided spec "-download-folder"; 1)
+  let b = Buffer.create 100 in
+  if Args.wants_help () || Args.nothing_given () then
+    (Args.bprint_help b cmd_line_spec; Buffer.output_buffer stderr b)
   else
-    if "" = !package then
-      (x_must_be_provided spec "package name"; 1)
-    else
-      let sherpa_conf = Sherpalib.read () in
-      let yypkg_conf = Conf.read () in
-      ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf
-      ~with_deps:!with_deps ~download_folder:!download_folder
-      ~package:!package);
-      0
+    let cmd_line = Args.parse cmd_line_spec Sys.argv in
+    let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
+    let (follow_deps, dest), cmd_line = settings_of_cmd_line cmd_line in
+    let action, actionopts = Yylib.action_of_cmd_line cmd_line in
+    let dest = FilePath.make_absolute (Sys.getcwd ()) dest in
+    let packages = Args.to_string_list actionopts in
+    Sys.chdir prefix;
+    Yylib.sanity_checks ();
+    let sherpa_conf = Sherpalib.read () in
+    let yypkg_conf = Conf.read () in
+    match action with
+    | None -> ()
+    | Some "-install" ->
+        let packages =
+          Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps ~dest
+          ~packages
+        in
+        Db.update (Install.install yypkg_conf packages)
+    | Some "-download" ->
+        ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps
+        ~dest ~packages)
+    | _ -> assert false
 
 let () = 
-  exit (main ())
+  main ()
