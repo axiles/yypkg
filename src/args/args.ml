@@ -42,13 +42,13 @@ let opt_of_string opts s =
   (* we return the opt which is matching the string
    * if several ones match, we fail *)
   match List.find_all (pred s) opts with
-    (* nothing found, option isn't recognized *)
-    | [] -> raise Not_found
-    (* one and only one element, option is recognized *)
-    | [ o ] -> o
-    (* if several options are matched, this means the option specification given
-     * is bad *)
-    | _ -> raise Option_specification_is_ambiguous
+  (* nothing found, option isn't recognized *)
+  | [] -> raise Not_found
+  (* one and only one element, option is recognized *)
+  | [ o ] -> o
+  (* if several options are matched, this means the option specification given
+   * is bad *)
+  | _ -> raise Option_specification_is_ambiguous
 
 let rec parse (opts : spec) accu = function
   (* starts with a dash, it's an option, maybe a valid one *)
@@ -70,12 +70,12 @@ let rec parse (opts : spec) accu = function
 
 let parse spec args =
   match parse spec [] (Array.to_list args) with
-    | opts, [] -> opts
-    | opts, q -> raise (Incomplete_parsing (opts, q))
+  | opts, [] -> opts
+  | opts, q -> raise (Incomplete_parsing (opts, q))
 
 let wants_help () = 
   let argv = Array.to_list Sys.argv in
-  [] = argv || List.exists (fun x -> "-help"=x || "--help"=x || "-h"=x) argv
+  [] = argv || List.exists (ListLabels.mem ~set:[ "-help"; "--help";  "-h" ]) argv
 
 let nothing_given () =
   1 = Array.length Sys.argv
@@ -106,12 +106,13 @@ let is_opt ?s = function
   | Val _ -> false
   | Opt (s', _) -> begin
       match s with
-        | Some s -> s = s'
-        | None -> true
+      | Some s -> s = s'
+      | None -> true
     end
 
-let is_val x =
-  not (is_opt x)
+let is_val = function
+  | Val _ -> true
+  | _ -> false
 
 let val_of_opts = function
   | Val s -> s
