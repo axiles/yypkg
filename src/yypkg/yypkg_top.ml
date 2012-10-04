@@ -93,28 +93,26 @@ let main b =
       Yylib.sanity_checks ();
       match action with
       | None -> ()
-      | Some action ->
-          match action, actionopts with
-          (* install, accepts several packages at once *)
-          | "-install", l ->
-              let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
-                (Args.to_string_list l) in
-              Db.update (Install.install (Conf.read ()) l)
-          (* upgrade, accepts several packages at once *)
-          | "-upgrade", l -> upgrade old_cwd l
-          (* uninstall, accepts several packages at once *)
-          | "-uninstall", l ->
-              let l = Args.to_string_list l in
-              Db.update (Uninstall.uninstall l)
-          (* list the installed packages *)
-          | "-list", l ->
-              let l = Args.to_string_list l in
-              Yylist.list (Db.read ()) l
-          (* config does nothing on its own but has suboptions *)
-          | "-config", subopts -> config subopts
-          (* if an option was different, Args.parse would already have
-           * complained, so this final pattern will never be matched *)
-          | _ -> assert false
+      (* install, accepts several packages at once *)
+      | Some "-install" ->
+          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
+            (Args.to_string_list actionopts) in
+          Db.update (Install.install (Conf.read ()) l)
+      (* upgrade, accepts several packages at once *)
+      | Some "-upgrade" -> upgrade old_cwd actionopts
+      (* uninstall, accepts several packages at once *)
+      | Some "-uninstall" ->
+          let l = Args.to_string_list actionopts in
+          Db.update (Uninstall.uninstall l)
+      (* list the installed packages *)
+      | Some "-list" ->
+          let l = Args.to_string_list actionopts in
+          Yylist.list (Db.read ()) l
+      (* config does nothing on its own but has suboptions *)
+      | Some "-config" -> config actionopts
+      (* if an option was different, Args.parse would already have
+       * complained, so this final pattern will never be matched *)
+      | _ -> assert false
 
 let main_wrap b =
   try main b with 
