@@ -40,10 +40,13 @@ let install_package package conf db =
     raise (Unmatched_predicates false_preds)
 
 let install conf db p =
+  Printf.eprintf "Installing %s...%!" (FilePath.DefaultPath.basename p);
   (* check the file exists, may raise 'File_not_found p' : caught in yypkg.ml *)
   Lib.assert_file_exists p;
   (* if the line above didn't abort, go on and instal the package *)
-  install_package p conf db
+  let updated_db = install_package p conf db in
+  Printf.eprintf " DONE\n%!";
+  updated_db
 
 let install yypkg_conf l db =
   List.fold_left (install yypkg_conf) db l
