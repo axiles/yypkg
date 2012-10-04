@@ -58,14 +58,20 @@ let pkglist ~sherpa_conf ~yypkg_conf  =
   let repo = repo ~conf:sherpa_conf () in
   List.filter (package_is_applicable ~yypkg_conf) repo.pkglist
 
-let get_packages ~yypkg_conf ~sherpa_conf ~with_deps ~download_folder ~package =
+let get_packages ~yypkg_conf ~sherpa_conf ~follow_deps ~dest ~packages =
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist =
     let pkglist = pkglist ~sherpa_conf ~yypkg_conf in
-    let p = List.find (fun p -> p.metadata.name = package) pkglist in
-    if with_deps then get_deps pkglist [ p ] else [ p ]
+    let knowns, unknowns = ListLabels.partition packages ~f:(fun p ->
+      ListLabels.exists pkglist ~f:(fun p' -> p'.metadata.name = p)) in
+    if unknowns <> [] then
+      raise (Invalid_argument
+        ("Unknown packages: " ^ (String.concat ", " unknowns)))
+    else
+      let packages = find_all_by_name ~pkglist ~name_list:knowns in
+      if follow_deps then get_deps pkglist packages else packages
   in
-  List.map (download_to_folder ~conf:sherpa_conf download_folder) pkglist
+  List.map (download_to_folder ~conf:sherpa_conf dest) pkglist
 
 let default_download_folder =
   try
