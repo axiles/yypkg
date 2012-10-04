@@ -25,10 +25,10 @@ let download_to_folder ~conf folder p =
   get_uri uri output;
   output
 
-let find_by_name pkglist name =
+let find_by_name ~pkglist ~name =
   List.find (fun p -> p.metadata.name = name) pkglist
 
-let find_all_by_name pkglist name_list =
+let find_all_by_name ~pkglist ~name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
 let package_is_applicable ~yypkg_conf pkg =
@@ -43,10 +43,10 @@ let get_deps pkglist packages =
     let name = p.metadata.name in
     let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.deps) in
     let accu = List.rev_append l accu in
-    List.fold_left add accu (find_all_by_name pkglist l)
+    List.fold_left add accu (find_all_by_name ~pkglist ~name_list:l)
   in
   let names = List.fold_left add [] packages in
-  find_all_by_name pkglist names
+  find_all_by_name ~pkglist ~name_list:names
 
 let repo_of_uri uri =
   TypesSexp.To.repo (Sexplib.Sexp.of_string (get_uri_contents uri))
