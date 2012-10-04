@@ -178,3 +178,16 @@ let prefix_of_cmd_line cmd_line =
    * caught later on *)
   | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and -prefix not specified")
 
+(* find the action from a command-line, only one allowed at a time *)
+let action_of_cmd_line cmd_line = 
+  (* we want all options (Args.Opt _) and discard all values *)
+  let lt, _ = List.partition Args.is_opt cmd_line in
+  match lt with
+    (* exactly one action: everything ok *)
+    | [ Args.Opt (action, subopts) ] -> Some action, subopts
+    (* no action: whatever the default will be *)
+    | [] -> None, []
+    (* several actions is forbidden: raise an exception that will be caught
+     * later on *)
+    | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
+

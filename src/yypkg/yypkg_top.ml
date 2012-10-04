@@ -38,19 +38,6 @@ let cmd_line_spec = [
   "-init", [], "setups a directory tree for yypkg (run once)";
 ]
 
-(* find the action from a command-line, only one allowed at a time *)
-let action_of_cmd_line cmd_line = 
-  (* we want all options (Args.Opt _) and discard all values *)
-  let lt, _ = List.partition Args.is_opt cmd_line in
-  match lt with
-    (* exactly one action: everything ok *)
-    | [ Args.Opt (action, subopts) ] -> Some action, subopts
-    (* no action: whatever the default will be *)
-    | [] -> None, []
-    (* several actions is forbidden: raise an exception that will be caught
-     * later on *)
-    | _ -> raise (Args.Parsing_failed "Only one action is allowed at once.")
-
 let config opts =
   match List.partition (Args.is_opt ~s:"-listpreds") opts with
   (* first: if -listpreds has been given, print the configuration predicates
@@ -94,7 +81,7 @@ let main b =
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
     let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
-    let action, actionopts = action_of_cmd_line cmd_line in
+    let action, actionopts = Yylib.action_of_cmd_line cmd_line in
     if action = Some "-init" && actionopts = [] then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
       let prefix = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) prefix in
