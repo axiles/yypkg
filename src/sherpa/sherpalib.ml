@@ -52,7 +52,7 @@ let repo_of_uri uri =
   TypesSexp.To.repo (Sexplib.Sexp.of_string (get_uri_contents uri))
 
 let repo ~conf () =
-  repo_of_uri (repo_uri ~conf ())
+  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el"])
 
 let pkglist ~sherpa_conf ~yypkg_conf  =
   let repo = repo ~conf:sherpa_conf () in
