@@ -14,9 +14,9 @@ let get_uri_contents uri =
   run_and_read [| wget; "-O"; "-"; "-nv"; uri |] `stdout
 
 let get_uri uri output =
-  let a = [| wget; "-O"; output; uri |] in
-  let pid = Unix.create_process wget a Unix.stdin Unix.stdout Unix.stderr in
-  ignore (Unix.waitpid [] pid)
+  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  ignore (run_and_read [| wget; "-nv"; "-O"; output; uri |] `stdout);
+  Printf.eprintf " DONE\n%!"
 
 let download_to_folder ~conf folder p =
   let uri = String.concat "/" [ conf.mirror; p.filename ] in
