@@ -147,6 +147,7 @@ let repo_metadata pkglist =
   in
   match targets, hosts with
   | [ target ], [ host ] -> { ST.target; host; pkglist }
+  | [], [ host ] -> { ST.target = host; host; pkglist }
   | [], [] ->
       ep "Error: not target and no host found";
       assert false
