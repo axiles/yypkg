@@ -1,4 +1,5 @@
 open Types
+module ST = SherpaT
 
 let pc : (string, string) Hashtbl.t = Hashtbl.create 20
 let libs : (string, string) Hashtbl.t = Hashtbl.create 20
@@ -34,7 +35,7 @@ let tar_grep filelist expr ext file =
   if List.exists (filename_check_suffix ext) filelist then
     (* Get the contents of all "*.ext" files in the package *)
     let l = Lib.from_tar (`get ("*." ^ ext)) file in
-    (* Only keep the lines that match expr: "Requires" ones for pkgconfig eg *)
+    (* Only keep the lines that match expr: eg "Requires" lines for pkgconfig *)
     let l = List.filter (fun x -> Str.string_match re x 0) l in
     (* But we want the "value" in these lines, not the "key" part *)
     let l = List.rev_map (Str.replace_first re "") l in
@@ -136,12 +137,25 @@ let add_deps packages ~memoizer folder pkg =
   { pkg with deps = requires }
 
 let repo_metadata pkglist =
-  let targets = List.rev_map (fun p -> p.metadata.target) pkglist in
-  let targets = List.sort compare (Lib.rev_may_value targets) in
-  match Lib.rev_uniq targets with
-  | [ target ] -> { repo_target = target; pkglist = pkglist }
-  | targets ->
-      ep "Error: several targets seen: %s\n" (String.concat ", " targets);
+  let hosts =
+    let triplets = List.rev_map (fun p -> p.metadata.host) pkglist in
+    Lib.rev_uniq (List.sort compare triplets)
+  in
+  let targets =
+    let triplets = List.rev_map (fun p -> p.metadata.target) pkglist in
+    Lib.rev_uniq (List.sort compare (Lib.rev_may_value triplets))
+  in
+  match targets, hosts with
+  | [ target ], [ host ] ->
+      { ST.target = target; host = host; pkglist = pkglist }
+  | [], [] ->
+      ep "Error: not target and no host found";
+      assert false
+  | _, _ ->
+      (if targets <> [] then
+        ep "Error: several targets seen: %s\n" (String.concat ", " targets));
+      (if hosts <> [] then
+        ep "Error: several hosts seen: %s\n" (String.concat ", " hosts));
       assert false
 
 module Output = struct
@@ -190,7 +204,7 @@ module Output = struct
   let html ~output ~repo =
     let html_oc = FilePath.concat output "package_list.html" in
     let html_oc = open_out_bin html_oc in
-    output_string html_oc (HTML.table repo.pkglist);
+    output_string html_oc (HTML.table repo.ST.pkglist);
     close_out html_oc
 
   let write ~output ~repo =

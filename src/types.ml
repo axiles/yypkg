@@ -117,18 +117,21 @@ type pkg = {
   deps : string list;
 }
 
-type repo = {
-  repo_target : string;
-  pkglist : pkg list;
-}
+module SherpaT = struct
+  type repo = {
+    target : string;
+    host : string;
+    pkglist : pkg list;
+  }
 
-type sherpa_conf = {
-  mirror : string;
-  download_folder : string;
-}
+  type sherpa_conf = {
+    mirror : string;
+    download_folder : string;
+  }
 
-type sherpa_conf_field =
-  | Mirror of string
+  type sherpa_conf_field =
+    | Mirror of string
+end
 
 exception Package_does_not_exist
 exception File_not_found of string

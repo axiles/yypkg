@@ -1,6 +1,8 @@
 open Types
 open Lib
 
+module ST = SherpaT
+
 let read () =
   TypesSexp.To.sherpa_conf (Disk.read Yylib.sherpa_conf_path)
 
@@ -19,7 +21,7 @@ let get_uri uri output =
   Printf.eprintf " DONE\n%!"
 
 let download_to_folder ~conf folder p =
-  let uri = String.concat "/" [ conf.mirror; p.filename ] in
+  let uri = String.concat "/" [ conf.ST.mirror; p.filename ] in
   let output = filename_concat [ folder; p.filename ] in
   FileUtil.mkdir ~parent:true ~mode:0o755 folder;
   get_uri uri output;
@@ -52,11 +54,11 @@ let repo_of_uri uri =
   TypesSexp.To.repo (Sexplib.Sexp.of_string (get_uri_contents uri))
 
 let repo ~conf () =
-  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el"])
+  repo_of_uri (String.concat "/" [ conf.ST.mirror; "package_list.el"])
 
 let pkglist ~sherpa_conf ~yypkg_conf  =
   let repo = repo ~conf:sherpa_conf () in
-  List.filter (package_is_applicable ~yypkg_conf) repo.pkglist
+  List.filter (package_is_applicable ~yypkg_conf) repo.ST.pkglist
 
 exception Unknown_package of string
 

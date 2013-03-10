@@ -34,9 +34,9 @@ module Of : sig
   val metadata : metadata -> t
   val conf : conf -> t
   val db : db -> t
-  val sherpa_conf : sherpa_conf -> t
+  val sherpa_conf : SherpaT.sherpa_conf -> t
   val script : script -> t
-  val repo : repo -> t
+  val repo : SherpaT.repo -> t
 end = struct
   let sexp_of_date (year, month, day, hour, minute) =
     let f = Sexplib.Conv.sexp_of_int in
@@ -134,14 +134,15 @@ end = struct
 
   let sexp_of_repo repo =
     List [
-      List [ Atom "repo_target"; Atom repo.repo_target ];
-      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repo.pkglist ]
+      List [ Atom "target"; Atom repo.SherpaT.target ];
+      List [ Atom "host"; Atom repo.SherpaT.host ];
+      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repo.SherpaT.pkglist ]
     ]
 
   let sexp_of_sherpa_conf sherpa_conf =
     List [
-      List [ Atom "mirror"; Atom sherpa_conf.mirror ];
-      List [ Atom "download_folder"; Atom sherpa_conf.download_folder ];
+      List [ Atom "mirror"; Atom sherpa_conf.SherpaT.mirror ];
+      List [ Atom "download_folder"; Atom sherpa_conf.SherpaT.download_folder ];
     ]
 
   let metadata = sexp_of_metadata
@@ -157,8 +158,8 @@ module To : sig
   val conf : t -> conf
   val db : t -> db
   val metadata : t -> metadata
-  val sherpa_conf : t -> sherpa_conf
-  val repo : t -> repo
+  val sherpa_conf : t -> SherpaT.sherpa_conf
+  val repo : t -> SherpaT.repo
 end = struct
   let date_of_sexp sexp =
     let f = int_of_sexp in
@@ -361,7 +362,7 @@ end = struct
     | _ -> of_sexp_error "pkg_of_sexp: atom argument" sexp
 
   let repo_of_sexp sexp =
-    let repo_target = ref None and pkglist = ref None in
+    let target = ref None and host = ref None and pkglist = ref None in
     let duplicates = ref [] in
     let extra = ref [] in
     let rec aux = function
@@ -370,17 +371,19 @@ end = struct
             record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
           in
           (match f_name with
-          | "repo_target" -> f ~conv:string_of_sexp ~res:repo_target
+          | "target" -> f ~conv:string_of_sexp ~res:target
+          | "host" -> f ~conv:string_of_sexp ~res:host
           | "pkglist" -> f ~conv:(list_of_sexp pkg_of_sexp) ~res:pkglist
           | _ -> extra := f_name :: !extra);
           aux q
       | [] -> (
-          match !repo_target, !pkglist with
-          | Some repo_target, Some pkglist ->
-              { repo_target = repo_target; pkglist = pkglist }
+          match !target, !host, !pkglist with
+          | Some target, Some host, Some pkglist ->
+              { SherpaT.target = target; host = host; pkglist = pkglist }
           | _ -> 
               record_undefined_fields ~name:"repo_of_sexp" ~sexp ~l:[
-                "repo_target", !repo_target = None; "pkglist", !pkglist = None ]
+                "target", !target = None; "host", !host = None;
+                "pkglist", !pkglist = None ]
         )
       | _ -> of_sexp_error "repo_of_sexp: atom or wrong list element" sexp
     in
@@ -405,7 +408,7 @@ end = struct
       | [] -> (
           match !mirror, !download_folder with
           | Some mirror, Some download_folder ->
-              { mirror = mirror; download_folder = download_folder }
+              { SherpaT.mirror = mirror; download_folder = download_folder }
           | _ -> 
               record_undefined_fields ~name:"sherpa_conf_of_sexp" ~sexp ~l:[
                 "mirror", !mirror = None; "download_folder", !download_folder =
