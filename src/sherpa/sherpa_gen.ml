@@ -93,17 +93,17 @@ let pkg_of_file ~memoizer file =
     memoizer#get file
   else
     let metadata = Yylib.metadata_of_script (Lib.open_package file) in
-    let filelist = Lib.from_tar `list file in
+    let files = Lib.from_tar `list file in
     (* When a .pc file is found, add it to the global list of .pc files.
      * Same for .dll, .so, .a, ... files *)
     let rels = [ "pc", pc; "dll", libs; "so", libs; "a", libs ] in
-    List.iter (fun (a, b) -> x_provides metadata.name filelist a b) rels;
+    List.iter (fun (a, b) -> x_provides metadata.name files a b) rels;
     let pkg = {
-      metadata = metadata;
+      metadata;
       size_compressed = (FileUtil.stat file).FileUtil.size;
       filename = (FilePath.basename file);
       signature = None;
-      files = filelist;
+      files;
       deps = [];
     } in
     memoizer#add file pkg;
@@ -146,8 +146,7 @@ let repo_metadata pkglist =
     Lib.rev_uniq (List.sort compare (Lib.rev_may_value triplets))
   in
   match targets, hosts with
-  | [ target ], [ host ] ->
-      { ST.target = target; host = host; pkglist = pkglist }
+  | [ target ], [ host ] -> { ST.target; host; pkglist }
   | [], [] ->
       ep "Error: not target and no host found";
       assert false

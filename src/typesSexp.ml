@@ -271,10 +271,8 @@ end = struct
           | Some name, Some size_expanded, Some version, Some packager_email,
             Some packager_name, Some description, Some host, Some target,
             Some predicates, Some comments ->
-              { name = name; size_expanded = size_expanded; version = version;
-                packager_email = packager_email; packager_name = packager_name;
-                description = description; host = host; target = target;
-                predicates = predicates; comments = comments }
+              { name; size_expanded; version; packager_email; packager_name;
+                description; host; target; predicates; comments }
           | _ ->
               record_undefined_fields ~name:"metadata_of_sexp" ~sexp ~l:[
                 "name", !name = None; "size_expanded", !size_expanded = None;
@@ -323,8 +321,8 @@ end = struct
     | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
 
   let pkg_of_sexp sexp =
-    let metadata = ref None and size_compressed = ref None and filename = ref None
-    and signature = ref None and files = ref None and deps = ref None in
+    let metadata = ref None and size_compressed = ref None and files = ref None
+    and filename = ref None and signature = ref None and deps = ref None in
     let duplicates = ref [] in
     let extra = ref [] in
     let rec aux = function
@@ -346,13 +344,12 @@ end = struct
           !deps) with
           | Some metadata, Some size_compressed, Some filename, Some signature,
             Some files, Some deps ->
-              { metadata = metadata; size_compressed = size_compressed; filename =
-                filename; signature = signature; files = files; deps = deps }
+              { metadata; size_compressed; filename; signature; files; deps }
           | _ ->
               record_undefined_fields ~name:"pkg_of_sexp" ~sexp ~l:[
-                "metadata", !metadata = None; "size_compressed", !size_compressed
-                = None; "filename", !filename = None; "signature",
-                !signature = None; "files", !files = None; "deps", !deps = None
+                "metadata", !metadata = None; "signature", !signature = None;
+                "size_compressed", !size_compressed = None; "filename",
+                !filename = None; "files", !files = None; "deps", !deps = None
               ]
         )
       | _ -> of_sexp_error "pkg_of_sexp: atom or wrong list element" sexp
@@ -379,7 +376,7 @@ end = struct
       | [] -> (
           match !target, !host, !pkglist with
           | Some target, Some host, Some pkglist ->
-              { SherpaT.target = target; host = host; pkglist = pkglist }
+              { SherpaT.target; host; pkglist }
           | _ -> 
               record_undefined_fields ~name:"repo_of_sexp" ~sexp ~l:[
                 "target", !target = None; "host", !host = None;
@@ -408,7 +405,7 @@ end = struct
       | [] -> (
           match !mirror, !download_folder with
           | Some mirror, Some download_folder ->
-              { SherpaT.mirror = mirror; download_folder = download_folder }
+              { SherpaT.mirror; download_folder }
           | _ -> 
               record_undefined_fields ~name:"sherpa_conf_of_sexp" ~sexp ~l:[
                 "mirror", !mirror = None; "download_folder", !download_folder =

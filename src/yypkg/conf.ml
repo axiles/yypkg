@@ -38,8 +38,7 @@ let write conf =
    * We use stable_sort so not to change anything if there are several bindings
    * for the same value, it shouldn't happen but Murphy's Law is Murphy's Law,
    * so why not stay safe? *)
-  let sorted_preds = List.stable_sort compare conf.preds in
-  let conf = { preds = sorted_preds } in
+  let conf = { preds = List.stable_sort compare conf.preds } in
   Disk.write conf_path (TypesSexp.Of.conf conf)
 
 (* read the conf, run the function, write the database to disk
