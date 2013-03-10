@@ -5,6 +5,7 @@ let cmd_line_spec = [
   "-follow-dependencies", [], "also fetch and install dependencies";
   "-download-folder", [],
     "download files there (instead of " ^ Yylib.default_download_path ^ ")";
+  "-set-mirror", [], "set the mirror to use";
   "-install", [], "install packages";
   "-download", [], "downlaod packages";
 ]
@@ -34,7 +35,7 @@ let main () =
     let (follow_deps, dest), cmd_line = settings_of_cmd_line cmd_line in
     let action, actionopts = Yylib.action_of_cmd_line cmd_line in
     let dest = FilePath.make_absolute (Sys.getcwd ()) dest in
-    let packages = Args.to_string_list actionopts in
+    let opts = Args.to_string_list actionopts in
     Sys.chdir prefix;
     Yylib.sanity_checks ();
     let sherpa_conf = Sherpalib.read () in
@@ -44,12 +45,18 @@ let main () =
     | Some "-install" ->
         let packages =
           Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps ~dest
-          ~packages
+          ~packages:opts
         in
         Db.update (Install.install yypkg_conf packages)
     | Some "-download" ->
         ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps
-        ~dest ~packages)
+        ~dest ~packages:opts)
+    | Some "-set-mirror" -> begin
+        match opts with
+        | [ mirror ] -> Sherpalib.update (fun c -> { c with SherpaT.mirror })
+        | [] -> raise (Args.Parsing_failed "No mirror given.")
+        | _ -> raise (Args.Parsing_failed "Several mirrors given.")
+      end
     | _ -> assert false
 
 let () = 
