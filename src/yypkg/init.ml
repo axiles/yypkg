@@ -48,7 +48,7 @@ let init prefix =
   Disk.write db_path (TypesSexp.Of.db []);
   let base_conf = { preds = [] } in
   let base_sherpa_conf = {
-    SherpaT.mirror = "http://notk.org/~adrien/yypkg/latest/packages/SERIES";
+    SherpaT.mirror = "http://yypkg.org/VERSION/packages/SERIES";
     download_folder = dl_folder;
   }
   in
