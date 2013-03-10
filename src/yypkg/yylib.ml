@@ -50,7 +50,8 @@ let expand_environment_variables s =
   else
     s
 
-(* bsdtar writes 'x some/path/foo' during extraction *)
+(* Strip the 'x ' prefix that bsdtar puts in front of paths during extraction
+ * and skip the warning lines (those which start with "bsdtar:" *)
 let filter_bsdtar_output x =
   if String.length x >= 7 && x.[0] = 'b' && x.[1] = 's' && x.[2] = 'd'
     && x.[3] = 't' && x.[4] = 'a' && x.[5] = 'r' && x.[6] = ':' then
