@@ -67,7 +67,7 @@ let get_packages ~yypkg_conf ~sherpa_conf ~follow_deps ~dest ~packages =
   let pkglist =
     let pkglist = pkglist ~sherpa_conf ~yypkg_conf in
     let packages =
-      if packages = [ "*" ] then
+      if packages = [ "all" ] then
         pkglist
       else
         ListLabels.rev_map packages ~f:(fun p ->
