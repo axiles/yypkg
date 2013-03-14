@@ -62,8 +62,8 @@ let x_provides name filelist ext h =
   let provides = List.rev_map f provides in
   update_list provides h name
 
-class ['a] memoizer ~output ~name =
-  let memo_file = FilePath.concat output ("memo_" ^ name) in
+class ['a] memoizer ~directory ~name =
+  let memo_file = FilePath.concat directory ("memo_" ^ name) in
   object(self)
     val mutable memo : (string * 'a) list = []
     method exists file =
@@ -195,38 +195,36 @@ module Output = struct
       ])
   end
 
-  let package_list ~output ~repo =
-    let el_oc = FilePath.concat output "package_list.el" in
+  let package_list ~directory ~repo =
+    let el_oc = FilePath.concat directory "package_list.el" in
     let el_oc = open_out_bin el_oc in
     Sexplib.Sexp.output_hum el_oc (TypesSexp.Of.repo repo);
     close_out el_oc
 
-  let html ~output ~repo =
-    let html_oc = FilePath.concat output "package_list.html" in
+  let html ~directory ~repo =
+    let html_oc = FilePath.concat directory "package_list.html" in
     let html_oc = open_out_bin html_oc in
     output_string html_oc (HTML.table repo.ST.pkglist);
     close_out html_oc
 
-  let write ~output ~repo =
-    package_list ~output ~repo;
-    html ~output ~repo
+  let write ~directory ~repo =
+    package_list ~directory ~repo;
+    html ~directory ~repo
 end
 
 let () =
-  let folder = Sys.argv.(1) in
-  let output = Sys.argv.(2) in
-  FileUtil.mkdir ~parent:true output;
-  let memoizer_pkgs = new memoizer ~output ~name:"pkg" in
-  let memoizer_deps = new memoizer ~output ~name:"deps" in
-  let files = Array.to_list (Sys.readdir folder) in
+  let dir = Sys.argv.(1) in
+  let memoizer_pkgs = new memoizer ~directory:dir ~name:"pkg" in
+  let memoizer_deps = new memoizer ~directory:dir ~name:"deps" in
+  let files = Array.to_list (Sys.readdir dir) in
   let files = List.filter (filename_check_suffix "txz") files in
   (* Build the list without deps first. *)
   let pkgs = ListLabels.rev_map files ~f:(fun f ->
-    pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat folder f)) in
+    pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat dir f)) in
   (* Add deps during a second stage. *)
-  let pkgs = List.rev_map (add_deps ~memoizer:memoizer_deps pkgs folder) pkgs in
+  let pkgs = List.rev_map (add_deps ~memoizer:memoizer_deps pkgs dir) pkgs in
   let pkg_compare a b = compare a.metadata.name b.metadata.name in
   let repo = repo_metadata (List.sort pkg_compare pkgs) in
-  Output.write ~output ~repo;
+  Output.write ~directory:dir ~repo;
   memoizer_pkgs#commit ();
   memoizer_deps#commit ()
