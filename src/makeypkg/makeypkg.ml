@@ -116,9 +116,10 @@ module Package_script = struct
     match script ~script:settings.script ~pkg_size with
     | meta, [], [] ->
         (* we want to expand the content of dir so we suffix it with '/' *)
-        let expand = dir, Expand (dir ^ "/", ".") in
+        let expand_id = sp "expand_%s" dir in
+        let expand = expand_id, Expand (dir ^ "/", ".") in
         let install_scripts = run_install_scripts settings.install_scripts in
-        meta, expand :: install_scripts, [ Reverse dir ]
+        meta, expand :: install_scripts, [ Reverse expand_id ]
     | script -> script
 end
 
