@@ -65,8 +65,9 @@ end = struct
     | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
     | Expand (orig, dest) -> List [ Atom "Expand"; Atom orig; Atom dest ]
     | MKdir dir -> List [ Atom "Exec"; Atom dir ]
-    | SearchReplace (file, search, replace) ->
-        List [ Atom "SearchReplace"; Atom file; Atom search; Atom replace ]
+    | SearchReplace (file, search, replace) -> List [
+        Atom "SearchReplace"; List [ Atom file; Atom search; Atom replace ]
+      ]
 
   let sexp_of_uninstall_action uninstall_action =
     match uninstall_action with
