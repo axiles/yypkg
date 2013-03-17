@@ -61,7 +61,7 @@ type settings = {
   output : string;
   package : dir;
   install_scripts : dir option;
-  metafile : string;
+  script : string;
 }
 
 let dir_of_path path =
@@ -75,13 +75,14 @@ let dir_of_path path =
   in
   { path = path; dirname = FP.dirname path; basename = FP.basename path }
 
-module Package_script_el = struct
-  let meta ~metafile ~pkg_size =
-    let sexp = match metafile with
+module Package_script = struct
+  let script ~script ~pkg_size =
+    let sexp = match script with
     | "-" -> Sexplib.Sexp.input_sexp stdin
     | file -> Sexplib.Sexp.load_sexp file
     in
-    { (TypesSexp.To.metadata sexp) with size_expanded = pkg_size }
+    let metadata, install, uninstall = TypesSexp.To.script sexp in
+    { metadata with size_expanded = pkg_size }, install, uninstall
 
   let run_install_scripts dir =
     let aux dir =
@@ -112,11 +113,13 @@ module Package_script_el = struct
 
   let make ~pkg_size settings =
     let dir = settings.package.basename in
-    let meta = meta ~metafile:settings.metafile ~pkg_size in
-    (* we want to expand the content of dir so we suffix it with '/' *)
-    let expand = dir, Expand (dir ^ "/", ".") in
-    let install_scripts = run_install_scripts settings.install_scripts in
-    meta, expand :: install_scripts, [ Reverse dir ]
+    match script ~script:settings.script ~pkg_size with
+    | meta, [], [] ->
+        (* we want to expand the content of dir so we suffix it with '/' *)
+        let expand = dir, Expand (dir ^ "/", ".") in
+        let install_scripts = run_install_scripts settings.install_scripts in
+        meta, expand :: install_scripts, [ Reverse dir ]
+    | script -> script
 end
 
 let output_file meta =
@@ -142,41 +145,41 @@ let compress settings meta (script_dir, script_name) =
   tar_compress tar_args snd output_path;
   output_path
 
-let dummy_meta () =
+let dummy_script () =
   let version = dummy_version () in
   let size_expanded = FileUtil.TB (Int64.of_int 42) in
-  let meta = { name = "dummy_name"; size_expanded = size_expanded; version =
+  let metadata = { name = "dummy_name"; size_expanded = size_expanded; version =
     version; packager_email = "adrien@notk.org"; packager_name = "Adrien Nader";
     description = "dummy"; host = "%{HST}"; target = Some "%{TGT}";
     predicates = []; comments = [] }
   in
-  Sexplib.Sexp.to_string_hum (TypesSexp.Of.metadata meta)
+  Sexplib.Sexp.to_string_hum (TypesSexp.Of.script (metadata, [], []))
 
 let parse_command_line () = 
-  let output, dir, iscripts, meta, template =
+  let output, dir, iscripts, script, template =
     ref (Sys.getcwd ()), ref "", ref "", ref "", ref false in
   let lst = [
     (* the output file*name* will be built from the other param values *)
     "-o", Arg.Set_string output, "output directory (defaults to current dir)";
-    "-meta", Arg.Set_string meta, "package metadata file (- for stdin)";
+    "-script", Arg.Set_string script, "package script file (- for stdin)";
     "-iscripts", Arg.Set_string iscripts, "directory of install scripts";
-    "-template", Arg.Set template, "write a template meta on stdout";
+    "-template", Arg.Set template, "write a template script on stdout";
   ]
   in
   let usage_msg = "\
 Create a yypkg package from a directory.
-Use either (-o, -meta, -iscripts and a directory) XOR -template (see -help).
+Use either (-o, -script, -iscripts and a directory) XOR -template (see -help).
 Examples:
-  $ makeypkg -o /some/dir -meta pcre.META -iscripts iscripts-atk package-atk
+  $ makeypkg -o /some/dir -script pcre.META -iscripts iscripts-atk package-atk
   $ makeypkg -template"
     in
   (* the last argument is the directory to package *)
   Arg.parse lst ((:=) dir) usage_msg;
   if !template then
-    (print_endline (dummy_meta ()); exit 0)
+    (print_endline (dummy_script ()); exit 0)
   else
     (* check if any argument has not been set (missing from the command-line *)
-    if List.mem "" [ !output; !dir; !meta ] then
+    if List.mem "" [ !output; !dir; !script ] then
       let () = prerr_endline usage_msg in
       exit (-1)
     else
@@ -185,13 +188,13 @@ Examples:
         package = dir_of_path !dir;
         install_scripts =
           if !iscripts <> "" then Some (dir_of_path !iscripts) else None;
-        metafile = !meta;
+        script = !script;
       }
 
 let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
-  let meta, _, _ as script = Package_script_el.make ~pkg_size settings in
+  let meta, _, _ as script = Package_script.make ~pkg_size settings in
   let script = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
   let output_file = compress settings meta script_dir_and_name in
