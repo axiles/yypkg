@@ -73,7 +73,7 @@ let dir_of_path path =
     else
       dir
   in
-  { path = path; dirname = FP.dirname path; basename = FP.basename path }
+  { path; dirname = FP.dirname path; basename = FP.basename path }
 
 module Package_script = struct
   let script ~script ~pkg_size =
@@ -148,8 +148,8 @@ let compress settings meta (script_dir, script_name) =
 let dummy_script () =
   let version = dummy_version () in
   let size_expanded = FileUtil.TB (Int64.of_int 42) in
-  let metadata = { name = "dummy_name"; size_expanded = size_expanded; version =
-    version; packager_email = "adrien@notk.org"; packager_name = "Adrien Nader";
+  let metadata = { name = "dummy_name"; size_expanded; version;
+    packager_email = "foo@bar.com"; packager_name = "Adrien Nader";
     description = "dummy"; host = "%{HST}"; target = Some "%{TGT}";
     predicates = []; comments = [] }
   in
