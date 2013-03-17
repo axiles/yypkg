@@ -10,7 +10,7 @@ let cmd_line_spec = [
   "-download", [], "downlaod packages";
 ]
 
-let settings_of_cmd_line cmd_line =
+let settings_of_cmd_line ~cwd cmd_line =
   let pred x = List.exists (fun s -> Args.is_opt ~s x) [
     "-follow-dependencies"; "-download-folder"] in
   let lt, lf = List.partition pred cmd_line in
@@ -18,7 +18,7 @@ let settings_of_cmd_line cmd_line =
   let dest =
     try
       match List.find (Args.is_opt ~s:"-download-folder") lt with
-      | Args.Opt (_, [ Args.Val dest ]) -> dest
+      | Args.Opt (_, [ Args.Val dest ]) -> FilePath.make_absolute cwd dest
       | Args.Opt _ -> raise (Args.Parsing_failed "Bad download folder")
       | _ -> assert false
     with Not_found -> Yylib.default_download_path
@@ -31,13 +31,13 @@ let main () =
     (Args.bprint_help b cmd_line_spec; Buffer.output_buffer stderr b)
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
+    let cwd = Sys.getcwd () in
     let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
-    let (follow_deps, dest), cmd_line = settings_of_cmd_line cmd_line in
-    let action, actionopts = Yylib.action_of_cmd_line cmd_line in
-    let dest = FilePath.make_absolute (Sys.getcwd ()) dest in
-    let opts = Args.to_string_list actionopts in
     Sys.chdir prefix;
     Yylib.sanity_checks ();
+    let (follow_deps, dest), cmd_line = settings_of_cmd_line ~cwd cmd_line in
+    let action, actionopts = Yylib.action_of_cmd_line cmd_line in
+    let opts = Args.to_string_list actionopts in
     let sherpa_conf = Sherpalib.read () in
     let yypkg_conf = Conf.read () in
     match action with
