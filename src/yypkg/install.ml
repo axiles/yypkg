@@ -20,23 +20,29 @@
 open Types
 open Yylib
 
-let execute_install_action package (id, action) =
-  match action with
-  | AHK p -> id, Filelist (command (ahk_bin :: p))
-  | Expand (in_, p) -> id, Filelist (expand package in_ p)
-  | Exec p -> id, Filelist (command p)
-  | MKdir p -> id, Filelist (mkdir p)
+let execute_install_action package = function
+  | AHK p -> Filelist (command (ahk_bin :: p))
+  | Expand (in_, p) -> Filelist (expand package in_ p)
+  | Exec p -> Filelist (command p)
+  | MKdir p -> Filelist (mkdir p)
   | SearchReplace (p, search, replace) ->
       let replace = expand_environment_variables replace in
       Lib.search_and_replace_in_file p search replace;
-      id, NA
+      NA
+
+let execute_install_action_wrap package (id, action) =
+  let can_fail_re = Str.regexp ".*-can-fail" in
+  if Str.string_match can_fail_re id 0 then
+    id, (try execute_install_action package action with _ -> NA)
+  else
+    id, execute_install_action package action
 
 let install_package package conf db =
   let metadata, install_actions, _ as script = Lib.open_package package in
   let pred_holds = Config.predicate_holds conf.preds in
   let _, false_preds = List.partition pred_holds metadata.predicates in
   if false_preds = [] then
-    let func = execute_install_action package in
+    let func = execute_install_action_wrap package in
     let results = List.rev_map func install_actions in
     let updated_db = Db.install_package db (script, results) in
     updated_db
