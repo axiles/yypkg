@@ -26,6 +26,10 @@ let execute_install_action package (id, action) =
   | Expand (in_, p) -> id, Filelist (expand package in_ p)
   | Exec p -> id, Filelist (command p)
   | MKdir p -> id, Filelist (mkdir p)
+  | SearchReplace (p, search, replace) ->
+      let replace = expand_environment_variables replace in
+      Lib.search_and_replace_in_file p search replace;
+      id, NA
 
 let install_package package conf db =
   let metadata, install_actions, _ as script = Lib.open_package package in
