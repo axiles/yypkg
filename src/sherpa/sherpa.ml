@@ -10,7 +10,7 @@ let cmd_line_spec = [
   "-download", [], "downlaod packages";
 ]
 
-let settings_of_cmd_line ~cwd cmd_line =
+let settings_of_cmd_line ~start_dir cmd_line =
   let pred x = List.exists (fun s -> Args.is_opt ~s x) [
     "-follow-dependencies"; "-download-folder"] in
   let lt, lf = List.partition pred cmd_line in
@@ -18,10 +18,11 @@ let settings_of_cmd_line ~cwd cmd_line =
   let dest =
     try
       match List.find (Args.is_opt ~s:"-download-folder") lt with
-      | Args.Opt (_, [ Args.Val dest ]) -> FilePath.make_absolute cwd dest
+      | Args.Opt (_, [ Args.Val dest ]) -> FilePath.make_absolute start_dir dest
       | Args.Opt _ -> raise (Args.Parsing_failed "Bad download folder")
       | _ -> assert false
-    with Not_found -> Yylib.default_download_path
+    with Not_found ->
+      FilePath.make_absolute (Sys.getcwd ()) Yylib.default_download_path
   in
   (follow, dest), lf
 
@@ -31,11 +32,11 @@ let main () =
     (Args.bprint_help b cmd_line_spec; Buffer.output_buffer stderr b)
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
-    let cwd = Sys.getcwd () in
+    let start_dir = Sys.getcwd () in
     let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
     Sys.chdir prefix;
     Yylib.sanity_checks ();
-    let (follow_deps, dest), cmd_line = settings_of_cmd_line ~cwd cmd_line in
+    let (follow, dest), cmd_line = settings_of_cmd_line ~start_dir cmd_line in
     let action, actionopts = Yylib.action_of_cmd_line cmd_line in
     let opts = Args.to_string_list actionopts in
     let sherpa_conf = Sherpalib.read () in
@@ -44,12 +45,12 @@ let main () =
     | None -> ()
     | Some "-install" ->
         let packages =
-          Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps ~dest
+          Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow ~dest
           ~packages:opts
         in
         Db.update (Install.install yypkg_conf packages)
     | Some "-download" ->
-        ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow_deps
+        ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow
         ~dest ~packages:opts)
     | Some "-set-mirror" -> begin
         match opts with

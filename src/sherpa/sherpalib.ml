@@ -62,7 +62,7 @@ let pkglist ~sherpa_conf ~yypkg_conf  =
 
 exception Unknown_package of string
 
-let get_packages ~yypkg_conf ~sherpa_conf ~follow_deps ~dest ~packages =
+let get_packages ~yypkg_conf ~sherpa_conf ~follow ~dest ~packages =
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist =
     let pkglist = pkglist ~sherpa_conf ~yypkg_conf in
@@ -76,7 +76,7 @@ let get_packages ~yypkg_conf ~sherpa_conf ~follow_deps ~dest ~packages =
           with Not_found -> raise (Unknown_package p)
         )
     in
-    if follow_deps then get_deps pkglist packages else packages
+    if follow then get_deps pkglist packages else packages
   in
   List.map (download_to_folder ~conf:sherpa_conf dest) pkglist
 
