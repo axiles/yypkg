@@ -21,7 +21,7 @@ let update_list l h id =
   ) l
 
 let filename_check_suffix ext s =
-  Filename.check_suffix s ext
+  FilePath.check_extension s ext
 
 let tar_grep filelist expr ext file =
   (* Str.global_replace quotes_re "\\2" will strip outer quotes from a string *)
