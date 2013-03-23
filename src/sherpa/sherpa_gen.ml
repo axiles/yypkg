@@ -21,7 +21,7 @@ let update_list l h id =
   ) l
 
 let filename_check_suffix ext s =
-  try FilePath.check_extension s ext with FilePath.NoExtension -> false
+  try FilePath.check_extension s ext with FilePath.NoExtension _ -> false
 
 let tar_grep filelist expr ext file =
   (* Str.global_replace quotes_re "\\2" will strip outer quotes from a string *)
