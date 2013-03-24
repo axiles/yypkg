@@ -44,10 +44,8 @@ let main () =
     match action with
     | None -> ()
     | Some "-install" ->
-        let packages =
-          Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow ~dest
-          ~packages:opts
-        in
+        let packages = Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow
+          ~dest ~packages:opts in
         Db.update (Install.install yypkg_conf packages)
     | Some "-download" ->
         ignore (Sherpalib.get_packages ~sherpa_conf ~yypkg_conf ~follow

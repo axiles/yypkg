@@ -75,7 +75,7 @@ let mkdir path_unexpanded =
   FileUtil.mkdir ~parent:true ~mode:0o755 path;
   [ path_unexpanded ]
 
-(* tar xf the folder 'in_' in the package 'pkg' to the folder 'p' *)
+(* tar xf the folder 'in_' from the package 'pkg' to the folder 'p' *)
 let expand pkg in_ p =
   (* NOTE: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
