@@ -33,7 +33,9 @@ let execute_install_action package = function
 let execute_install_action_wrap package (id, action) =
   let can_fail_re = Str.regexp ".*-can-fail" in
   if Str.string_match can_fail_re id 0 then
-    id, (try execute_install_action package action with _ -> NA)
+    id, (try execute_install_action package action with _ ->
+      Printf.eprintf "\nAction '%s' failed but is 'can-fail': continuing." id;
+      NA)
   else
     id, execute_install_action package action
 
