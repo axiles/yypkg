@@ -62,9 +62,7 @@ type install_action =
   | MKdir of string (* mkdir X, path on the system *)
   | SearchReplace of string * string * string
 
-type result = 
-  | Filelist of string list
-  | NA (* XXX: what is this used for? *)
+type result = string list
 
 type uninstall_action =
   | RM of string (* RM X, path on the system *)

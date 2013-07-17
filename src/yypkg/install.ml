@@ -21,21 +21,21 @@ open Types
 open Yylib
 
 let execute_install_action package = function
-  | AHK p -> Filelist (command (ahk_bin :: p))
-  | Expand (in_, p) -> Filelist (expand package in_ p)
-  | Exec p -> Filelist (command p)
-  | MKdir p -> Filelist (mkdir p)
+  | AHK p -> command (ahk_bin :: p)
+  | Expand (in_, p) -> expand package in_ p
+  | Exec p -> command p
+  | MKdir p -> mkdir p
   | SearchReplace (p, search, replace) ->
       let replace = expand_environment_variables replace in
       Lib.search_and_replace_in_file p search replace;
-      NA
+      []
 
 let execute_install_action_wrap package (id, action) =
   let can_fail_re = Str.regexp ".*-can-fail" in
   if Str.string_match can_fail_re id 0 then
     id, (try execute_install_action package action with _ ->
       Printf.eprintf "\nAction '%s' failed but is 'can-fail': continuing." id;
-      NA)
+      [])
   else
     id, execute_install_action package action
 

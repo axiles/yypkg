@@ -119,11 +119,7 @@ let rm path_unexpanded =
 
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =
-  let f = function
-    | _, Filelist l -> List.mem file l
-    | _ -> false
-  in
-  List.exists f result_list
+  List.exists (fun (_id, l) -> List.mem file l) result_list
 
 (* Return the yypkg metadata from a sherpa package *)
 let metadata_of_pkg ((m, _, _), _) =

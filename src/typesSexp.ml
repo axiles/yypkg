@@ -74,10 +74,7 @@ end = struct
     | RM dir -> List [ Atom "RM"; Atom dir ]
     | Reverse action_id -> List [ Atom "Reverse"; Atom action_id ]
 
-  let sexp_of_result result =
-    match result with
-    | Filelist files -> List [ Atom "Filelist"; sexp_of_string_list files ]
-    | NA -> Atom "NA"
+  let sexp_of_result = sexp_of_string_list
 
   let sexp_of_predicate (name, values) =
     List [ Atom name; sexp_of_string_list values ]
@@ -211,12 +208,7 @@ end = struct
     | _ -> of_sexp_error
         "uninstall_action_of_sexp: wrong list or wrong list argument" sexp
 
-  let result_of_sexp sexp =
-    match sexp with
-    | List [ Atom "Filelist"; files ] -> Filelist (string_list_of_sexp files)
-    | Atom "NA" -> NA
-    | _ -> of_sexp_error
-        "result_of_sexp: wrong atom, wrong list or wrong list argument" sexp
+  let result_of_sexp = string_list_of_sexp
 
   let predicate_of_sexp sexp =
     match sexp with
