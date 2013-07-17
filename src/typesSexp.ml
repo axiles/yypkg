@@ -59,6 +59,10 @@ end = struct
 
   let sexp_of_action_id = sexp_of_string
 
+  let sexp_of_filekind = function
+    | `Directory -> Atom "Directory"
+    | `File -> Atom "File"
+
   let sexp_of_install_action install_action =
     match install_action with
     | AHK params -> List [ Atom "AHK"; sexp_of_string_list params ]
@@ -68,6 +72,9 @@ end = struct
     | SearchReplace (file, search, replace) -> List [
         Atom "SearchReplace"; List [ Atom file; Atom search; Atom replace ]
       ]
+    | Symlink (target, name, kind) -> List [
+        Atom "Symlink"; List [ Atom target; Atom name; sexp_of_filekind kind ]
+    ]
 
   let sexp_of_uninstall_action uninstall_action =
     match uninstall_action with
@@ -190,6 +197,13 @@ end = struct
   let string_list_of_sexp sexp = list_of_sexp string_of_sexp sexp
   let action_id_of_sexp = string_of_sexp
 
+  let filekind_of_sexp sexp =
+    match sexp with
+    | Atom "File" -> `File
+    | Atom "Directory" -> `Directory
+    | _ ->
+        of_sexp_error "filekind_of_sexp: wrong atom or wrong atom argument" sexp
+
   let install_action_of_sexp sexp =
     match sexp with
     | List [ Atom "AHK"; params ] -> AHK (string_list_of_sexp params)
@@ -198,6 +212,8 @@ end = struct
     | List [ Atom "MKdir"; Atom dir ] -> MKdir dir
     | List [ Atom "SearchReplace"; List [Atom f; Atom search; Atom replace] ] ->
         SearchReplace (f, search, replace)
+    | List [ Atom "Symlink"; List [ Atom target; Atom name; kind ] ] ->
+        Symlink (target, name, filekind_of_sexp kind)
     | _ -> of_sexp_error
         "install_action_of_sexp: wrong list or wrong list argument" sexp
 

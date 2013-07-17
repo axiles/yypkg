@@ -29,6 +29,9 @@ let execute_install_action package = function
       let replace = expand_environment_variables replace in
       Lib.search_and_replace_in_file p search replace;
       []
+  | Symlink (target, name, kind) ->
+      symlink ~target ~name ~kind;
+      [ name ]
 
 let execute_install_action_wrap package (id, action) =
   let can_fail_re = Str.regexp ".*-can-fail" in

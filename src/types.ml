@@ -55,18 +55,20 @@ let dummy_version () =
 
 (* this is only a name, an identifier *)
 type action_id = string
+type filekind = [ `Directory | `File ]
 type install_action =
   | AHK of string list (* params *)
   | Exec of string list (* argv *)
   | Expand of string * string (* extract from X to Y: from archive to system *)
   | MKdir of string (* mkdir X, path on the system *)
-  | SearchReplace of string * string * string
+  | SearchReplace of string * string * string (* file, search, replace *)
+  | Symlink of string * string * filekind (* target, name, filekind *)
 
 type result = string list
 
 type uninstall_action =
-  | RM of string (* RM X, path on the system *)
-  | Reverse of action_id
+  | RM of string (* rm X, path on the system *)
+  | Reverse of action_id (* remove files added by action action_id *)
 
 type predicate = string * string list
 

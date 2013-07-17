@@ -93,10 +93,10 @@ let expand pkg in_ p =
  *   doesn't fail if a file doesn't exist
  *   removes directories only if empty *)
 let rm path_unexpanded =
-  (* Sys.file_exists and most others will follow symlinks
-   * This means that if 'y' points to 'x' but 'x' doesn't exist, Sys.file_exists
-   * will return false even though 'y' exists *)
   let exists path =
+    (* Sys.file_exists and most others will follow symlinks This means that if
+     * 'y' points to 'x' but 'x' doesn't exist, Sys.file_exists will return
+     * false even though 'y' exists *)
     try ignore (Unix.lstat path); true with _ -> false
   in
   (* FIXME: env var souldn't be kept in the database, they have to be expanded
@@ -104,7 +104,6 @@ let rm path_unexpanded =
   let path_expanded = expand_environment_variables path_unexpanded in
   let path = FilePath.DefaultPath.reduce path_expanded in
   if exists path then
-    (* Sys.file_exists follows symlink and is therefore not usable *)
     if FileUtil.test FileUtil.Is_dir path then
       if [| |] = Sys.readdir path then
         let () = FileUtil.rm ~recurse:true [ path ] in
@@ -188,3 +187,11 @@ let action_of_cmd_line cmd_line =
      * later on *)
     | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
 
+let symlink ~target ~name ~kind =
+  match Lib.os_type, kind with
+  | `Unix, _ -> Unix.symlink target name
+  | `Windows, `File -> Unix.link target name
+  | `Windows, `Directory ->
+      let cmd = String.concat " " [ "mklink"; "/J"; name; target ] in
+      let ret = Sys.command cmd in
+      if ret <> 0 then failwith (sprintf "%S returned %d." cmd ret) else ()

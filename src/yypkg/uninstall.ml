@@ -28,27 +28,26 @@ let file_can_be_removed file other_packages =
   else
     true
 
-let execute_uninstall_action (_, install_results) other_pkgs = function
-  | RM p -> assert false
-      (* id, "" *)
-  | Reverse id -> 
-      (* rm the files that have been added by 'id' *)
-      let pred (action_id, results) = action_id = id in
-      let rm s = if file_can_be_removed s other_pkgs then rm s else () in
-      let g (id, l) =
-        (* we have to reverse the actions: files are create folder first and
-         * then, contents of the folder. Of course, when removing, we have to
-         * remove in reverse order: contents and then folder *)
-        List.iter rm (List.rev l)
-      in
-      List.iter g (List.find_all pred install_results)
+let execute_uninstall_action other_pkgs pkg =
+  let (_, _, uninstall_actions), install_results = pkg in
+  ListLabels.iter uninstall_actions ~f:(function
+    | RM p -> assert false
+    (* id, "" *)
+    | Reverse id ->
+        (* rm the files that have been added by 'id' *)
+        let pred (action_id, results) = action_id = id in
+        ListLabels.iter (List.find_all pred install_results) ~f:(fun (id, l) ->
+          (* We have to reverse the actions: files are created first and then,
+           * contents of the folder. Of course, when removing, we have to remove
+           * in reverse order: contents and then folder *)
+          ListLabels.iter (List.rev l) ~f:(fun s ->
+            if file_can_be_removed s other_pkgs then rm s)
+        )
+  )
 
 let uninstall_package db package_name =
   let pkgs, other_pkgs = List.partition (package_is_named package_name) db in
-  let f (((_, _, u_acts), m) as pkg) =
-    List.iter (execute_uninstall_action pkg other_pkgs) u_acts
-  in
-  List.iter f pkgs;
+  List.iter (execute_uninstall_action other_pkgs) pkgs;
   Db.uninstall_package db package_name
 
 let uninstall db p =
