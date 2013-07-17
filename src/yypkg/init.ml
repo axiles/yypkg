@@ -41,7 +41,7 @@ let init prefix =
   let folders = dl_folder :: (List.map mk_absolute folders) in
   List.iter mkdir folders;
   Sys.chdir prefix;
-  (if "Win32" = Sys.os_type then
+  (if `Windows = Lib.os_type then
     let module FU = FileUtil in
     let fl = FU.find FU.Is_file Lib.binary_path (Lib.prepend_if is_binary) [] in
     FU.cp fl (mk_absolute "sbin"));
