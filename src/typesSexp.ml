@@ -1,5 +1,5 @@
 (*
- * yypkg - A cross-platforma package manager
+ * yypkg - A cross-platform package manager
  * Copyright (C) 2010 Adrien Nader
  *
  * This program is free software: you can redistribute it and/or modify
