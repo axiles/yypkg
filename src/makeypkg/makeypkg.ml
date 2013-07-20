@@ -44,6 +44,16 @@ let xz_opt size =
   let lzma_settings = lzma_settings ~fastest size in
   String.concat " " [ "-vv"; "--x86"; sp "--lzma2=%s" lzma_settings ]
 
+(* tar + xz *)
+let tar_xz tar_args xz_opt out =
+  let tar_args = Array.concat
+    ([| tar; "cvf"; out; "--use-compress-program"; xz |] :: tar_args) in
+  let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
+  let pid = U.create_process_env tar tar_args env U.stdin U.stdout U.stderr in
+  match U.waitpid [] pid with
+  | _, U.WEXITED 0 -> ()
+  | _ -> process_failed tar_args
+
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
   if s <> "" && s.[String.length s - 1] = dir_sep.[0] then

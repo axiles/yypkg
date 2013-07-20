@@ -131,16 +131,6 @@ let tar, xz, wget =
       filename_concat [ binary_path; "xz.exe" ],
       filename_concat [ binary_path; "wget.exe" ]
 
-(* tar + xz *)
-let tar_xz tar_args xz_opt out =
-  let tar_args = Array.concat
-    ([| tar; "cvf"; out; "--use-compress-program"; xz |] :: tar_args) in
-  let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
-  let pid = U.create_process_env tar tar_args env U.stdin U.stdout U.stderr in
-  match U.waitpid [] pid with
-  | _, U.WEXITED 0 -> ()
-  | _ -> process_failed tar_args
-
 (* decompress + untar, "f" will read the output from bsdtar:
  *   'bsdtar xv -O' outputs the content of files to stdout
  *   'bsdtar xv' outputs the list of files expanded to stderr
