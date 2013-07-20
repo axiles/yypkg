@@ -254,7 +254,7 @@ let assert_file_exists f =
 
 exception Skip
 
-let list_rev_map_skip f l =
+let list_rev_map_skip ~f l =
   let rec aux f accu = function
     | hd :: tl ->
         let accu = try (f hd) :: accu with Skip -> accu in
