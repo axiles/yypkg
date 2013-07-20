@@ -236,17 +236,6 @@ let rev_uniq l =
   | t :: q -> rev_uniq_rc [ t ] t q
   | [] -> []
 
-let list_rev_map_exn f l =
-  let rec aux f accu = function
-    | t :: q ->
-        let x = try Some (f t) with _ -> None in
-        (match x with
-        | Some x -> aux f (x :: accu) q
-        | None -> aux f accu q)
-    | [] -> accu
-  in
-  aux f [] l
-
 let prepend_if pred accu x =
   if pred x then x :: accu else accu
 
