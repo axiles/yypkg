@@ -121,7 +121,7 @@ module Package_script = struct
     | Some dir -> aux dir
     | None -> []
 
-  let make ~pkg_size settings =
+  let build ~pkg_size settings =
     let dir = settings.package.basename in
     match script ~script:settings.script ~pkg_size with
     | meta, [], [] ->
@@ -139,7 +139,7 @@ let output_file meta =
   | None -> sp "%s-%s-%s.txz" meta.name version meta.host
   | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
-let compress settings meta (script_dir, script_name) =
+let archive settings meta (script_dir, script_name) =
   let install_scripts = function 
     | Some dir -> [| "-C"; dir.dirname; dir.basename |]
     | None -> [| |]
@@ -205,9 +205,9 @@ Examples:
 let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
-  let meta, _, _ as script = Package_script.make ~pkg_size settings in
+  let meta, _, _ as script = Package_script.build ~pkg_size settings in
   let script = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script in
-  let output_file = compress settings meta script_dir_and_name in
+  let output_file = archive settings meta script_dir_and_name in
   Printf.printf "Package created as: %s\n." output_file
 
