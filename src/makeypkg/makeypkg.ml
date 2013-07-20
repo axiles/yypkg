@@ -22,7 +22,7 @@ open Types
 
 let sp = Printf.sprintf
 
-let xz_call size =
+let xz_opt size =
   let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
   let four_kb = 1 lsl 12 in (* min xz dictionnary size *)
   let smallest_bigger_power_of_two size =
@@ -42,7 +42,7 @@ let xz_call size =
   (* YYLOWCOMPRESS is mostly a quick hack, no need to make it very clean *)
   let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
   let lzma_settings = lzma_settings ~fastest size in
-  [| xz; "-vv"; "--x86"; sp "--lzma2=%s" lzma_settings |]
+  String.concat " " [ "-vv"; "--x86"; sp "--lzma2=%s" lzma_settings ]
 
 let rec strip_trailing_slash s =
   (* dir_sep's length is 1 *)
@@ -134,16 +134,16 @@ let compress settings meta (script_dir, script_name) =
     | Some dir -> [| "-C"; dir.dirname; dir.basename |]
     | None -> [| |]
   in
-  let tar_args = Array.concat [
+  let tar_args = [
     [| "--exclude=*.la" |];
     [| "-C"; script_dir; script_name |];
     install_scripts settings.install_scripts;
     [| "-C"; settings.package.dirname; settings.package.basename |]
   ]
   in
-  let snd = xz_call (FileUtil.byte_of_size meta.size_expanded) in
+  let xz_opt = xz_opt (FileUtil.byte_of_size meta.size_expanded) in
   let output_path = Filename.concat settings.output (output_file meta) in
-  tar_compress tar_args snd output_path;
+  tar_xz tar_args xz_opt output_path;
   output_path
 
 let dummy_script () =

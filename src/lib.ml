@@ -131,18 +131,15 @@ let tar, xz, wget =
       filename_concat [ binary_path; "xz.exe" ],
       filename_concat [ binary_path; "wget.exe" ]
 
-(* tar + compress on unix, piping the output of tar to the compressor *)
-let tar_compress tar_args compress out =
-  let tar_args = Array.concat [ [| tar; "cvf"; "-" |]; tar_args ] in
-  let fst_out, fst_in = U.pipe () in
-  let snd_out = U.openfile out [ U.O_WRONLY; U.O_CREAT; U.O_TRUNC ] 0o644 in
-  let pid1 = U.create_process tar tar_args U.stdin fst_in U.stderr in
-  U.close fst_in;
-  let pid2 = U.create_process compress.(0) compress fst_out snd_out U.stderr in
-  U.close fst_out; U.close snd_out;
-  match snd (U.waitpid [] pid2), snd (U.waitpid [] pid1) with
-  | U.WEXITED 0, U.WEXITED 0 -> ()
-  | _, _ -> process_failed tar_args 
+(* tar + xz *)
+let tar_xz tar_args xz_opt out =
+  let tar_args = Array.concat
+    ([| tar; "cvf"; out; "--use-compress-program"; xz |] :: tar_args) in
+  let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
+  let pid = U.create_process_env tar tar_args env U.stdin U.stdout U.stderr in
+  match U.waitpid [] pid with
+  | _, U.WEXITED 0 -> ()
+  | _ -> process_failed tar_args
 
 (* decompress + untar, "f" will read the output from bsdtar:
  *   'bsdtar xv -O' outputs the content of files to stdout
