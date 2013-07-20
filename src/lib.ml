@@ -18,7 +18,6 @@
  *)
 
 open Types
-module U = Unix
 
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
