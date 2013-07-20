@@ -121,15 +121,34 @@ module Package_script = struct
     | Some dir -> aux dir
     | None -> []
 
+  let segregate_symlinks dir =
+    let module FU = FileUtil in
+    let accumulate =
+      let i = ref (-1) in
+      fun l e ->
+        let target = FU.readlink e in
+        let kind = match (FU.stat target).FU.kind with
+        | FU.Dir -> `Directory
+        | FU.File -> `File
+        | _ -> assert false (* other kinds don't make sense in packages *)
+        in
+        incr i;
+        (sp "symlink_%d" !i, Symlink (target, e, kind)) :: l
+    in
+    FU.find ~follow:FU.Skip FU.Is_link dir accumulate []
+
   let build ~pkg_size settings =
     let dir = settings.package.basename in
     match script ~script:settings.script ~pkg_size with
     | meta, [], [] ->
-        (* we want to expand the content of dir so we suffix it with '/' *)
         let expand_id = sp "expand_%s" dir in
-        let expand = expand_id, Expand (dir ^ "/", ".") in
-        let install_scripts = run_install_scripts settings.install_scripts in
-        meta, expand :: install_scripts, [ Reverse expand_id ]
+        let install_actions =
+          (* we want to expand the content of dir so we suffix it with '/' *)
+          (expand_id, Expand (dir ^ "/", "."))
+          :: run_install_scripts settings.install_scripts
+          @ (segregate_symlinks settings.package.path)
+        in
+        meta, install_actions, [ Reverse "symlinks"; Reverse expand_id ]
     | script -> script
 end
 
@@ -139,13 +158,20 @@ let output_file meta =
   | None -> sp "%s-%s-%s.txz" meta.name version meta.host
   | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
-let archive settings meta (script_dir, script_name) =
+let archive settings (meta, install_actions, _) (script_dir, script_name) =
+  let symlinks =
+    list_rev_map_skip install_actions ~f:(function
+      | _id, Symlink (_t, n, _k) -> sp "--exclude=%s" n
+      | _ -> raise Skip
+    )
+  in
   let install_scripts = function 
     | Some dir -> [| "-C"; dir.dirname; dir.basename |]
     | None -> [| |]
   in
   let tar_args = [
     [| "--exclude=*.la" |];
+    Array.of_list symlinks;
     [| "-C"; script_dir; script_name |];
     install_scripts settings.install_scripts;
     [| "-C"; settings.package.dirname; settings.package.basename |]
@@ -205,9 +231,9 @@ Examples:
 let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
-  let meta, _, _ as script = Package_script.build ~pkg_size settings in
-  let script = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
-  let script_dir_and_name = write_temp_file "package_script.el" script in
-  let output_file = archive settings meta script_dir_and_name in
+  let script = Package_script.build ~pkg_size settings in
+  let script_sexp = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
+  let script_dir_and_name = write_temp_file "package_script.el" script_sexp in
+  let output_file = archive settings script script_dir_and_name in
   Printf.printf "Package created as: %s\n." output_file
 
