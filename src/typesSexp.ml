@@ -20,16 +20,6 @@ open Sexplib.Sexp
 open Sexplib.Conv
 open Types
 
-let record_undefined_fields ~name ~l ~sexp =
-  let f errs (field, missing) = if missing then field :: errs else errs in
-  let missing = List.fold_left f [] l in
-  let msg = [ name; "some fields are missing"; String.concat ", " missing ] in
-  of_sexp_error (String.concat ": " msg) sexp
-
-let record_extra_fields ~name ~extra ~sexp =
-  let msg = [ name; "there are extra fields"; String.concat ", " extra ] in
-  of_sexp_error (String.concat ": " msg) sexp
-
 module Of : sig
   val metadata : metadata -> t
   val conf : conf -> t
@@ -50,7 +40,7 @@ end = struct
 
   let sexp_of_string_list params = sexp_of_list sexp_of_string params
 
-  let sexp_of_action_id = sexp_of_string
+  let sexp_of_action_id s = Atom s
 
   let sexp_of_filekind = function
     | `Directory -> Atom "Directory"
@@ -81,14 +71,17 @@ end = struct
 
   let sexp_of_size size =
     let p s i =
-      List [ Atom s; Atom (Int64.to_string i) ]
+      List [ Atom s; sexp_of_int64 i ]
     in
     match size with
     | FileUtil.TB i -> p "TB" i
     | FileUtil.GB i -> p "GB" i
     | FileUtil.MB i -> p "MB" i
     | FileUtil.KB i -> p "KB" i
-    | FileUtil.B i -> p "B" i
+    | FileUtil.B  i -> p  "B" i
+
+  let sexp_of_string_tuple (s1, s2) =
+    List [ Atom s1; Atom s2 ]
 
   let sexp_of_metadata m =
     List [
@@ -100,8 +93,7 @@ end = struct
       List [ Atom "description"; Atom m.description ];
       List [ Atom "host"; Atom m.host ];
       List [ Atom "target"; sexp_of_option sexp_of_string m.target ];
-      List [ Atom "predicates"; sexp_of_list (fun (s1, s2) ->
-          List [ Atom s1; Atom s2 ])  m.predicates ];
+      List [ Atom "predicates"; sexp_of_list sexp_of_string_tuple m.predicates ];
       List [ Atom "comments"; sexp_of_string_list m.comments ];
     ]
 
@@ -161,13 +153,52 @@ module To : sig
   val sherpa_conf : t -> SherpaT.sherpa_conf
   val repo : t -> SherpaT.repo
 end = struct
+  module Record = struct
+    let accumulate ~f_name ~f_sexp ~duplicates ~fields ~extra =
+      try
+        let is_set, conv = List.assoc f_name fields in
+        if is_set () then
+          duplicates := f_name :: !duplicates
+        else
+          conv f_sexp
+      with Not_found -> extra := f_name :: !extra
+
+    let field_iter ~func ~fields l =
+      let extra = ref [] in
+      let duplicates = ref [] in
+      ListLabels.iter l ~f:(function
+        | List [ Atom f_name; f_sexp ] ->
+            accumulate ~f_name ~f_sexp ~duplicates ~fields ~extra
+        | sexp ->
+            of_sexp_error (func ^ ": atom or wrong list element") sexp
+      );
+      !duplicates, !extra
+
+    let undefined_fields ~func ~fields ~sexp =
+      let f errs (name, (is_set, _)) = if is_set () then name :: errs else errs in
+      let msg = Printf.sprintf "%s: some fields are missing: %s" func
+        (String.concat ", " (List.fold_left f [] fields))
+      in
+      of_sexp_error msg sexp
+
+    let parse ~func ~sexp ~fields ~build_value =
+      match sexp with
+      | List l ->
+          let _duplicates, _extra = field_iter ~func ~fields l in
+          build_value ()
+      | _ -> of_sexp_error (func ^ ": atom argument") sexp
+
+    let field_spec name var conv =
+      name, ((fun () -> !var != None) , (fun sexp -> var := Some (conv sexp)))
+  end
+
   let source_version_of_sexp = function
     | List [ Atom "Alpha"; Atom s ] -> Alpha s
     | List [ Atom "Beta"; Atom s ] -> Beta s
     | List [ Atom "RC"; Atom s ] -> RC s
     | List [ Atom "Snapshot"; Atom s ] -> Snapshot s
     | List [ Atom "Stable"; Atom s ] -> Stable s
-    | sexp -> of_sexp_error "source_version_of_sexp: wrong atom or wrong atom argument" sexp
+    | sexp -> of_sexp_error "source_version_of_sexp: atom or wrong atom" sexp
 
   let version_of_sexp sexp =
     match sexp with
@@ -185,7 +216,7 @@ end = struct
     | Atom "File" -> `File
     | Atom "Directory" -> `Directory
     | _ ->
-        of_sexp_error "filekind_of_sexp: wrong atom or wrong atom argument" sexp
+        of_sexp_error "filekind_of_sexp: list or wrong atom argument" sexp
 
   let install_action_of_sexp sexp =
     match sexp with
@@ -198,14 +229,14 @@ end = struct
     | List [ Atom "Symlink"; List [ Atom target; Atom name; kind ] ] ->
         Symlink (target, name, filekind_of_sexp kind)
     | _ -> of_sexp_error
-        "install_action_of_sexp: wrong list or wrong list argument" sexp
+        "install_action_of_sexp: atom or wrong list argument" sexp
 
   let uninstall_action_of_sexp sexp =
     match sexp with
     | List [ Atom "RM"; Atom dir ] -> RM dir
     | List [ Atom "Reverse"; Atom action_id ] -> Reverse action_id
     | _ -> of_sexp_error
-        "uninstall_action_of_sexp: wrong list or wrong list argument" sexp
+        "uninstall_action_of_sexp: atom or wrong list argument" sexp
 
   let result_of_sexp = string_list_of_sexp
 
@@ -213,13 +244,11 @@ end = struct
     match sexp with
     | List [ Atom name; values ] -> name, string_list_of_sexp values
     | _ -> of_sexp_error
-        "predicate_of_sexp: wrong list or wrong list argument" sexp
+        "predicate_of_sexp: atom or wrong list argument" sexp
 
   let size_of_sexp sexp = match sexp with
-    | Sexplib.Sexp.List [ Sexplib.Sexp.Atom mult; Sexplib.Sexp.Atom s ] ->
-        let i = try Int64.of_string s with Failure "int_of_string" ->
-          of_sexp_error "size_of_sexp: size isn't a valid integer" sexp
-        in
+    | List [ Atom mult; i ] ->
+        let i = int64_of_sexp i in
         begin match mult with
         | "TB" -> FileUtil.TB i | "GB" -> FileUtil.GB i | "MB" -> FileUtil.MB i
         | "KB" -> FileUtil.KB i | "B" -> FileUtil.B i
@@ -232,70 +261,54 @@ end = struct
     | None -> res := Some (conv f_sexp)
     | Some _ -> duplicates := f_name :: !duplicates
 
+  let string_tuple_of_sexp = function
+    | List [ Atom s1; Atom s2 ] -> s1, s2
+    | sexp -> of_sexp_error "string_tuple_of_sexp: not a tuple" sexp
+
   let metadata_of_sexp sexp =
+    let func = "metadata_of_sexp" in
     let name = ref None and size_expanded = ref None and version = ref None and
     packager_email = ref None and packager_name = ref None and description = ref
     None and host = ref None and target = ref None and predicates = ref None and
     comments = ref None in
-    let duplicates = ref [] in
-    let extra = ref [] in
-    let rec aux = function
-      | List [ Atom f_name; f_sexp ] :: q ->
-          let f ~conv ~res =
-            record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
-          in
-          let g = function
-            | List [ Atom s1; Atom s2 ] -> s1, s2
-            | _ -> of_sexp_error "" sexp
-          in
-          (match f_name with
-          | "name" -> f ~conv:string_of_sexp ~res:name
-          | "size_expanded" -> f ~conv:size_of_sexp ~res:size_expanded
-          | "version" -> f ~conv:version_of_sexp ~res:version
-          | "packager_email" -> f ~conv:string_of_sexp ~res:packager_email
-          | "packager_name" -> f ~conv:string_of_sexp ~res:packager_name
-          | "description" -> f ~conv:string_of_sexp ~res:description
-          | "host" -> f ~conv:string_of_sexp ~res:host
-          | "target" -> f ~conv:(option_of_sexp string_of_sexp) ~res:target
-          | "predicates" -> f ~conv:(list_of_sexp g) ~res:predicates
-          | "comments" -> f ~conv:string_list_of_sexp ~res:comments
-          | _ -> extra := f_name :: !extra);
-          aux q
-      | [] -> (
-          match (!name, !size_expanded, !version, !packager_email, !packager_name,
-          !description, !host, !target, !predicates, !comments) with
-          | Some name, Some size_expanded, Some version, Some packager_email,
-            Some packager_name, Some description, Some host, Some target,
-            Some predicates, Some comments ->
-              { name; size_expanded; version; packager_email; packager_name;
-                description; host; target; predicates; comments }
-          | _ ->
-              record_undefined_fields ~name:"metadata_of_sexp" ~sexp ~l:[
-                "name", !name = None; "size_expanded", !size_expanded = None;
-                "version", !version = None; "packager_email", !packager_email =
-                None; "packager_name", !packager_name = None; "description",
-                !description = None; "host", !host = None; "predicates",
-                !predicates = None; "comments", !comments = None
-              ]
-        )
-      | _ -> of_sexp_error "metadata_of_sexp: atom or wrong list element" sexp
+    let fields = Record.([
+      field_spec "name" name string_of_sexp;
+      field_spec "size_expanded" size_expanded size_of_sexp;
+      field_spec "version" version version_of_sexp;
+      field_spec "packager_email" packager_email string_of_sexp;
+      field_spec "packager_name" packager_name string_of_sexp;
+      field_spec "description" description string_of_sexp;
+      field_spec "host" host string_of_sexp;
+      field_spec "target" target (option_of_sexp string_of_sexp);
+      field_spec "predicates" predicates (list_of_sexp string_tuple_of_sexp);
+      field_spec "comments" comments string_list_of_sexp;
+    ])
     in
-    match sexp with
-    | List l -> aux l
-    | _ -> of_sexp_error "metadata_of_sexp: atom argument" sexp
+    let build_value () =
+      match (!name, !size_expanded, !version, !packager_email, !packager_name,
+      !description, !host, !target, !predicates, !comments) with
+      | Some name, Some size_expanded, Some version, Some packager_email,
+        Some packager_name, Some description, Some host, Some target,
+        Some predicates, Some comments ->
+          { name; size_expanded; version; packager_email; packager_name;
+            description; host; target; predicates; comments }
+      | _ ->
+          Record.undefined_fields ~func ~sexp ~fields
+    in
+    Record.parse ~func ~sexp ~fields ~build_value
 
   let script_of_sexp sexp =
     let f = function
       | List [ action_id; install_action ] ->
           action_id_of_sexp action_id, install_action_of_sexp install_action
       | _ -> of_sexp_error
-          "predicate_of_sexp: install_actions: atom or wrong list" sexp
+          "install_actions: atom or wrong list" sexp
     in
     match sexp with
     | List [ metadata; install_actions; uninstall_actions ] ->
         metadata_of_sexp metadata, list_of_sexp f install_actions, list_of_sexp
         uninstall_action_of_sexp uninstall_actions
-    | _ -> of_sexp_error "predicate_of_sexp: atom or wrong list" sexp
+    | _ -> of_sexp_error "script_of_sexp: atom or wrong list" sexp
 
   let package_of_sexp sexp =
     let f = function
@@ -317,102 +330,63 @@ end = struct
     | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
 
   let pkg_of_sexp sexp =
+    let func = "pkg_of_sexp" in
     let metadata = ref None and size_compressed = ref None and files = ref None
     and filename = ref None and signature = ref None and deps = ref None in
-    let duplicates = ref [] in
-    let extra = ref [] in
-    let rec aux = function
-      | List [ Atom f_name; f_sexp ] :: q ->
-          let f ~conv ~res =
-            record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
-          in
-          (match f_name with
-          | "metadata" -> f ~conv:metadata_of_sexp ~res:metadata
-          | "size_compressed" -> f ~conv:size_of_sexp ~res:size_compressed
-          | "filename" -> f ~conv:string_of_sexp ~res:filename
-          | "signature" -> f ~conv:(option_of_sexp string_of_sexp) ~res:signature
-          | "files" -> f ~conv:string_list_of_sexp ~res:files
-          | "deps" -> f ~conv:string_list_of_sexp ~res:deps
-          | _ -> extra := f_name :: !extra);
-          aux q
-      | [] -> (
-          match (!metadata, !size_compressed, !filename, !signature, !files,
-          !deps) with
-          | Some metadata, Some size_compressed, Some filename, Some signature,
-            Some files, Some deps ->
-              { metadata; size_compressed; filename; signature; files; deps }
-          | _ ->
-              record_undefined_fields ~name:"pkg_of_sexp" ~sexp ~l:[
-                "metadata", !metadata = None; "signature", !signature = None;
-                "size_compressed", !size_compressed = None; "filename",
-                !filename = None; "files", !files = None; "deps", !deps = None
-              ]
-        )
-      | _ -> of_sexp_error "pkg_of_sexp: atom or wrong list element" sexp
+    let fields = Record.([
+      field_spec "metadata" metadata metadata_of_sexp;
+      field_spec "size_compressed" size_compressed size_of_sexp;
+      field_spec "filename" filename string_of_sexp;
+      field_spec "signature" signature (option_of_sexp string_of_sexp);
+      field_spec "files" files string_list_of_sexp;
+      field_spec "deps" deps string_list_of_sexp;
+    ])
     in
-    match sexp with
-    | List l -> aux l
-    | _ -> of_sexp_error "pkg_of_sexp: atom argument" sexp
+    let build_value () =
+      match (!metadata, !size_compressed, !filename, !signature, !files, !deps)
+      with
+      | Some metadata, Some size_compressed, Some filename, Some signature,
+        Some files, Some deps ->
+          { metadata; size_compressed; filename; signature; files; deps }
+      | _ ->
+          Record.undefined_fields ~func ~sexp ~fields
+    in
+    Record.parse ~func ~sexp ~fields ~build_value
 
   let repo_of_sexp sexp =
+    let func = "repo_of_sexp" in
     let target = ref None and host = ref None and pkglist = ref None in
-    let duplicates = ref [] in
-    let extra = ref [] in
-    let rec aux = function
-      | List [ Atom f_name; f_sexp ] :: q ->
-          let f ~conv ~res =
-            record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
-          in
-          (match f_name with
-          | "target" -> f ~conv:string_of_sexp ~res:target
-          | "host" -> f ~conv:string_of_sexp ~res:host
-          | "pkglist" -> f ~conv:(list_of_sexp pkg_of_sexp) ~res:pkglist
-          | _ -> extra := f_name :: !extra);
-          aux q
-      | [] -> (
-          match !target, !host, !pkglist with
-          | Some target, Some host, Some pkglist ->
-              { SherpaT.target; host; pkglist }
-          | _ -> 
-              record_undefined_fields ~name:"repo_of_sexp" ~sexp ~l:[
-                "target", !target = None; "host", !host = None;
-                "pkglist", !pkglist = None ]
-        )
-      | _ -> of_sexp_error "repo_of_sexp: atom or wrong list element" sexp
+    let fields = Record.([
+      field_spec "target" target string_of_sexp;
+      field_spec "host" host string_of_sexp;
+      field_spec "pkglist" pkglist (list_of_sexp pkg_of_sexp);
+    ])
     in
-    match sexp with
-    | List l -> aux l
-    | _ -> of_sexp_error "repo_of_sexp: atom argument" sexp
+    let build_value () =
+      match !target, !host, !pkglist with
+      | Some target, Some host, Some pkglist ->
+          { SherpaT.target; host; pkglist }
+      | _ -> 
+          Record.undefined_fields ~func ~sexp ~fields
+    in
+    Record.parse ~func ~sexp ~fields ~build_value
 
   let sherpa_conf_of_sexp sexp =
+    let func = "sherpa_conf_of_sexp" in
     let mirror = ref None and download_folder = ref None in
-    let duplicates = ref [] in
-    let extra = ref [] in
-    let rec aux = function
-      | List [ Atom f_name; f_sexp ] :: q ->
-          let f ~conv ~res =
-            record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res
-          in
-          (match f_name with
-          | "mirror" -> f ~conv:string_of_sexp ~res:mirror
-          | "download_folder" -> f ~conv:string_of_sexp ~res:download_folder
-          | _ -> extra := f_name :: !extra);
-          aux q
-      | [] -> (
-          match !mirror, !download_folder with
-          | Some mirror, Some download_folder ->
-              { SherpaT.mirror; download_folder }
-          | _ -> 
-              record_undefined_fields ~name:"sherpa_conf_of_sexp" ~sexp ~l:[
-                "mirror", !mirror = None; "download_folder", !download_folder =
-                  None
-              ]
-        )
-      | _ -> of_sexp_error "sherpa_conf_of_sexp: atom or wrong list element" sexp
+    let fields = Record.([
+      field_spec "mirror" mirror string_of_sexp;
+      field_spec "download_folder" download_folder string_of_sexp;
+    ])
     in
-    match sexp with
-    | List l -> aux l
-    | _ -> of_sexp_error "sherpa_conf_of_sexp: atom argument" sexp
+    let build_value () =
+      match !mirror, !download_folder with
+      | Some mirror, Some download_folder ->
+          { SherpaT.mirror; download_folder }
+      | _ -> 
+          Record.undefined_fields ~func ~sexp ~fields
+    in
+    Record.parse ~func ~sexp ~fields ~build_value
 
   let script = script_of_sexp
   let conf = conf_of_sexp
