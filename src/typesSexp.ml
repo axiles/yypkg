@@ -38,22 +38,15 @@ module Of : sig
   val script : script -> t
   val repo : SherpaT.repo -> t
 end = struct
-  let sexp_of_date (year, month, day, hour, minute) =
-    let f = Sexplib.Conv.sexp_of_int in
-    Sexplib.Sexp.List [ f year; f month; f day; f hour; f minute ]
+  let sexp_of_source_version = function
+    | Alpha s -> List [ Atom "Alpha"; Atom s ]
+    | Beta s -> List [ Atom "Beta"; Atom s ]
+    | RC s -> List [ Atom "RC"; Atom s ]
+    | Snapshot s -> List [ Atom "Snapshot"; Atom s ]
+    | Stable s -> List [ Atom "Stable"; Atom s ]
 
-  let sexp_of_status status =
-    match status with
-    | Alpha i -> List [ Atom "Alpha"; sexp_of_int i ]
-    | Beta i -> List [ Atom "Beta"; sexp_of_int i ]
-    | RC i -> List [ Atom "RC"; sexp_of_int i ]
-    | Snapshot_date date -> List [ Atom "Snapshot_date"; sexp_of_date date ]
-    | Snapshot_hash s -> List [ Atom "Snapshot_hash"; Atom s ]
-    | Stable -> Atom "Stable"
-
-  let sexp_of_version (version_cmpnts, status, build_number) =
-    List [ sexp_of_list sexp_of_string version_cmpnts; sexp_of_status status;
-    sexp_of_int build_number ]
+  let sexp_of_version (source_version, build_number) =
+    List [ sexp_of_source_version source_version; sexp_of_int build_number ]
 
   let sexp_of_string_list params = sexp_of_list sexp_of_string params
 
@@ -168,30 +161,20 @@ module To : sig
   val sherpa_conf : t -> SherpaT.sherpa_conf
   val repo : t -> SherpaT.repo
 end = struct
-  let date_of_sexp sexp =
-    let f = int_of_sexp in
-    match sexp with
-    | Sexplib.Sexp.List [ year; month; day; hour; minute ] ->
-        (f year, f month, f day, f hour, f minute)
-    | _ -> of_sexp_error "data_of_sexp: list of 5 int atoms needed" sexp
-
-  let status_of_sexp (sexp : Sexplib.Sexp.t) =
-    match sexp with
-    | List [ Atom "Alpha"; i ] -> Alpha (int_of_sexp i)
-    | List [ Atom "Beta"; i ] -> Beta (int_of_sexp i)
-    | List [ Atom "RC"; i ] -> RC (int_of_sexp i)
-    | List [ Atom "Snapshot_date"; date ] -> Snapshot_date (date_of_sexp date)
-    | List [ Atom "Snapshot_hash"; Atom hash ] -> Snapshot_hash hash
-    | Atom "Stable" -> Stable
-    | _ -> of_sexp_error "status_of_sexp: wrong atom or wrong atom argument" sexp
+  let source_version_of_sexp = function
+    | List [ Atom "Alpha"; Atom s ] -> Alpha s
+    | List [ Atom "Beta"; Atom s ] -> Beta s
+    | List [ Atom "RC"; Atom s ] -> RC s
+    | List [ Atom "Snapshot"; Atom s ] -> Snapshot s
+    | List [ Atom "Stable"; Atom s ] -> Stable s
+    | sexp -> of_sexp_error "source_version_of_sexp: wrong atom or wrong atom argument" sexp
 
   let version_of_sexp sexp =
     match sexp with
-    | List [ version_cmpnts; status; build_number ] ->
-        let version_cmpnts = list_of_sexp string_of_sexp version_cmpnts in
-        (version_cmpnts, status_of_sexp status, int_of_sexp build_number)
+    | List [ source_version; build_number ] ->
+        source_version_of_sexp source_version, int_of_sexp build_number
     | List _ -> of_sexp_error
-        "version_of_sexp: list must contain exactly three elements" sexp
+        "version_of_sexp: list must contain exactly two elements" sexp
     | Atom _ -> of_sexp_error "version_of_sexp: list needed" sexp
 
   let string_list_of_sexp sexp = list_of_sexp string_of_sexp sexp

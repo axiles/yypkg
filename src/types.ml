@@ -16,42 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-type date =
-  int (* year *)
-  * int (* month *)
-  * int (* day *)
-  * int (* hour *)
-  * int (* minute *)
+type source_version = 
+  | Stable of string
+  | RC of string
+  | Beta of string
+  | Alpha of string
+  | Snapshot of string
 
-let string_of_date (year, month, day, hour, minute) =
-  Printf.sprintf "%d-%d-%d-%d-%d" year month day hour minute
+let string_of_source_version = function
+  | Alpha s -> "alpha-" ^ s
+  | Beta s -> "beta-" ^ s
+  | RC s -> "rc-" ^ s
+  | Snapshot s -> "snapshot-" ^ s
+  | Stable s -> "stable-" ^ s
 
-type status = 
-  | Alpha of int
-  | Beta of int
-  | RC of int
-  | Snapshot_date of date
-  | Snapshot_hash of string
-  | Stable
-
-let string_of_status = function
-  | Alpha x -> Printf.sprintf "alpha-%d" x
-  | Beta x -> Printf.sprintf "beta-%d" x
-  | RC x -> Printf.sprintf "rc-%d" x
-  | Snapshot_date date -> Printf.sprintf "snapshot-%s" (string_of_date date)
-  | Snapshot_hash s -> Printf.sprintf "snapshot-%s" s
-  | Stable -> "stable"
-
-type version = (string list * status * int)
+type version = source_version * int
 
 (* create a string from a version *)
-let string_of_version (version, status, iteration) =
-  let version = String.concat "." version in
-  let status = string_of_status status in
-  String.concat "-" [ version; status; string_of_int iteration ]
+let string_of_version (source_version, iteration) =
+  Printf.sprintf "%s-%d" (string_of_source_version source_version) iteration
 
 let dummy_version () =
-  [ "0"; "0"; "17" ], Snapshot_date ( 1970, 01, 01, 00, 00 ), 1
+  Snapshot "1970-01-01-00-00", 1
 
 (* this is only a name, an identifier *)
 type action_id = string
