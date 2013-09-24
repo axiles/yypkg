@@ -23,21 +23,18 @@ open Types
 let sp = Printf.sprintf
 
 let xz_opt size =
-  let sixty_four_mb = 1 lsl 26 in (* max xz dictionnary size *)
-  let four_kb = 1 lsl 12 in (* min xz dictionnary size *)
+  let max_dict = 1 lsl 26 in (* 64MB *)
+  let min_dict = 1 lsl 18 in (* 256kB *)
   let smallest_bigger_power_of_two size =
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
-  let lzma_settings ?(fastest=false) size =
-    let dict = max four_kb (smallest_bigger_power_of_two size) in
-    let dict = min sixty_four_mb dict in
-    let dict, mf, mode, nice = if fastest then
-      string_of_int four_kb, "hc3", "fast", "3"
+  let lzma_settings ~fastest size =
+    if fastest then
+      sp "dict=%d,mf=%s,mode=%s,nice=%d" min_dict "hc3" "fast" 3
     else
-      string_of_int dict, "bt4", "normal", "128"
-    in
-    let p = sp "%s=%s" in
-    String.concat "," [ p "dict" dict; p "mf" mf; p "mode" mode; p "nice" nice ]
+      let dict = max min_dict (smallest_bigger_power_of_two size) in
+      let dict = min max_dict dict in
+      sp "dict=%d,mf=%s,mode=%s,nice=%d" dict "bt4" "normal" 128
   in
   (* YYLOWCOMPRESS is mostly a quick hack, no need to make it very clean *)
   let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
