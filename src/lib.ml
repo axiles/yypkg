@@ -21,6 +21,8 @@ open Types
 
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
+exception Skip
+
 
 let may f = function
   | None -> ()
@@ -250,8 +252,6 @@ let rev_may_value l =
 let assert_file_exists f =
   if not (Sys.file_exists f) then
     raise (File_not_found f)
-
-exception Skip
 
 let list_rev_map_skip ~f l =
   let rec aux f accu = function
