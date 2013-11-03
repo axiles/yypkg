@@ -119,6 +119,15 @@ module Package_script = struct
 
   let segregate_symlinks dir =
     let module FU = FileUtil in
+    let report_format = format_of_string "[symlink] %s: %S -> %S\n" in
+    let report e t kind =
+      let kind_string = match kind with
+      | `Directory -> "directory"
+      | `File -> "file"
+      | `Unhandled reason -> sp "unhandled (%s)" reason
+      in
+      ep report_format kind_string e t
+    in
     let accumulate =
       fun l e ->
         let target = FU.readlink e in
@@ -127,6 +136,7 @@ module Package_script = struct
         | FU.File -> `File
         | _ -> assert false (* other kinds don't make sense in packages *)
         in
+        report e target kind;
         ("symlink", Symlink (target, e, kind)) :: l
     in
     FU.find ~follow:FU.Skip FU.Is_link dir accumulate []
