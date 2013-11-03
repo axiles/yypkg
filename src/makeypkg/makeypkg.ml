@@ -130,7 +130,7 @@ module Package_script = struct
     in
     let accumulate =
       fun l e0 ->
-        let target0 = FU.readlink e0 in
+        let target0 = Unix.readlink e0 in
         let e = FilePath.make_relative dir e0 in
         let target = FilePath.make_relative (FilePath.dirname e0) target0 in
         let kind =
