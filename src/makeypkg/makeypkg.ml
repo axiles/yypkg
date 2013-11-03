@@ -20,8 +20,6 @@ open Types
 open Lib
 open Types
 
-let sp = Printf.sprintf
-
 let xz_opt size =
   let max_dict = 1 lsl 26 in (* 64MB *)
   let min_dict = 1 lsl 18 in (* 256kB *)

@@ -23,7 +23,7 @@ open Yylib
 let file_can_be_removed file other_packages =
   (* not (List.exists (file_exists_in_package file) other_packages) *)
   if List.exists (file_exists_in_package file) other_packages then (
-    Printf.eprintf "Not removed (exists in another package): %s\n" file;
+    Lib.ep "Not removed (exists in another package): %s\n" file;
     false)
   else
     true

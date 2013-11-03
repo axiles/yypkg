@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-open Printf
 open Types
 
 let ahk_bin =
@@ -107,14 +106,14 @@ let rm path_unexpanded =
     if FileUtil.test FileUtil.Is_dir path then
       if [| |] = Sys.readdir path then
         let () = FileUtil.rm ~recurse:true [ path ] in
-        Printf.eprintf "Removed: %s\n" path
+        Lib.ep "Removed: %s\n" path
       else
-        Printf.eprintf "Not removed (directory not empty): %s\n" path
+        Lib.ep "Not removed (directory not empty): %s\n" path
     else
       let () = FileUtil.rm [ path ] in
-      Printf.eprintf "Removed: %s\n" path
+      Lib.ep "Removed: %s\n" path
   else
-    Printf.eprintf "Not removed (doesn't exist): %s\n" path
+    Lib.ep "Not removed (doesn't exist): %s\n" path
 
 (* checks if a file exists in any package in a given database *)
 let file_exists_in_package file (_, result_list) =

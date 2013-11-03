@@ -4,9 +4,6 @@ module ST = SherpaT
 let pc : (string, string) Hashtbl.t = Hashtbl.create 20
 let libs : (string, string) Hashtbl.t = Hashtbl.create 20
 
-let sp = Printf.sprintf
-let ep = Printf.eprintf
-
 (* Update the hashtables to mention with the names of the packages containing
  * the various files *)
 let update_list l h id =
@@ -14,7 +11,7 @@ let update_list l h id =
     if Hashtbl.mem h x then
       let e = Hashtbl.find h x in
       if e <> id then
-        (ep "%s can't provide %s: %s already does." id x e;
+        (Lib.ep "%s can't provide %s: %s already does." id x e;
         assert false)
     else
       Hashtbl.add h x id
@@ -149,13 +146,13 @@ let repo_metadata pkglist =
   | [ target ], [ host ] -> { ST.target; host; pkglist }
   | [], [ host ] -> { ST.target = host; host; pkglist }
   | [], [] ->
-      ep "Error: not target and no host found";
+      Lib.ep "Error: not target and no host found";
       assert false
   | _, _ ->
       (if targets <> [] then
-        ep "Error: several targets seen: %s\n" (String.concat ", " targets));
+        Lib.ep "Error: several targets seen: %s\n" (String.concat ", " targets));
       (if hosts <> [] then
-        ep "Error: several hosts seen: %s\n" (String.concat ", " hosts));
+        Lib.ep "Error: several hosts seen: %s\n" (String.concat ", " hosts));
       assert false
 
 module Output = struct
