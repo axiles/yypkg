@@ -120,7 +120,6 @@ module Package_script = struct
   let segregate_symlinks dir =
     let module FU = FileUtil in
     let accumulate =
-      let i = ref (-1) in
       fun l e ->
         let target = FU.readlink e in
         let kind = match (FU.stat target).FU.kind with
@@ -128,8 +127,7 @@ module Package_script = struct
         | FU.File -> `File
         | _ -> assert false (* other kinds don't make sense in packages *)
         in
-        incr i;
-        (sp "symlink_%d" !i, Symlink (target, e, kind)) :: l
+        ("symlink", Symlink (target, e, kind)) :: l
     in
     FU.find ~follow:FU.Skip FU.Is_link dir accumulate []
 
@@ -144,7 +142,7 @@ module Package_script = struct
           :: run_install_scripts settings.install_scripts
           @ (segregate_symlinks settings.package.path)
         in
-        meta, install_actions, [ Reverse "symlinks"; Reverse expand_id ]
+        meta, install_actions, [ Reverse "symlink"; Reverse expand_id ]
     | script -> script
 end
 
