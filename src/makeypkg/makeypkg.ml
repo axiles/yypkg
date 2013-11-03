@@ -133,17 +133,22 @@ module Package_script = struct
 
   let build ~pkg_size settings =
     let dir = settings.package.basename in
-    match script ~script:settings.script ~pkg_size with
-    | meta, [], [] ->
-        let expand_id = sp "expand_%s" dir in
-        let install_actions =
-          (* we want to expand the content of dir so we suffix it with '/' *)
-          (expand_id, Expand (dir ^ "/", "."))
-          :: run_install_scripts settings.install_scripts
-          @ (segregate_symlinks settings.package.path)
-        in
-        meta, install_actions, [ Reverse "symlink"; Reverse expand_id ]
-    | script -> script
+    let script = script ~script:settings.script ~pkg_size in
+    let meta, install_actions, uninstall_actions = script in
+    let expand_id = sp "expand_%s" dir in
+    let install_actions =
+      (* we want to expand the content of dir so we suffix it with '/' *)
+      (expand_id, Expand (dir ^ "/", "."))
+      :: run_install_scripts settings.install_scripts
+      @ (segregate_symlinks settings.package.path)
+      @ install_actions
+    in
+    let uninstall_actions =
+      Reverse "symlink"
+      :: Reverse expand_id
+      :: uninstall_actions
+    in
+    meta, install_actions, uninstall_actions
 end
 
 let output_file meta =
