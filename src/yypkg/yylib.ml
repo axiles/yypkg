@@ -187,12 +187,14 @@ let action_of_cmd_line cmd_line =
     | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
 
 let symlink ~target ~name ~kind =
+  let unlink f = try Unix.unlink f with _ -> () in
   match Lib.os_type, kind with
-  | `Unix, _ -> Unix.symlink target name
-  | `Windows, `File -> Unix.link target name
+  | `Unix, _ -> unlink name; Unix.symlink target name
+  | `Windows, `File -> unlink name; Unix.link target name
   | `Windows, `Directory ->
+      unlink name;
       let cmd = String.concat " " [ "mklink"; "/J"; name; target ] in
       let ret = Sys.command cmd in
-      if ret <> 0 then failwith (sprintf "%S returned %d." cmd ret) else ()
+      if ret <> 0 then failwith (Lib.sp "%S returned %d." cmd ret) else ()
   | `Windows, `Unhandled reason ->
       Lib.ep "Skipping symlink %S -> %S: %s" name target reason
