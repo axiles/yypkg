@@ -36,13 +36,17 @@ let execute_uninstall_action other_pkgs pkg =
     | Reverse id ->
         (* rm the files that have been added by 'id' *)
         let pred (action_id, results) = action_id = id in
-        ListLabels.iter (List.find_all pred install_results) ~f:(fun (id, l) ->
-          (* We have to reverse the actions: files are created first and then,
-           * contents of the folder. Of course, when removing, we have to remove
-           * in reverse order: contents and then folder *)
-          ListLabels.iter (List.rev l) ~f:(fun s ->
-            if file_can_be_removed s other_pkgs then rm s)
-        )
+        match List.find_all pred install_results with
+        | [] ->
+            Lib.ep "WARNING: asked to reverse action %S which doesn't exist" id
+        | l ->
+          ListLabels.iter l ~f:(fun (_id, l) ->
+            (* We have to reverse the actions: files are created first and then,
+             * contents of the folder. Of course, when removing, we have to
+             * remove in reverse order: contents and then folder *)
+            ListLabels.iter (List.rev l) ~f:(fun s ->
+              if file_can_be_removed s other_pkgs then rm s)
+          )
   )
 
 let uninstall_package db package_name =
