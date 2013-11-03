@@ -16,8 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-open Sexplib.Sexp
-open Sexplib.Conv
+open Pre_sexp
 open Types
 
 module Of : sig
@@ -28,6 +27,16 @@ module Of : sig
   val script : script -> t
   val repo : SherpaT.repo -> t
 end = struct
+
+  let sexp_of_int n = Atom (string_of_int n)
+  let sexp_of_list sexp_of__a lst =
+    List (List.rev (List.rev_map sexp_of__a lst))
+  let sexp_of_string str = Atom str
+  let sexp_of_int64 n = Atom (Int64.to_string n)
+  let sexp_of_option sexp_of__a = function
+    | Some x -> List [ Atom "some"; sexp_of__a x ]
+    | None -> Atom "none"
+
   let sexp_of_source_version = function
     | Alpha s -> List [ Atom "Alpha"; Atom s ]
     | Beta s -> List [ Atom "Beta"; Atom s ]
@@ -153,6 +162,47 @@ module To : sig
   val sherpa_conf : t -> SherpaT.sherpa_conf
   val repo : t -> SherpaT.repo
 end = struct
+  module Conv : sig
+    val of_sexp_error : string -> Pre_sexp.t -> 'a
+    val int_of_sexp : Pre_sexp.t -> int
+    val int64_of_sexp : Pre_sexp.t -> int64
+    val list_of_sexp : (Pre_sexp.t -> 'a) -> Pre_sexp.t -> 'a list
+    val string_of_sexp : Pre_sexp.t -> string
+    val option_of_sexp : (Pre_sexp.t -> 'a) -> Pre_sexp.t -> 'a option
+  end = struct
+    let of_sexp_error what sexp =
+      raise (Pre_sexp.Of_sexp_error (Failure what, sexp))
+
+    let ints_of_sexp conv name sexp =
+      match sexp with
+      | Atom str ->
+          (try conv str
+          with exc -> of_sexp_error (name ^ ": " ^ Printexc.to_string exc) sexp)
+      | List _ -> of_sexp_error (name ^ ": atom needed") sexp
+
+    let int_of_sexp sexp = ints_of_sexp int_of_string "int_of_string" sexp
+
+    let int64_of_sexp sexp = ints_of_sexp Int64.of_string "int64_of_string" sexp
+
+    let list_of_sexp a__of_sexp sexp = match sexp with
+      | List lst -> List.rev (List.rev_map a__of_sexp lst)
+      | Atom _ -> of_sexp_error "list_of_sexp: list needed" sexp
+
+    let string_of_sexp sexp = match sexp with
+      | Atom str -> str
+      | List _ -> of_sexp_error "string_of_sexp: atom needed" sexp
+
+    let option_of_sexp a__of_sexp sexp =
+      match sexp with
+      | List [] | Atom ("none" | "None") -> None
+      | List [el] | List [Atom ("some" | "Some"); el] -> Some (a__of_sexp el)
+      | List _ ->
+          of_sexp_error "option_of_sexp: list must represent optional value" sexp
+      | Atom _ -> of_sexp_error "option_of_sexp: only none can be atom" sexp
+  end
+
+  open Conv
+
   module Record = struct
     let accumulate ~f_name ~f_sexp ~duplicates ~fields ~extra =
       try

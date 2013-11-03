@@ -198,7 +198,7 @@ module Output = struct
   let package_list ~directory ~repo =
     let el_oc = FilePath.concat directory "package_list.el" in
     let el_oc = open_out_bin el_oc in
-    Sexplib.Sexp.output_hum el_oc (TypesSexp.Of.repo repo);
+    Pre_sexp.output_hum el_oc (TypesSexp.Of.repo repo);
     close_out el_oc
 
   let html ~directory ~repo =

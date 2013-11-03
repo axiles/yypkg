@@ -86,8 +86,8 @@ let dir_of_path path =
 module Package_script = struct
   let script ~script ~pkg_size =
     let sexp = match script with
-    | "-" -> Sexplib.Sexp.input_sexp stdin
-    | file -> Sexplib.Sexp.load_sexp file
+    | "-" -> Pre_sexp.input_sexp stdin
+    | file -> Pre_sexp.load_sexp file
     in
     let metadata, install, uninstall = TypesSexp.To.script sexp in
     { metadata with size_expanded = pkg_size }, install, uninstall
@@ -188,7 +188,7 @@ let dummy_script () =
     description = "dummy"; host = "%{HST}"; target = Some "%{TGT}";
     predicates = []; comments = [] }
   in
-  Sexplib.Sexp.to_string_hum (TypesSexp.Of.script (metadata, [], []))
+  Pre_sexp.to_string_hum (TypesSexp.Of.script (metadata, [], []))
 
 let parse_command_line () = 
   let output, dir, iscripts, script, template =
@@ -230,7 +230,7 @@ let () =
   let settings = parse_command_line () in
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
   let script = Package_script.build ~pkg_size settings in
-  let script_sexp = Sexplib.Sexp.to_string_hum (TypesSexp.Of.script script) in
+  let script_sexp = Pre_sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_dir_and_name = write_temp_file "package_script.el" script_sexp in
   let output_file = archive settings script script_dir_and_name in
   Printf.printf "Package created as: %s\n." output_file

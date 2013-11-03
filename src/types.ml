@@ -70,7 +70,7 @@ type metadata = {
   packager_name : string;
   description : string;
   host : string;
-  target : string Sexplib.Conv.sexp_option;
+  target : string option;
   predicates : (string * string) list;
   comments : string list;
 }
