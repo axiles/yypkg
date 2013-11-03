@@ -129,12 +129,19 @@ module Package_script = struct
       ep report_format kind_string e t
     in
     let accumulate =
-      fun l e ->
-        let target = FU.readlink e in
-        let kind = match (FU.stat target).FU.kind with
-        | FU.Dir -> `Directory
-        | FU.File -> `File
-        | _ -> assert false (* other kinds don't make sense in packages *)
+      fun l e0 ->
+        let target0 = FU.readlink e0 in
+        let e = FilePath.make_relative dir e0 in
+        let target = FilePath.make_relative (FilePath.dirname e0) target0 in
+        let kind =
+          try
+            let target_kind = FU.((stat target0).kind) in
+            match target_kind with
+            | FU.Dir -> `Directory
+            | FU.File -> `File
+            | _ -> `Unhandled "File neither directory nor file"
+          with FU.FileDoesntExist _ ->
+            `Unhandled "ENOENT"
         in
         report e target kind;
         ("symlink", Symlink (target, e, kind)) :: l
