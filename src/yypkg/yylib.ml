@@ -194,3 +194,5 @@ let symlink ~target ~name ~kind =
       let cmd = String.concat " " [ "mklink"; "/J"; name; target ] in
       let ret = Sys.command cmd in
       if ret <> 0 then failwith (sprintf "%S returned %d." cmd ret) else ()
+  | `Windows, `Unhandled reason ->
+      Lib.ep "Skipping symlink %S -> %S: %s" name target reason

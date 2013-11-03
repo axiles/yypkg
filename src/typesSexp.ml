@@ -53,6 +53,7 @@ end = struct
 
   let sexp_of_filekind = function
     | `Directory -> Atom "Directory"
+    | `Unhandled reason -> List [ Atom "Unhandled"; Atom reason ]
     | `File -> Atom "File"
 
   let sexp_of_install_action install_action =
@@ -265,6 +266,7 @@ end = struct
     match sexp with
     | Atom "File" -> `File
     | Atom "Directory" -> `Directory
+    | List [ Atom "Unhandled"; Atom reason ] -> `Unhandled reason
     | _ ->
         of_sexp_error "filekind_of_sexp: list or wrong atom argument" sexp
 

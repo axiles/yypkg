@@ -41,7 +41,7 @@ let dummy_version () =
 
 (* this is only a name, an identifier *)
 type action_id = string
-type filekind = [ `Directory | `File ]
+type filekind = [ `Directory | `File | `Unhandled of string ]
 type install_action =
   | AHK of string list (* params *)
   | Exec of string list (* argv *)
