@@ -153,17 +153,18 @@ module Package_script = struct
     let script = script ~script:settings.script ~pkg_size in
     let meta, install_actions, uninstall_actions = script in
     let expand_id = sp "expand_%s" dir in
+    let symlinks_install_actions = segregate_symlinks settings.package.path in
     let install_actions =
       (* we want to expand the content of dir so we suffix it with '/' *)
       (expand_id, Expand (dir ^ "/", "."))
       :: run_install_scripts settings.install_scripts
-      @ (segregate_symlinks settings.package.path)
+      @ symlinks_install_actions
       @ install_actions
     in
     let uninstall_actions =
-      Reverse "symlink"
-      :: Reverse expand_id
-      :: uninstall_actions
+      (if symlinks_install_actions <> [] then [ Reverse "symlink" ] else [])
+      @ [ Reverse expand_id ]
+      @ uninstall_actions
     in
     meta, install_actions, uninstall_actions
 end
