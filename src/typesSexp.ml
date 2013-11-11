@@ -212,7 +212,9 @@ end = struct
           duplicates := f_name :: !duplicates
         else
           conv f_sexp
-      with Not_found -> extra := f_name :: !extra
+      with
+      | Not_found -> extra := f_name :: !extra
+      | e -> Printf.eprintf "Unknown error with field `%s'.\n" f_name; raise e
 
     let field_iter ~func ~fields l =
       let extra = ref [] in
