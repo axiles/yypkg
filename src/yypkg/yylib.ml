@@ -208,7 +208,7 @@ let symlink ~target ~name ~kind =
   | `Windows, `File -> unlink name; link target name
   | `Windows, `Directory ->
       unlink name;
-      let cmd = String.concat " " [ "mklink"; "/J"; name; target ] in
+      let cmd = Lib.sp "mklink /J %S %S" name target in
       let ret = Sys.command cmd in
       if ret <> 0 then failwith (Lib.sp "%S returned %d." cmd ret) else ()
   | `Windows, `Unhandled reason ->
