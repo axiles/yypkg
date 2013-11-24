@@ -205,7 +205,10 @@ let symlink ~target ~name ~kind =
   in
   match Lib.os_type, kind with
   | `Unix, _ -> unlink name; symlink target name
-  | `Windows, `File -> unlink name; link target name
+  | `Windows, `File ->
+      (* FIXME: target_abs below will be wrong if target is an absolute path *)
+      let target_abs = String.concat "/" [ FilePath.dirname name; target ] in
+      unlink name; link target_abs name
   | `Windows, `Directory ->
       unlink name;
       let cmd = Lib.sp "mklink /J %S %S" name target in
