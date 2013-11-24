@@ -197,4 +197,4 @@ let symlink ~target ~name ~kind =
       let ret = Sys.command cmd in
       if ret <> 0 then failwith (Lib.sp "%S returned %d." cmd ret) else ()
   | `Windows, `Unhandled reason ->
-      Lib.ep "Skipping symlink %S -> %S: %s" name target reason
+      Lib.ep "Skipping symlink %S -> %S: %s\n" name target reason
