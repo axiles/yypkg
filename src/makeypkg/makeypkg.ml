@@ -135,12 +135,11 @@ module Package_script = struct
         let target = FilePath.make_relative (FilePath.dirname e0) target0 in
         let kind =
           try
-            let target_kind = FU.((stat target0).kind) in
-            match target_kind with
-            | FU.Dir -> `Directory
-            | FU.File -> `File
+            match Unix.((stat e0).st_kind) with
+            | Unix.S_DIR -> `Directory
+            | Unix.S_REG -> `File
             | _ -> `Unhandled "File neither directory nor file"
-          with FU.FileDoesntExist _ ->
+          with Unix.Unix_error (Unix.ENOENT, _, _) ->
             `Unhandled "ENOENT"
         in
         report e target kind;
