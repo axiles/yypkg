@@ -187,10 +187,25 @@ let action_of_cmd_line cmd_line =
     | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
 
 let symlink ~target ~name ~kind =
-  let unlink f = try Unix.unlink f with _ -> () in
+  let log_unix_error (error, f, arg) =
+    Lib.ep "Unix.Unix_error: `%s` `%s`: `%s`\n" f arg (Unix.error_message error)
+  in
+  let unlink f =
+    try Unix.unlink f with
+    | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+    | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
+  in
+  let link target name =
+    try Unix.link target name with
+    | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
+  in
+  let symlink target name =
+    try Unix.symlink target name with
+    | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
+  in
   match Lib.os_type, kind with
-  | `Unix, _ -> unlink name; Unix.symlink target name
-  | `Windows, `File -> unlink name; Unix.link target name
+  | `Unix, _ -> unlink name; symlink target name
+  | `Windows, `File -> unlink name; link target name
   | `Windows, `Directory ->
       unlink name;
       let cmd = String.concat " " [ "mklink"; "/J"; name; target ] in
