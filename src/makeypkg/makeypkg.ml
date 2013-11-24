@@ -119,12 +119,12 @@ module Package_script = struct
 
   let segregate_symlinks dir =
     let module FU = FileUtil in
-    let report_format = format_of_string "[symlink] %s: %S -> %S\n" in
+    let report_format = format_of_string "[symlink] %s: %S -> %S\n%!" in
     let report e t kind =
       let kind_string = match kind with
-      | `Directory -> "directory"
-      | `File -> "file"
-      | `Unhandled reason -> sp "unhandled (%s)" reason
+      | `Directory -> "Directory"
+      | `File -> "File"
+      | `Unhandled reason -> sp "Unhandled (%s)" reason
       in
       ep report_format kind_string e t
     in
