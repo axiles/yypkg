@@ -34,13 +34,15 @@ let execute_install_action package = function
       [ name ]
 
 let execute_install_action_wrap package (id, action) =
-  let can_fail_re = Str.regexp ".*-can-fail" in
-  if Str.string_match can_fail_re id 0 then
-    id, (try execute_install_action package action with _ ->
-      Printf.eprintf "\nAction '%s' failed but is 'can-fail': continuing." id;
-      [])
-  else
+  try
     id, execute_install_action package action
+  with e ->
+    let can_fail_re = Str.regexp ".*-can-fail" in
+    if not (Str.string_match can_fail_re id 0) then
+      raise e
+    else
+      Printf.eprintf "\nAction '%s' failed but is 'can-fail': continuing." id;
+      id, []
 
 let install_package package conf db =
   let metadata, install_actions, _ as script = Lib.open_package package in
