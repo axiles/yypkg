@@ -143,9 +143,16 @@ module Package_script = struct
             `Unhandled "ENOENT"
         in
         report e target kind;
-        ("symlink", Symlink (target, e, kind)) :: l
+        ("symlink", (target, e, kind)) :: l
     in
-    FU.find ~follow:FU.Skip FU.Is_link dir accumulate []
+    let links = FU.find ~follow:FU.Skip FU.Is_link dir accumulate [] in
+    let cmp (_, (_, _, kind_a) as a) (_, (_, _, kind_b) as b) =
+      match kind_a, kind_b with
+      | `Directory, `Directory -> compare a b
+      | `Directory, _ -> -1
+      | _, _ -> compare a b
+    in
+    List.map (fun (s, (t, e, k)) -> s, Symlink (t, e, k)) (List.sort cmp links)
 
   let build ~pkg_size settings =
     let dir = settings.package.basename in
