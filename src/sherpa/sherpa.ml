@@ -7,7 +7,7 @@ let cmd_line_spec = [
     "download files there (instead of " ^ Yylib.default_download_path ^ ")";
   "-set-mirror", [], "set the mirror to use";
   "-install", [], "install packages";
-  "-download", [], "downlaod packages";
+  "-download", [], "download packages";
 ]
 
 let settings_of_cmd_line ~start_dir cmd_line =
