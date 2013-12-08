@@ -16,28 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-type source_version = 
-  | Stable of string
-  | RC of string
-  | Beta of string
-  | Alpha of string
-  | Snapshot of string
+type source_version = string
 
-let string_of_source_version = function
-  | Alpha s -> "alpha-" ^ s
-  | Beta s -> "beta-" ^ s
-  | RC s -> "rc-" ^ s
-  | Snapshot s -> "snapshot-" ^ s
-  | Stable s -> "stable-" ^ s
-
-type version = source_version * int
+type version = string * int
 
 (* create a string from a version *)
 let string_of_version (source_version, iteration) =
-  Printf.sprintf "%s-%d" (string_of_source_version source_version) iteration
+  Printf.sprintf "%s-%d" source_version iteration
 
 let dummy_version () =
-  Snapshot "1970-01-01-00-00", 1
+  "1970-01-01-00-00-snapshot", 1
 
 (* this is only a name, an identifier *)
 type action_id = string

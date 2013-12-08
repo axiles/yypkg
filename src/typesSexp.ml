@@ -37,15 +37,8 @@ end = struct
     | Some x -> List [ Atom "some"; sexp_of__a x ]
     | None -> Atom "none"
 
-  let sexp_of_source_version = function
-    | Alpha s -> List [ Atom "Alpha"; Atom s ]
-    | Beta s -> List [ Atom "Beta"; Atom s ]
-    | RC s -> List [ Atom "RC"; Atom s ]
-    | Snapshot s -> List [ Atom "Snapshot"; Atom s ]
-    | Stable s -> List [ Atom "Stable"; Atom s ]
-
   let sexp_of_version (source_version, build_number) =
-    List [ sexp_of_source_version source_version; sexp_of_int build_number ]
+    List [ Atom source_version; sexp_of_int build_number ]
 
   let sexp_of_string_list params = sexp_of_list sexp_of_string params
 
@@ -245,18 +238,10 @@ end = struct
       name, ((fun () -> !var != None) , (fun sexp -> var := Some (conv sexp)))
   end
 
-  let source_version_of_sexp = function
-    | List [ Atom "Alpha"; Atom s ] -> Alpha s
-    | List [ Atom "Beta"; Atom s ] -> Beta s
-    | List [ Atom "RC"; Atom s ] -> RC s
-    | List [ Atom "Snapshot"; Atom s ] -> Snapshot s
-    | List [ Atom "Stable"; Atom s ] -> Stable s
-    | sexp -> of_sexp_error "source_version_of_sexp: atom or wrong atom" sexp
-
   let version_of_sexp sexp =
     match sexp with
     | List [ source_version; build_number ] ->
-        source_version_of_sexp source_version, int_of_sexp build_number
+        string_of_sexp source_version, int_of_sexp build_number
     | List _ -> of_sexp_error
         "version_of_sexp: list must contain exactly two elements" sexp
     | Atom _ -> of_sexp_error "version_of_sexp: list needed" sexp
