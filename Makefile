@@ -6,6 +6,7 @@ all:
 
 clean:
 	cd src && ocamlbuild -clean
+	rm -f src/*.$(KIND)
 
 install:
 	cp src/yypkg.native /opt/mgw64/sbin/yypkg
