@@ -13,7 +13,10 @@ let update f =
   write (f (read ()))
 
 let get_uri_contents uri =
-  run_and_read [| wget; "-O"; "-"; "-nv"; uri |] `stdout
+  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  let content = run_and_read [| wget; "-O"; "-"; "-nv"; uri |] `stdout in
+  Printf.eprintf " DONE\n%!";
+  content
 
 let get_uri uri output =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
