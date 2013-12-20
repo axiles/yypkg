@@ -68,7 +68,11 @@ exception Unknown_package of string
 let get_packages ~yypkg_conf ~sherpa_conf ~follow ~dest ~packages =
   (* NOT used in sherpa_gui so the call to repo() isn't redoing the download *)
   let pkglist =
-    let pkglist = pkglist ~sherpa_conf ~yypkg_conf in
+    let repo = repo ~conf:sherpa_conf () in
+    let pkglist = List.filter (package_is_applicable ~yypkg_conf) repo.ST.pkglist in
+    ep "%d/%d packages available after filtering through predicates.\n"
+      (List.length pkglist)
+      (List.length repo.ST.pkglist);
     let packages =
       if packages = [ "all" ] then
         pkglist
