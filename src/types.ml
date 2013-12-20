@@ -80,9 +80,6 @@ type conf = {
   preds : predicate list;
 }
 
-type field = 
-  | Predicate of (string * string list)
-
 type pkg = {
   metadata : metadata;
   size_compressed : size;

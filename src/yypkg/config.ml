@@ -29,8 +29,7 @@ let key_value_pair s =
 
 (* updates the association list from "X=A,B,C" strings *)
 let setpred conf pred =
-  let pred = Predicate (key_value_pair pred) in
-  Conf.set conf pred
+  Conf.set conf (key_value_pair pred)
 
 let delpred conf pred =
   Conf.unset conf pred

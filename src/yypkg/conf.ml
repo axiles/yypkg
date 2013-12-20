@@ -20,10 +20,9 @@
 open Types
 open Yylib
 
-let set conf = function
-  | Predicate (binding, value) -> 
-      let preds = List.remove_assoc binding conf.preds in
-      { preds = (binding, value) :: preds }
+let set conf (binding, value) =
+  let preds = List.remove_assoc binding conf.preds in
+  { preds = (binding, value) :: preds }
 
 let unset conf binding = 
   { preds = List.remove_assoc binding conf.preds }
