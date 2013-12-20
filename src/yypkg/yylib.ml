@@ -188,7 +188,7 @@ let action_of_cmd_line cmd_line =
 
 let symlink ~target ~name ~kind =
   let log_unix_error (error, f, arg) =
-    Lib.ep "Unix.Unix_error: `%s` `%s`: `%s`\n" f arg (Unix.error_message error)
+    Lib.ep "Unix_error: `%s` `%s`: `%s`\n%!" f arg (Unix.error_message error)
   in
   let unlink f =
     try Unix.unlink f with
