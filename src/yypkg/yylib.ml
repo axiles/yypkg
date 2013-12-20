@@ -19,6 +19,9 @@
 
 open Types
 
+external remove : string -> unit = "yy_remove"
+external create_reparse_point : string -> string -> unit = "create_reparse_point"
+
 let ahk_bin =
   Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
 
@@ -195,6 +198,10 @@ let symlink ~target ~name ~kind =
     | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
     | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
   in
+  let remove f =
+    try remove f with
+    | Failure s  -> Lib.ep "Failure in remove: %s\n%!" s
+  in
   let link target name =
     try Unix.link target name with
     | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
@@ -208,12 +215,10 @@ let symlink ~target ~name ~kind =
   | `Windows, `File ->
       (* FIXME: target_abs below will be wrong if target is an absolute path *)
       let target_abs = String.concat "/" [ FilePath.dirname name; target ] in
-      unlink name; link target_abs name
+      remove name; link target_abs name
   | `Windows, `Directory ->
-      unlink name;
+      remove name;
       let target_abs = String.concat "/" [ FilePath.dirname name; target ] in
-      let cmd = Lib.sp "mklink /J %S %S" name target_abs in
-      let ret = Sys.command cmd in
-      if ret <> 0 then failwith (Lib.sp "%S returned %d." cmd ret) else ()
+      create_reparse_point target_abs name
   | `Windows, `Unhandled reason ->
       Lib.ep "Skipping symlink %S -> %S: %s\n" name target reason
