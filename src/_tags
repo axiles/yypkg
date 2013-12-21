@@ -1,4 +1,3 @@
 <{args,makeypkg,yypkg,sherpa,sexplib}>: include
 <*> or <{sexplib,makeypkg,yypkg,sherpa}/*>: package(bigarray), package(fileutils.str), debug
-<*gui*> or <sherpa/*gui*>: package(lablgtk2)
 
