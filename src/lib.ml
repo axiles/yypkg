@@ -26,6 +26,25 @@ exception Skip
 let ep = Printf.eprintf
 let sp = Printf.sprintf
 
+let cri = 0
+let err = 1
+let wrn = 2
+let dbg = 3
+
+let log level =
+  let threshold =
+    try
+      match Sys.getenv "YYLOGLEVEL" with
+      | "CRI" | "cri" -> cri
+      | "ERR" | "err" -> err
+      | "WRN" | "wrn" -> wrn
+      | "DBG" | "dbg" -> dbg
+      | s -> try int_of_string s with _ -> 0
+    with Not_found -> 0
+  in
+  (if threshold >= level then Printf.kfprintf else Printf.ikfprintf)
+  (fun _ -> ()) stderr
+
 let may f = function
   | None -> ()
   | Some v -> f v

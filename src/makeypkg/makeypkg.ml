@@ -24,6 +24,7 @@ let xz_opt size =
   let max_dict = 1 lsl 26 in (* 64MB *)
   let min_dict = 1 lsl 18 in (* 256kB *)
   let smallest_bigger_power_of_two size =
+    let log = Pervasives.log in
     2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
   in
   let lzma_settings ~fastest size =

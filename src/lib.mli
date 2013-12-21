@@ -1,5 +1,10 @@
 exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
+val cri : int
+val err : int
+val wrn : int
+val dbg : int
+val log : int -> ('a, out_channel, unit, unit) format4 -> 'a
 val may : ('a -> unit) -> 'a option -> unit
 val process_failed : ?stderr:string -> string array -> 'a
 val os_type : [> `Unix | `Windows ]
