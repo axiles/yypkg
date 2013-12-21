@@ -25,9 +25,6 @@
 open Types
 open Yylib
 
-let mkdir =
-  FileUtil.mkdir ~parent:true ~mode:0o755
-
 let is_binary x =
   let exts = [ "dll"; "exe" ] in
   List.fold_left (fun b e -> b || FilePath.check_extension x e) false exts
@@ -39,7 +36,7 @@ let init prefix =
   let dl_folder = mk_absolute default_download_path in
   let folders = [conf_folder; "sbin"; db_folder] in
   let folders = dl_folder :: (List.map mk_absolute folders) in
-  List.iter mkdir folders;
+  List.iter (fun f -> FileUtil.mkdir ~parent:true ~mode:0o755 f) folders;
   Sys.chdir prefix;
   (if `Windows = Lib.os_type then
     let module FU = FileUtil in

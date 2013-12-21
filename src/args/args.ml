@@ -8,7 +8,12 @@
 (* '-mainopt1 -opt1subopt1 -opt1subopt2 -mainopt2' will be parsed as:
   * [ "mainopt1", [ "opt1subopt1"; "opt2subopt2"] ; "mainopt2", [] ] *)
 
-type spec = (string * spec * string) list
+type child = {
+  name : string;
+  children : child list;
+  help : string;
+}
+and spec = child list
 
 (* Something on the command-line is either an option (starts with a dash), or a
  * value. Values are free-form, options are checked against the spec. *)
@@ -16,18 +21,17 @@ type opt =
   | Val of string
   | Opt of (string * opt list)
 
+let spec ~name ~children ~help = { name; children; help }
+
 (* Option_specification_is_ambiguous means the spec used to parse the params is
  * bad: a single argument can be matched by several elements of the spec
  * This isn't a fail of this library, the problem really is the spec *)
 exception Option_specification_is_ambiguous
 exception Incomplete_parsing of (opt list * string list)
 
-let rec bprint_spec b n (name, subs, text) =
-  Printf.bprintf b "%s%s : %s\n" (String.make n ' ') name text;
-  List.iter (bprint_spec b (n+1)) subs
-
-let usage_msg spec = 
-  "Usage", spec, "command-line arguments to yypkg"
+let rec bprint_spec b n { name; children; help } =
+  Printf.bprintf b "%s%s : %s\n" (String.make n ' ') name help;
+  List.iter (bprint_spec b (n+1)) children
 
 (* at any point, we read the argument, if it starts with a '-' and is among the
  * options recognized, we store it as an option, if it's not recognized, we
@@ -38,7 +42,7 @@ let opt_of_string opts s =
   (* currently, the option on the command-line has to match exactly the spec *)
   (* we *may* recognize '-foo:x=42:y=43' but '-foo x=42 y=43' does the same and
    * is already working *)
-  let pred x (y, _, _) = y = x in
+  let pred x { name } = name = x in
   (* we return the opt which is matching the string
    * if several ones match, we fail *)
   match List.find_all (pred s) opts with
@@ -50,12 +54,12 @@ let opt_of_string opts s =
    * is bad *)
   | _ -> raise Option_specification_is_ambiguous
 
-let rec parse (opts : spec) accu = function
+let rec parse opts accu = function
   (* starts with a dash, it's an option, maybe a valid one *)
   | ( t :: q ) as l when t.[0] = '-' -> begin
       try 
         (* what are the corresponding suboptions? *)
-        let _, subopts, _ = opt_of_string opts t in
+        let { children = subopts } = opt_of_string opts t in
         (* we'll try to parse as much of the *subo*ptions before returning to
          * the current level *)
         let subs, q' = parse subopts [] q in
@@ -80,8 +84,8 @@ let wants_help () =
 let nothing_given () =
   1 = Array.length Sys.argv
 
-let bprint_help b cmd_line_spec =
-  bprint_spec b 0 (usage_msg cmd_line_spec)
+let usage_msg spec what =
+  { name = "Usage"; children = spec; help = "command-line arguments to " ^ what}
 
 (* this is a little test:
   let spec = [ "-install", []; "-uninstall", []]

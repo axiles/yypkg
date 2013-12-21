@@ -1,13 +1,15 @@
 open Types
 
-let cmd_line_spec = [
-  "-prefix", [], "prefix sherpa will be working in";
-  "-follow-dependencies", [], "also fetch and install dependencies";
-  "-download-folder", [],
-    "download files there (instead of " ^ Yylib.default_download_path ^ ")";
-  "-set-mirror", [], "set the mirror to use";
-  "-install", [], "install packages";
-  "-download", [], "download packages";
+let cmd_line_spec =
+  let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
+  [
+    mk ~n:"-prefix" ~h:"prefix sherpa will be working in" [];
+    mk ~n:"-follow-dependencies" ~h:"also fetch and install dependencies" [];
+    mk ~n:"-download-folder"
+      ~h:("download files there (instead of " ^ Yylib.default_download_path ^ ")") [];
+    mk ~n:"-set-mirror" ~h:"set the mirror to use" [];
+    mk ~n:"-install" ~h:"install packages" [];
+    mk ~n:"-download" ~h:"download packages" [];
 ]
 
 let settings_of_cmd_line ~start_dir cmd_line =
@@ -28,8 +30,10 @@ let settings_of_cmd_line ~start_dir cmd_line =
 
 let main () =
   let b = Buffer.create 100 in
-  if Args.wants_help () || Args.nothing_given () then
-    (Args.bprint_help b cmd_line_spec; Buffer.output_buffer stderr b)
+  if Args.wants_help () || Args.nothing_given () then (
+    Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "sherpa");
+    Buffer.output_buffer stderr b
+  )
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     let start_dir = Sys.getcwd () in
@@ -58,5 +62,5 @@ let main () =
       end
     | _ -> assert false
 
-let () = 
+let () =
   main ()

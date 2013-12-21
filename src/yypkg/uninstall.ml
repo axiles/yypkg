@@ -21,7 +21,6 @@ open Types
 open Yylib
 
 let file_can_be_removed file other_packages =
-  (* not (List.exists (file_exists_in_package file) other_packages) *)
   if List.exists (file_exists_in_package file) other_packages then (
     Lib.ep "Not removed (exists in another package): %s\n" file;
     false)
@@ -54,11 +53,10 @@ let uninstall_package db package_name =
   List.iter (execute_uninstall_action other_pkgs) pkgs;
   Db.uninstall_package db package_name
 
-let uninstall db p =
-  if is_installed db p then
-    uninstall_package db p
-  else
-    raise Package_does_not_exist
-
 let uninstall l db =
-  List.fold_left uninstall db l
+  ListLabels.fold_left ~init:db l ~f:(fun db p ->
+    if is_installed db p then
+      uninstall_package db p
+    else
+      raise Package_does_not_exist
+  )

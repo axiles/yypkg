@@ -30,9 +30,6 @@ let download_to_folder ~conf folder p =
   get_uri uri output;
   output
 
-let find_by_name ~pkglist ~name =
-  List.find (fun p -> p.metadata.name = name) pkglist
-
 let find_all_by_name ~pkglist ~name_list =
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
@@ -86,10 +83,4 @@ let get_packages ~yypkg_conf ~sherpa_conf ~follow ~dest ~packages =
     if follow then get_deps pkglist packages else packages
   in
   List.map (download_to_folder ~conf:sherpa_conf dest) pkglist
-
-let default_download_folder =
-  try
-    let prefix = Unix.getenv "YYPREFIX" in
-    Lib.filename_concat [ prefix; "var"; "cache"; "packages" ]
-  with Not_found -> ""
 

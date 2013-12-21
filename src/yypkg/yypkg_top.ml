@@ -21,21 +21,22 @@ open Types
 open Yylib
 
 (* all the options we accept *)
-let cmd_line_spec = [
-  "-prefix", [], "prefix yypkg will be working in";
-  "-install", [], "install a package (extension is .txz)";
-  "-upgrade", [
-    "-install-new", [], "If package isn't already installed, install it.";
-  ], "upgrade with package (extension is .txz)";
-  "-uninstall", [], "uninstall a package by name";
-  "-list", [], "list the packages installed";
-  "-config", [
-    "-setpreds", [], "set a predicate: \"host=x86_64-w64-mingw32\"";
-    "-delpreds", [], "remove a predicate";
-    "-listpreds", [], "list predicates";
-    (* not handled currently: "-regen", []; *)
-  ], "parent option for:";
-  "-init", [], "setups a directory tree for yypkg (run once)";
+let cmd_line_spec =
+  let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
+  [
+    mk ~n:"-prefix" ~h:"prefix yypkg will be working in" [];
+    mk ~n:"-install" ~h:"install a package (extension is .txz)" [];
+    mk ~n:"-upgrade" ~h: "upgrade with package (extension is .txz)" [
+      mk ~n:"-install-new" ~h:"If package isn't already installed, install it." [];
+    ];
+    mk ~n:"-uninstall" ~h:"uninstall a package by name" [];
+    mk ~n:"-list" ~h:"list the packages installed" [];
+    mk ~n:"-config" ~h:"parent option for:" [
+      mk ~n:"-setpreds" ~h:"set a predicate: \"host=x86_64-w64-mingw32\"" [];
+      mk ~n:"-delpreds" ~h:"remove a predicate" [];
+      mk ~n:"-listpreds" ~h:"list predicates" [];
+    ];
+    mk ~n:"-init" ~h:"setups a directory tree for yypkg (run once)" [];
 ]
 
 let config opts =
@@ -76,7 +77,7 @@ let upgrade old_cwd cmd_line =
 
 let main b =
   if Args.wants_help () || Args.nothing_given () then
-     Args.bprint_help b cmd_line_spec
+    Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
@@ -117,7 +118,7 @@ let main b =
 let main_wrap b =
   try main b with 
   | Args.Incomplete_parsing (opts, sl) as e ->
-      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec);
+      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg");
       raise e
   | Args.Parsing_failed s as e -> raise e
   | File_not_found p as e when Yylib.db_path = p || Yylib.conf_path = p ->
