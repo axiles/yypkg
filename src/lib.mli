@@ -8,7 +8,6 @@ val log : int -> ('a, out_channel, unit, unit) format4 -> 'a
 val may : ('a -> unit) -> 'a option -> unit
 val process_failed : ?stderr:string -> string array -> 'a
 val os_type : [> `Unix | `Windows ]
-val dir_sep : string
 val run_and_read : string array -> [< `stderr | `stdout ] -> string
 val split_by_line : string -> string list
 val filename_concat : string list -> string

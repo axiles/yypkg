@@ -61,12 +61,6 @@ let os_type =
   | "Win32" -> `Windows
   | _ -> assert false
 
-(* it would have been too dull if all OSes had the same directory separators *)
-let dir_sep =
-  match os_type with
-  | `Unix -> "/"
-  | `Windows -> "\\"
-
 let read pid ~accumulate ~output =
   (* We'll be reading at most 160 characters at a time, I don't know if there's
    * a better way to do it: more, less, adptive. No idea but this should be good
@@ -166,7 +160,7 @@ let from_tar action input =
   in
   split_by_line (run_and_read tar_argv which_fd)
 
-let split_path ?(dir_sep=dir_sep) path =
+let split_path ?(dir_sep=Filename.dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path
 
 (* chop_list list i removes the first i elements of list and raises

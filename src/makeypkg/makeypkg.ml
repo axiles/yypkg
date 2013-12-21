@@ -52,8 +52,8 @@ let tar_xz tar_args xz_opt out =
   | _ -> process_failed tar_args
 
 let rec strip_trailing_slash s =
-  (* dir_sep's length is 1 *)
-  if s <> "" && s.[String.length s - 1] = dir_sep.[0] then
+  (* dir_sep's length is always 1 *)
+  if s <> "" && s.[String.length s - 1] = Filename.dir_sep.[0] then
     strip_trailing_slash (String.sub s 0 (String.length s - 1))
   else
     s
