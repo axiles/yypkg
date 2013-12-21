@@ -185,19 +185,23 @@ let symlink ~target ~name ~kind =
     Lib.ep "Unix_error: `%s` `%s`: `%s`\n%!" f arg (Unix.error_message error)
   in
   let unlink f =
+    Lib.(log dbg "Calling unlink(`%s').\n" f);
     try Unix.unlink f with
     | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
     | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
   in
   let remove f =
+    Lib.(log dbg "Calling remove(`%s').\n" f);
     try remove f with
     | Failure s  -> Lib.ep "Failure in remove: %s\n%!" s
   in
   let link target name =
+    Lib.(log dbg "Calling link(`%s', `%s').\n" target name);
     try Unix.link target name with
     | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
   in
   let symlink target name =
+    Lib.(log dbg "Calling symlink(`%s', `%s').\n" target name);
     try Unix.symlink target name with
     | Unix.Unix_error (e, s1, s2) as x -> log_unix_error (e, s1, s2); raise x
   in
@@ -210,6 +214,7 @@ let symlink ~target ~name ~kind =
   | `Windows, `Directory ->
       remove name;
       let target_abs = String.concat "/" [ FilePath.dirname name; target ] in
+      Lib.(log dbg "Calling create_reparse_point(`%s', `%s').\n" target_abs name);
       create_reparse_point target_abs name
   | `Windows, `Unhandled reason ->
       Lib.ep "Skipping symlink %S -> %S: %s\n" name target reason
