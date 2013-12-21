@@ -226,7 +226,7 @@ create_reparse_point(value ml_to, value ml_at)
   CloseHandle(h_ntdll);
 
   if (GetFullPathName(toA, MAX_PATH, toA_full, NULL) == 0) {
-    custom_failwith(GetLastError(), "GetFullPathNamer, ");
+    custom_failwith(GetLastError(), "GetFullPathName, ");
   }
 
   if (MultiByteToWideChar(CP_UTF8, 0, toA_full, -1, toW, MAX_PATH) == 0) {

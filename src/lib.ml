@@ -63,15 +63,15 @@ let os_type =
 
 let read pid ~accumulate ~output =
   (* We'll be reading at most 160 characters at a time, I don't know if there's
-   * a better way to do it: more, less, adptive. No idea but this should be good
-   * enough *)
+   * a better way to do it: more, less, adaptive. No idea but this should be
+   * good enough *)
   let s = String.make 160 '_' in
   (* This function reads everything available from a descriptor and returns
    * when there's nothing more available (yet) *)
   let rec read_once ((fd_out, buf_out) as out) ((fd_err, buf_err) as err) =
     (* check if there's something to read: a timeout of 0.02 to minimize
      * latency, shouldn't cost anything *)
-    let lst_read, _, _ = Unix.select [ fd_out; fd_err ] [] [ ] 0.02 in
+    let lst_read, _, _ = Unix.select [ fd_out; fd_err ] [] [] 0.02 in
     let f fd buf =
       let l = Unix.read fd s 0 160 in
       Buffer.add_substring buf s 0 l;
@@ -221,6 +221,7 @@ let queue_map f q =
   new_queue
 
 (* Search for a regexp in a file's lines and Str.global_replace *)
+(* FIXME: is this function really needed and used? *)
 let search_and_replace_in_file file search replace =
   let search = Str.regexp search in
   let contents = read_file file in

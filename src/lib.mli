@@ -27,7 +27,6 @@ val strip_component :
   ?prefix:string -> ?dir_sep:string -> int -> string -> string
 val read_file : string -> string Queue.t
 val overwrite_file : string -> string Queue.t -> unit
-val queue_map : ('a -> 'b) -> 'a Queue.t -> 'b Queue.t
 val search_and_replace_in_file : string -> string -> string -> unit
 val write_temp_file : string -> string -> string * string
 val open_package : string -> Types.script
