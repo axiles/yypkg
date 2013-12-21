@@ -151,14 +151,17 @@ let tar, xz, wget =
  *   'bsdtar xv -O' outputs the content of files to stdout
  *   'bsdtar xv' outputs the list of files expanded to stderr
  *   'bsdtar t' outputs the list of files to stdout *)
-let from_tar action input =
-  let tar_argv, which_fd = match action with
-  | `extract (pq, strip, iq) ->
-      [| tar; "xvf"; input; "--strip-components"; strip; "-C"; pq; iq |],`stderr
-  | `get file -> [| tar; "xf"; input; "-qO"; file |], `stdout
-  | `list -> [| tar; "tf"; input |], `stdout
-  in
-  split_by_line (run_and_read tar_argv which_fd)
+module Tar = struct
+  let extract ~from (pq, strip, iq) =
+    split_by_line (run_and_read
+      [| tar; "xvf"; from; "--strip-components"; strip; "-C"; pq; iq |]
+      `stderr
+    )
+  let get ~from file =
+    run_and_read [| tar; "xf"; from; "-qO"; file |] `stdout
+  let list ~from =
+    split_by_line (run_and_read [| tar; "tf"; from |] `stdout)
+end
 
 let split_path ?(dir_sep=Filename.dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path
@@ -238,8 +241,7 @@ let write_temp_file base_name contents =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let l = from_tar (`get "package_script.el") package in
-  let s = String.concat "\n" l in
+  let s = Tar.get ~from:package "package_script.el" in
   TypesSexp.To.script (Pre_sexp.of_string s)
 
 let rev_uniq l =

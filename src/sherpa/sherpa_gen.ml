@@ -31,7 +31,7 @@ let tar_grep filelist expr ext file =
    * we'd have to manage that failure. *)
   if List.exists (filename_check_suffix ext) filelist then
     (* Get the contents of all "*.ext" files in the package *)
-    let l = Lib.from_tar (`get ("*." ^ ext)) file in
+    let l = Lib.split_by_line (Lib.Tar.get ~from:file ("*." ^ ext)) in
     (* Only keep the lines that match expr: eg "Requires" lines for pkgconfig *)
     let l = List.filter (fun x -> Str.string_match re x 0) l in
     (* But we want the "value" in these lines, not the "key" part *)
@@ -90,7 +90,7 @@ let pkg_of_file ~memoizer file =
     memoizer#get file
   else
     let metadata = Yylib.metadata_of_script (Lib.open_package file) in
-    let files = Lib.from_tar `list file in
+    let files = Lib.Tar.list ~from:file in
     (* When a .pc file is found, add it to the global list of .pc files.
      * Same for .dll, .so, .a, ... files *)
     let rels = [ "pc", pc; "dll", libs; "so", libs; "a", libs ] in

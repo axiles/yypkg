@@ -16,9 +16,11 @@ val install_path : string
 val tar : string
 val xz : string
 val wget : string
-val from_tar :
-  [< `extract of string * string * string | `get of string | `list ] ->
-  string -> string list
+module Tar : sig
+  val extract : from:string -> (string * string * string) -> string list
+  val get : from:string -> string -> string
+  val list : from:string -> string list
+end
 val split_path : ?dir_sep:string -> string -> string list
 val chop_list : 'a list -> int -> 'a list
 val strip_component :
