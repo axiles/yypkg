@@ -106,7 +106,7 @@ let accumulate ~stdout ~stderr f accu =
 let run_and_read argv which_fd =
   let stdout_out, stdout_in = Unix.pipe () in
   let stderr_out, stderr_in = Unix.pipe () in
-  let output = { stdout = Buffer.create 10000; stderr = Buffer.create 10000 } in
+  let output = { stdout = Buffer.create 20000; stderr = Buffer.create 20000 } in
   let accumulate = accumulate ~stdout:stdout_out ~stderr:stderr_out in
   let pid = Unix.create_process argv.(0) argv Unix.stdin stdout_in stderr_in in
   let status = read pid ~accumulate ~output in
