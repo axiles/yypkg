@@ -189,15 +189,22 @@ module Output = struct
         `Right "Version";
         `Right "Size compressed";
         `Right "Size expanded";
+        `Left "Host";
+        `Left "Target";
+        `Left "Constraints";
         `Left "Dependencies";
       ]
     let tr_pkg { deps; size_compressed; metadata = m } =
       let of_size = FileUtil.string_of_size ~fuzzy:true in
+      let sp_predicate (k, v) = String.concat "=" [ k; v ] in
       tr [
         `Left (m.name);
         `Right (string_of_version m.version);
         `Right (of_size size_compressed);
         `Right (of_size m.size_expanded);
+        `Left m.host;
+        `Left (match m.target with Some target -> target | None -> "N/A");
+        `Left (String.concat ", " (List.map sp_predicate m.predicates));
         `Left ((String.concat ", " deps))
       ]
 
