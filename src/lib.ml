@@ -119,7 +119,11 @@ let run_and_read argv which_fd =
   | _ -> process_failed ~stderr:(Buffer.contents output.stderr) argv
 
 let split_by_line s =
-  Str.split (Str.regexp "\n") s
+  let line_end = match os_type with
+  | `Unix -> "\n"
+  | `Windows -> "\r\n"
+  in
+  Str.split (Str.regexp line_end) s
 
 (* List.fold_left Filename.concat *)
 let filename_concat = function
