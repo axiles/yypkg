@@ -213,7 +213,7 @@ let symlink ~target ~name ~kind =
       remove name; link target_abs name
   | `Windows, `Directory ->
       remove name;
-      let target_abs = String.concat "/" [ FilePath.dirname name; target ] in
+      let target_abs = Lib.filename_concat [ FilePath.dirname name; target ] in
       Lib.(log dbg "Calling create_reparse_point(`%s', `%s').\n" target_abs name);
       create_reparse_point target_abs name
   | `Windows, `Unhandled reason ->
