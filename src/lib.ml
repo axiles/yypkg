@@ -157,7 +157,20 @@ let tar, xz, wget =
 module Tar = struct
   let extract ~from (pq, strip, iq) =
     split_by_line (run_and_read
-      [| tar; "xvf"; from; "--strip-components"; strip; "-C"; pq; iq |]
+      [|
+        tar;
+        "xvf";
+        from;
+        (* bsdtar will store extended attributes when creating the archive and
+         * will try to restore them during extraction if run as root; however
+         * not all filesystems support the same flags and bsdtar might try to
+         * restore flags which make no sense to the target filesystem. *)
+        "--no-same-permissions";
+        "--strip-components";
+        strip;
+        "-C"; pq;
+        iq
+      |]
       `stderr
     )
   let get ~from file =
