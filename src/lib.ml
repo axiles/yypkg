@@ -248,14 +248,6 @@ let search_and_replace_in_file file search replace =
   let new_contents = queue_map f contents in
   overwrite_file file new_contents
 
-let write_temp_file base_name contents =
-  let dir = Filename.temp_dir_name in
-  let path = Filename.concat dir base_name in
-  let oc = open_out_bin path in
-  output_string oc contents;
-  close_out oc;
-  dir, base_name
-
 (* reads 'package_script.el' from a package *)
 let open_package package =
   let s = Tar.get ~from:package "package_script.el" in

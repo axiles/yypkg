@@ -182,7 +182,7 @@ let output_file meta =
   | None -> sp "%s-%s-%s.txz" meta.name version meta.host
   | Some target -> sp "%s-%s-%s-%s.txz" meta.name version target meta.host
 
-let archive settings (meta, install_actions, _) (script_dir, script_name) =
+let archive settings (meta, install_actions, _) script_dir script_name =
   let symlinks =
     list_rev_map_skip install_actions ~f:(function
       | _id, Symlink (_t, n, _k) -> sp "--exclude=%s" n
@@ -196,7 +196,8 @@ let archive settings (meta, install_actions, _) (script_dir, script_name) =
   let tar_args = [
     [| "--exclude=*.la" |];
     Array.of_list symlinks;
-    [| "-C"; script_dir; script_name |];
+    [| "-C"; script_dir |];
+    [| "-s"; sp "/%s/%s/" script_name "package_script.el"; script_name |];
     install_scripts settings.install_scripts;
     [| "-C"; settings.package.dirname; settings.package.basename |]
   ]
@@ -257,7 +258,10 @@ let () =
   let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
   let script = Package_script.build ~pkg_size settings in
   let script_sexp = Pre_sexp.to_string_hum (TypesSexp.Of.script script) in
-  let script_dir_and_name = write_temp_file "package_script.el" script_sexp in
-  let output_file = archive settings script script_dir_and_name in
+  let script_path, oc = Filename.open_temp_file "package_script-" ".el" in
+  output_string oc script_sexp;
+  close_out oc;
+  let output_file = archive settings script (Filename.dirname script_path) (Filename.basename script_path) in
+  Unix.unlink script_path;
   Printf.printf "Package created as: %s\n." output_file
 
