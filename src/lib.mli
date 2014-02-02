@@ -30,7 +30,6 @@ val overwrite_file : string -> string Queue.t -> unit
 val search_and_replace_in_file : string -> string -> string -> unit
 val write_temp_file : string -> string -> string * string
 val open_package : string -> Types.script
-val rev_uniq : 'a list -> 'a list
 val prepend_if : ('a -> bool) -> 'a list -> 'a -> 'a list
 val rev_may_value : 'a option list -> 'a list
 val assert_file_exists : string -> unit

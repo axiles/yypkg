@@ -261,16 +261,6 @@ let open_package package =
   let s = Tar.get ~from:package "package_script.el" in
   TypesSexp.To.script (Pre_sexp.of_string s)
 
-let rev_uniq l =
-  let rec rev_uniq_rc accu cur = function
-    | t :: q when t = cur -> rev_uniq_rc accu cur q
-    | t :: q -> rev_uniq_rc (t :: accu) t q
-    | [] -> accu
-  in
-  match l with
-  | t :: q -> rev_uniq_rc [ t ] t q
-  | [] -> []
-
 let prepend_if pred accu x =
   if pred x then x :: accu else accu
 

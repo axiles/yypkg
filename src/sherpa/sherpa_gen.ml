@@ -148,17 +148,17 @@ let add_deps packages ~memoizer folder pkg =
   (* We find packages that provide the needed .pc files *)
   let pc_requires = list_deps pc pkg.metadata.name pc_requires in
   (* Found the deps: concat them, sort them and remove duplicates. *)
-  let requires = Lib.rev_uniq (List.sort compare pc_requires) in
-  { pkg with deps = requires }
+  let deps = List.sort_uniq compare pc_requires in
+  { pkg with deps = deps }
 
 let repo_metadata pkglist =
   let hosts =
     let triplets = List.rev_map (fun p -> p.metadata.host) pkglist in
-    Lib.rev_uniq (List.sort compare triplets)
+    List.sort_uniq compare triplets
   in
   let targets =
     let triplets = List.rev_map (fun p -> p.metadata.target) pkglist in
-    Lib.rev_uniq (List.sort compare (Lib.rev_may_value triplets))
+    List.sort_uniq compare (Lib.rev_may_value triplets)
   in
   match targets, hosts with
   | [ target ], [ host ] -> { ST.target; host; pkglist }
