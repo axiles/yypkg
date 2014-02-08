@@ -164,7 +164,7 @@ let repo_metadata pkglist =
   | [ target ], [ host ] -> { ST.target; host; pkglist }
   | [], [ host ] -> { ST.target = host; host; pkglist }
   | [], [] ->
-      Lib.ep "Error: not target and no host found";
+      Lib.ep "Error: no target and no host found";
       assert false
   | _, _ ->
       (if targets <> [] then
