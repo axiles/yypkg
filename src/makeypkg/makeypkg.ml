@@ -120,7 +120,7 @@ module Package_script = struct
 
   let segregate_symlinks dir =
     let module FU = FileUtil in
-    let report_format = format_of_string "[symlink] %s: %S -> %S\n%!" in
+    let report_format = format_of_string "[symlink] %s: %S -> %S\n" in
     let report e t kind =
       let kind_string = match kind with
       | `Directory -> "Directory"
