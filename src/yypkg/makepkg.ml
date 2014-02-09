@@ -245,7 +245,7 @@ let main opts =
       { accu with template = Args.(get bool n o) });
   ]
   in
-  let opts = Args.foo ~where:"--makepkg" ~init l opts in
+  let opts = Args.fold_values ~where:"--makepkg" ~init l opts in
   if opts.template then
     print_endline (dummy_script ())
   else

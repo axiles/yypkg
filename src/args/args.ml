@@ -50,7 +50,7 @@ exception Parsing_failed of string
 
 let rec bprint_spec b n { name; children; help } =
   Printf.bprintf b "%s%s : %s\n" (String.make n ' ') name help;
-  List.iter (bprint_spec b (n+1)) children
+  List.iter (bprint_spec b (n+2)) children
 
 (* at any point, we read the argument, if it starts with a '-' and is among the
  * options recognized, we store it as an option, if it's not recognized, we
@@ -135,20 +135,12 @@ let is_opt ?s = function
       | None -> true
     end
 
-let is_val = function
-  | Val _ -> true
-  | _ -> false
-
-let val_of_opts = function
-  | Val s -> s
-  | Opt _ -> assert false
-
 let to_string_list l =
-  let l, m = List.partition is_val l in
+  let l, m = List.partition (function Val _ -> true | _ -> false) l in
   if m <> [] then
     raise (Invalid_argument "to_string_list")
   else
-    List.rev (List.rev_map val_of_opts l)
+    List.rev (List.rev_map (function Val s -> s | _ -> assert false) l)
 
 type 'a getter = (string -> 'a) * string
 
@@ -156,9 +148,8 @@ let bool = bool_of_string, "true or false"
 let string = (fun x -> x), "a string"
 
 let get getter name opt =
-  let sp = Printf.sprintf in
   let fail name valid issue =
-    let msg = sp "%s requires %s, not %s." name valid issue in
+    let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
     raise (Invalid_argument msg)
   in
   match getter, opt with
@@ -167,7 +158,7 @@ let get getter name opt =
   | (f, valid), Val opt ->
       (try f opt with Invalid_argument _ -> fail name valid opt)
 
-let foo ~where ~init l opts =
+let fold_values ~where ~init l opts =
   let sp = Printf.sprintf in
   let fail msg =
     raise (Parsing_failed msg)

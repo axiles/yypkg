@@ -171,7 +171,7 @@ let main opts =
   ]
   in
   let init = { generate = "" } in
-  let opts = Args.foo ~where:"--repository" ~init l opts in
+  let opts = Args.fold_values ~where:"--repository" ~init l opts in
   generate opts.generate
 
 let cli_spec =

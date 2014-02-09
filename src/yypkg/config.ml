@@ -72,7 +72,7 @@ let predicates opts =
     "--delete", (fun ~accu n o ->
       { accu with delete = Args.(get string n o) :: accu.delete });
   ] in
-  let o = Args.foo ~init ~where:"--predicates" l opts in
+  let o = Args.fold_values ~init ~where:"--predicates" l opts in
   match o.list, o.set, o.delete with
   | true, [], [] ->
       print_predicates (read ())
