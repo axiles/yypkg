@@ -33,14 +33,6 @@ let setpred conf pred =
 let delpred conf pred =
   Conf.unset conf pred
 
-(* check if the predicate holds against conf *)
-let predicate_holds (conf : predicate list) (key, value) = 
-  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
-   * configuration, equivalent to false *)
-  try 
-    let conf_vals = List.assoc key conf in
-    List.mem value conf_vals
-  with Not_found -> false
+let set_mirror conf mirror =
+  { conf with mirror }
 
-(* Nothing to do right now *)
-(* let regen _ = () *)

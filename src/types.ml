@@ -77,7 +77,8 @@ type db = package list
   * stability=stable,release_candidate
  * It's mostly free-form, and left as a way to extend the format easily *)
 type conf = {
-  preds : predicate list;
+  predicates : predicate list;
+  mirror : string;
 }
 
 type pkg = {
@@ -89,21 +90,11 @@ type pkg = {
   deps : string list;
 }
 
-module SherpaT = struct
-  type repo = {
-    target : string;
-    host : string;
-    pkglist : pkg list;
-  }
-
-  type sherpa_conf = {
-    mirror : string;
-    download_folder : string;
-  }
-
-  type sherpa_conf_field =
-    | Mirror of string
-end
+type repository = {
+  target : string;
+  host : string;
+  pkglist : pkg list;
+}
 
 exception Package_does_not_exist
 exception File_not_found of string

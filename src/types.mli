@@ -32,7 +32,10 @@ type script =
     metadata * (action_id * install_action) list * uninstall_action list
 type package = script * (action_id * result) list
 type db = package list
-type conf = { preds : predicate list; }
+type conf = {
+  predicates : predicate list;
+  mirror : string;
+}
 type pkg = {
   metadata : metadata;
   size_compressed : size;
@@ -41,12 +44,8 @@ type pkg = {
   files : string list;
   deps : string list;
 }
-module SherpaT :
-  sig
-    type repo = { target : string; host : string; pkglist : pkg list; }
-    type sherpa_conf = { mirror : string; download_folder : string; }
-    type sherpa_conf_field = Mirror of string
-  end
+type repository = { target : string; host : string; pkglist : pkg list; }
+
 exception Package_does_not_exist
 exception File_not_found of string
 exception Not_upgrading_not_installed_package of string

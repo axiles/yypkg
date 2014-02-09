@@ -23,9 +23,8 @@ module Of : sig
   val metadata : metadata -> t
   val conf : conf -> t
   val db : db -> t
-  val sherpa_conf : SherpaT.sherpa_conf -> t
   val script : script -> t
-  val repo : SherpaT.repo -> t
+  val repository : repository -> t
 end = struct
 
   let sexp_of_int n = Atom (string_of_int n)
@@ -115,7 +114,10 @@ end = struct
 
   let sexp_of_db db = sexp_of_list sexp_of_package db
   let sexp_of_conf conf =
-    List [ Atom "preds"; sexp_of_list sexp_of_predicate conf.preds ]
+    List [
+      Atom "predicates"; sexp_of_list sexp_of_predicate conf.predicates;
+      Atom "mirror"; sexp_of_string conf.mirror;
+    ]
 
   let sexp_of_pkg pkg =
     List [
@@ -127,25 +129,18 @@ end = struct
       List [ Atom "deps"; sexp_of_string_list pkg.deps ];
     ]
 
-  let sexp_of_repo repo =
+  let sexp_of_repository repository =
     List [
-      List [ Atom "target"; Atom repo.SherpaT.target ];
-      List [ Atom "host"; Atom repo.SherpaT.host ];
-      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repo.SherpaT.pkglist ]
-    ]
-
-  let sexp_of_sherpa_conf sherpa_conf =
-    List [
-      List [ Atom "mirror"; Atom sherpa_conf.SherpaT.mirror ];
-      List [ Atom "download_folder"; Atom sherpa_conf.SherpaT.download_folder ];
+      List [ Atom "target"; Atom repository.target ];
+      List [ Atom "host"; Atom repository.host ];
+      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repository.pkglist ]
     ]
 
   let metadata = sexp_of_metadata
   let conf = sexp_of_conf
   let db = sexp_of_db
-  let sherpa_conf= sexp_of_sherpa_conf
   let script = sexp_of_script
-  let repo = sexp_of_repo
+  let repository = sexp_of_repository
 end
 
 module To : sig
@@ -153,8 +148,7 @@ module To : sig
   val conf : t -> conf
   val db : t -> db
   val metadata : t -> metadata
-  val sherpa_conf : t -> SherpaT.sherpa_conf
-  val repo : t -> SherpaT.repo
+  val repository : t -> repository
 end = struct
   module Conv : sig
     val of_sexp_error : string -> Pre_sexp.t -> 'a
@@ -295,11 +289,6 @@ end = struct
         end
     | _ -> of_sexp_error "size_of_sexp: not a FileUtil.size" sexp
 
-  let record_of_sexp_aux ~f_name ~f_sexp ~duplicates ~conv ~res =
-    match !res with
-    | None -> res := Some (conv f_sexp)
-    | Some _ -> duplicates := f_name :: !duplicates
-
   let string_tuple_of_sexp = function
     | List [ Atom s1; Atom s2 ] -> s1, s2
     | sexp -> of_sexp_error "string_tuple_of_sexp: not a tuple" sexp
@@ -363,10 +352,19 @@ end = struct
   let db_of_sexp sexp = list_of_sexp package_of_sexp sexp
 
   let conf_of_sexp sexp =
-    match sexp with
-    | List [ Atom "preds"; predicates ] ->
-        { preds = list_of_sexp predicate_of_sexp predicates }
-    | _ -> of_sexp_error "conf_of_sexp: atom or wrong list" sexp
+    let func = "conf_of_sexp" in
+    let predicates = ref None and mirror = ref None in
+    let fields = Record.([
+      field_spec "predicates" predicates (list_of_sexp predicate_of_sexp);
+      field_spec "mirror" mirror string_of_sexp;
+    ])
+    in
+    let build_value () =
+      match (!predicates, !mirror) with
+      | Some predicates, Some mirror -> { predicates; mirror }
+      | _ -> Record.undefined_fields ~func ~sexp ~fields
+    in
+    Record.parse ~func ~sexp ~fields ~build_value
 
   let pkg_of_sexp sexp =
     let func = "pkg_of_sexp" in
@@ -392,8 +390,8 @@ end = struct
     in
     Record.parse ~func ~sexp ~fields ~build_value
 
-  let repo_of_sexp sexp =
-    let func = "repo_of_sexp" in
+  let repository_of_sexp sexp =
+    let func = "repository_of_sexp" in
     let target = ref None and host = ref None and pkglist = ref None in
     let fields = Record.([
       field_spec "target" target string_of_sexp;
@@ -404,24 +402,7 @@ end = struct
     let build_value () =
       match !target, !host, !pkglist with
       | Some target, Some host, Some pkglist ->
-          { SherpaT.target; host; pkglist }
-      | _ -> 
-          Record.undefined_fields ~func ~sexp ~fields
-    in
-    Record.parse ~func ~sexp ~fields ~build_value
-
-  let sherpa_conf_of_sexp sexp =
-    let func = "sherpa_conf_of_sexp" in
-    let mirror = ref None and download_folder = ref None in
-    let fields = Record.([
-      field_spec "mirror" mirror string_of_sexp;
-      field_spec "download_folder" download_folder string_of_sexp;
-    ])
-    in
-    let build_value () =
-      match !mirror, !download_folder with
-      | Some mirror, Some download_folder ->
-          { SherpaT.mirror; download_folder }
+          { target; host; pkglist }
       | _ -> 
           Record.undefined_fields ~func ~sexp ~fields
     in
@@ -431,7 +412,6 @@ end = struct
   let conf = conf_of_sexp
   let db = db_of_sexp
   let metadata = metadata_of_sexp
-  let sherpa_conf = sherpa_conf_of_sexp
-  let repo = repo_of_sexp
+  let repository = repository_of_sexp
 end
 

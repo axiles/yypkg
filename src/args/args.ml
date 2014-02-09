@@ -33,8 +33,8 @@ type child = {
 }
 and spec = child list
 
-(* Something on the command-line is either an option (starts with a dash), or a
- * value. Values are free-form, options are checked against the spec. *)
+(* Something on the command-line is either an option (starts with two dashes),
+ * or a value. Values are free-form, options are checked against the spec. *)
 type opt = 
   | Val of string
   | Opt of (string * opt list)
@@ -46,6 +46,7 @@ let spec ~name ~children ~help = { name; children; help }
  * This isn't a fail of this library, the problem really is the spec *)
 exception Option_specification_is_ambiguous
 exception Incomplete_parsing of (opt list * string list)
+exception Parsing_failed of string
 
 let rec bprint_spec b n { name; children; help } =
   Printf.bprintf b "%s%s : %s\n" (String.make n ' ') name help;
@@ -74,11 +75,11 @@ let opt_of_string opts s =
 
 let rec parse opts accu = function
   (* starts with a dash, it's an option, maybe a valid one *)
-  | ( t :: q ) as l when t.[0] = '-' -> begin
+  | ( t :: q ) as l when t.[0] = '-' && t.[1] = '-' -> begin
       try 
         (* what are the corresponding suboptions? *)
         let { children = subopts } = opt_of_string opts t in
-        (* we'll try to parse as much of the *subo*ptions before returning to
+        (* we'll try to parse as much of the *sub*options before returning to
          * the current level *)
         let subs, q' = parse subopts [] q in
         parse opts (Opt (t, List.rev subs) :: accu) q'
@@ -124,6 +125,8 @@ let usage_msg spec what =
 *)
 
 
+(* returns true if the value given is an option which name matches the optional
+ * argument ?s, if given. *)
 let is_opt ?s = function
   | Val _ -> false
   | Opt (s', _) -> begin
@@ -147,4 +150,35 @@ let to_string_list l =
   else
     List.rev (List.rev_map val_of_opts l)
 
-exception Parsing_failed of string
+type 'a getter = (string -> 'a) * string
+
+let bool = bool_of_string, "true or false"
+let string = (fun x -> x), "a string"
+
+let get getter name opt =
+  let sp = Printf.sprintf in
+  let fail name valid issue =
+    let msg = sp "%s requires %s, not %s." name valid issue in
+    raise (Invalid_argument msg)
+  in
+  match getter, opt with
+  | (_, valid), Opt _ ->
+      fail name valid "switches"
+  | (f, valid), Val opt ->
+      (try f opt with Invalid_argument _ -> fail name valid opt)
+
+let foo ~where ~init l opts =
+  let sp = Printf.sprintf in
+  let fail msg =
+    raise (Parsing_failed msg)
+  in
+  ListLabels.fold_left opts ~init ~f:(fun accu a ->
+    match a with
+    | Opt (o, v) ->
+        let f = (try List.assoc o l with
+        | Not_found -> fail (sp "Unknown option `%s' to %s." o where))
+        in
+        List.fold_left (fun accu v -> f ~accu o v) accu v
+    | Val v ->
+        fail (sp "%s requires a sub-option, not `%s'." where v))
+

@@ -18,6 +18,8 @@
 
 open Types
 
+exception Unknown_package of string
+
 external remove : string -> unit = "yy_remove"
 external create_reparse_point : string -> string -> unit = "create_reparse_point"
 
@@ -38,9 +40,6 @@ let default_download_path =
 
 let conf_path =
   Lib.filename_concat [ "etc"; "yypkg.d"; "yypkg.conf" ]
-
-let sherpa_conf_path =
-  Lib.filename_concat [ "etc"; "yypkg.d"; "sherpa.conf" ]
 
 (* replace env var of the form ${windir} *)
 let expand_environment_variables s =
@@ -147,7 +146,7 @@ let is_installed db p =
   * TODO: check the external binaries are available 
   * ... *)
 let sanity_checks () =
-  let required_files = [ db_path; conf_path; sherpa_conf_path ] in
+  let required_files = [ db_path; conf_path ] in
   List.iter Lib.assert_file_exists required_files
 
 (* find the prefix from a command-line *)
@@ -217,3 +216,84 @@ let symlink ~target ~name ~kind =
       create_reparse_point target_abs name
   | `Windows, `Unhandled reason ->
       Lib.ep "Skipping symlink %S -> %S: %s\n" name target reason
+
+(* check if the predicate holds against conf *)
+let predicate_holds (conf : predicate list) (key, value) = 
+  (* List.assoc may raise Not_found: means the predicate hasn't been set in the
+   * configuration, equivalent to false *)
+  try 
+    let conf_vals = List.assoc key conf in
+    List.mem value conf_vals
+  with Not_found -> false
+
+let get_uri_contents uri =
+  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  let content = Lib.run_and_read [| Lib.wget; "-O"; "-"; "-nv"; uri |] `stdout in
+  Printf.eprintf " DONE\n%!";
+  content
+
+let get_uri uri output =
+  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  ignore (Lib.run_and_read [| Lib.wget; "-nv"; "-O"; output; uri |] `stdout);
+  Printf.eprintf " DONE\n%!"
+
+let download_to_folder ~conf folder p =
+  let uri = String.concat "/" [ conf.mirror; p.filename ] in
+  let output = Lib.filename_concat [ folder; p.filename ] in
+  FileUtil.mkdir ~parent:true ~mode:0o755 folder;
+  get_uri uri output;
+  output
+
+let find_all_by_name ~pkglist ~name_list =
+  List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
+
+let package_is_applicable ~conf pkg =
+  let f = predicate_holds conf.predicates in
+  f ("host", pkg.metadata.host)
+  && match pkg.metadata.target with
+  | Some target -> f ("target", target)
+  | None -> true
+
+let get_deps pkglist packages =
+  let rec add accu p =
+    let name = p.metadata.name in
+    let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.deps) in
+    let accu = List.rev_append l accu in
+    List.fold_left add accu (find_all_by_name ~pkglist ~name_list:l)
+  in
+  let names = List.fold_left add [] packages in
+  find_all_by_name ~pkglist ~name_list:names
+
+let repo_of_uri uri =
+  TypesSexp.To.repository (Pre_sexp.of_string (get_uri_contents uri))
+
+let repository ~conf () =
+  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el"])
+
+let pkglist ~conf  =
+  let repository = repository ~conf () in
+  List.filter (package_is_applicable ~conf) repository.pkglist
+
+let get_packages ~conf ~follow ~dest ~packages =
+  (* NOT used in sherpa_gui so the call to repository() isn't redoing the
+   * download *)
+  let pkglist =
+    let repository = repository ~conf () in
+    let pkglist = List.filter (package_is_applicable ~conf) repository.pkglist in
+    Lib.ep "%d/%d packages available after filtering through predicates.\n"
+      (List.length pkglist)
+      (List.length repository.pkglist);
+    let packages =
+      if packages = [ "all" ] then
+        pkglist
+      else
+        ListLabels.rev_map packages ~f:(fun p ->
+          try
+            List.find (fun p' -> p = p'.metadata.name) pkglist 
+          with Not_found -> raise (Unknown_package p)
+        )
+    in
+    if follow then get_deps pkglist packages else packages
+  in
+  List.map (download_to_folder ~conf dest) pkglist
+

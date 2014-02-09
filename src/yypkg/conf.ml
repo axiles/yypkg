@@ -20,23 +20,22 @@ open Types
 open Yylib
 
 let set conf (binding, value) =
-  let preds = List.remove_assoc binding conf.preds in
-  { preds = (binding, value) :: preds }
+  let predicates = List.remove_assoc binding conf.predicates in
+  { conf with predicates = (binding, value) :: predicates }
 
 let unset conf binding = 
-  { preds = List.remove_assoc binding conf.preds }
+  { conf with predicates = List.remove_assoc binding conf.predicates }
 
 let read () =
   TypesSexp.To.conf (Disk.read conf_path)
 
 let write conf =
-  (* Let's sort the configuration. Won't be faster but should be nicer to read
+  (* Let's sort the predicates. Won't be faster but should be nicer to read
    * when editing the file by hand. It'll also avoid requiring to sort the
    * output when listing the configuration to the user.
    * We use stable_sort so not to change anything if there are several bindings
-   * for the same value, it shouldn't happen but Murphy's Law is Murphy's Law,
-   * so why not stay safe? *)
-  let conf = { preds = List.stable_sort compare conf.preds } in
+   * for the same value. *)
+  let conf = { conf with predicates = List.stable_sort compare conf.predicates } in
   Disk.write conf_path (TypesSexp.Of.conf conf)
 
 (* read the conf, run the function, write the database to disk
@@ -44,9 +43,9 @@ let write conf =
 let update f =
   write (f (read ()))
 
-let print_preds conf = 
+let print_predicates conf = 
   let print_single_pred (binding, values) = 
     Printf.printf "%s = %s\n" binding (String.concat "," values)
   in
-  List.iter print_single_pred conf.preds
+  List.iter print_single_pred conf.predicates
 

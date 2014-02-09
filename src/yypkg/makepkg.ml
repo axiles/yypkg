@@ -18,7 +18,6 @@
 
 open Types
 open Lib
-open Types
 
 let xz_opt size =
   let max_dict = 1 lsl 26 in (* 64MB *)
@@ -64,11 +63,12 @@ type dir = {
   basename : string;
 }
 
-type settings = {
+type makepkg_opts = {
   output : string;
-  package : dir;
-  install_scripts : dir option;
   script : string;
+  install_scripts : dir option;
+  directory : dir;
+  template : bool;
 }
 
 let dir_of_path path =
@@ -156,11 +156,11 @@ module Package_script = struct
     List.map (fun (s, (t, e, k)) -> s, Symlink (t, e, k)) (List.sort cmp links)
 
   let build ~pkg_size settings =
-    let dir = settings.package.basename in
+    let dir = settings.directory.basename in
     let script = script ~script:settings.script ~pkg_size in
     let meta, install_actions, uninstall_actions = script in
     let expand_id = sp "expand_%s" dir in
-    let symlinks_install_actions = segregate_symlinks settings.package.path in
+    let symlinks_install_actions = segregate_symlinks settings.directory.path in
     let install_actions =
       (* we want to expand the content of dir so we suffix it with '/' *)
       (expand_id, Expand (dir ^ "/", "."))
@@ -199,7 +199,7 @@ let archive settings (meta, install_actions, _) script_dir script_name =
     [| "-C"; script_dir |];
     [| "-s"; sp "/%s/%s/" script_name "package_script.el"; script_name |];
     install_scripts settings.install_scripts;
-    [| "-C"; settings.package.dirname; settings.package.basename |]
+    [| "-C"; settings.directory.dirname; settings.directory.basename |]
   ]
   in
   let xz_opt = xz_opt (FileUtil.byte_of_size meta.size_expanded) in
@@ -217,6 +217,7 @@ let dummy_script () =
   in
   Pre_sexp.to_string_hum (TypesSexp.Of.script (metadata, [], []))
 
+  (*
 let parse_command_line () = 
   let output, dir, iscripts, script, template =
     ref (Sys.getcwd ()), ref "", ref "", ref "", ref false in
@@ -247,15 +248,15 @@ Examples:
     else
       {
         output = !output;
-        package = dir_of_path !dir;
+        directory = dir_of_path !dir;
         install_scripts =
           if !iscripts <> "" then Some (dir_of_path !iscripts) else None;
         script = !script;
       }
+      *)
 
-let () =
-  let settings = parse_command_line () in
-  let pkg_size = fst (FileUtil.du [ settings.package.path ]) in
+let generate settings =
+  let pkg_size = fst (FileUtil.du [ settings.directory.path ]) in
   let script = Package_script.build ~pkg_size settings in
   let script_sexp = Pre_sexp.to_string_hum (TypesSexp.Of.script script) in
   let script_path, oc = Filename.open_temp_file "package_script-" ".el" in
@@ -265,3 +266,8 @@ let () =
   Unix.unlink script_path;
   Printf.printf "Package created as: %s\n." output_file
 
+let main settings =
+  if settings.template then
+    print_endline (dummy_script ())
+  else
+    generate settings

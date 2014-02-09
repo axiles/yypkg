@@ -17,7 +17,9 @@
  *)
 
 open Types
-module ST = SherpaT
+
+let filename_check_suffix ext s =
+  try FilePath.check_extension s ext with FilePath.NoExtension _ -> false
 
 class ['a] memoizer ~directory ~name =
   let memo_file = FilePath.concat directory ("memo_" ^ name) in
@@ -62,7 +64,7 @@ let pkg_of_file ~memoizer file =
     memoizer#add file pkg;
     pkg
 
-let repo_metadata pkglist =
+let repository_metadata pkglist =
   let hosts =
     let triplets = List.rev_map (fun p -> p.metadata.host) pkglist in
     List.sort_uniq compare triplets
@@ -72,8 +74,8 @@ let repo_metadata pkglist =
     List.sort_uniq compare (Lib.rev_may_value triplets)
   in
   match targets, hosts with
-  | [ target ], [ host ] -> { ST.target; host; pkglist }
-  | [], [ host ] -> { ST.target = host; host; pkglist }
+  | [ target ], [ host ] -> { target; host; pkglist }
+  | [], [ host ] -> { target = host; host; pkglist }
   | [], [] ->
       Lib.ep "Error: no target and no host found";
       assert false
@@ -128,25 +130,24 @@ module Output = struct
       ])
   end
 
-  let package_list ~directory ~repo =
+  let package_list ~directory ~repository =
     let el_oc = FilePath.concat directory "package_list.el" in
     let el_oc = open_out_bin el_oc in
-    Pre_sexp.output_hum el_oc (TypesSexp.Of.repo repo);
+    Pre_sexp.output_hum el_oc (TypesSexp.Of.repository repository);
     close_out el_oc
 
-  let html ~directory ~repo =
+  let html ~directory ~repository =
     let html_oc = FilePath.concat directory "package_list.html" in
     let html_oc = open_out_bin html_oc in
-    output_string html_oc (HTML.table repo.ST.pkglist);
+    output_string html_oc (HTML.table repository.pkglist);
     close_out html_oc
 
-  let write ~directory ~repo =
-    package_list ~directory ~repo;
-    html ~directory ~repo
+  let write ~directory ~repository =
+    package_list ~directory ~repository;
+    html ~directory ~repository
 end
 
-let () =
-  let dir = Sys.argv.(1) in
+let generate dir =
   let memoizer_pkgs = new memoizer ~directory:dir ~name:"pkg" in
   let files = Array.to_list (Sys.readdir dir) in
   let files = List.filter (filename_check_suffix "txz") files in
@@ -155,6 +156,6 @@ let () =
     pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat dir f)) in
   (* Add deps during a second stage. *)
   let pkg_compare a b = compare a.metadata.name b.metadata.name in
-  let repo = repo_metadata (List.sort pkg_compare pkgs) in
-  Output.write ~directory:dir ~repo;
+  let repository = repository_metadata (List.sort pkg_compare pkgs) in
+  Output.write ~directory:dir ~repository;
   memoizer_pkgs#commit ()

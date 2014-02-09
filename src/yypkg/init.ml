@@ -43,11 +43,5 @@ let init prefix =
     let fl = FU.find FU.Is_file Lib.binary_path (Lib.prepend_if is_binary) [] in
     FU.cp fl (mk_absolute "sbin"));
   Disk.write db_path (TypesSexp.Of.db []);
-  let base_conf = { preds = [] } in
-  let base_sherpa_conf = {
-    SherpaT.mirror = "http://yypkg.org/VERSION/packages/SERIES";
-    download_folder = dl_folder;
-  }
-  in
+  let base_conf = { mirror = ""; predicates = [] } in
   Disk.write conf_path (TypesSexp.Of.conf base_conf);
-  Disk.write sherpa_conf_path (TypesSexp.Of.sherpa_conf base_sherpa_conf)
