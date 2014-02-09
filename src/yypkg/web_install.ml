@@ -98,7 +98,8 @@ let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
   mk ~n:"--web-install" ~h:"download and install a package by name" [
     mk ~n:"--follow-dependencies" ~h:"also fetch and install dependencies" [];
-    mk ~n:"--download-only" ~h:"download packages" [];
+    mk ~n:"--download-only" ~h:"only download packages, don't install them" [];
     mk ~n:"--download-folder" 
       ~h:("where to put downloaded files (instead of " ^ Yylib.default_download_path ^ ")") [];
+    mk ~n:"--packages" ~h:"packages to install" [];
   ];
