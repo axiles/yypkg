@@ -159,3 +159,23 @@ let generate dir =
   let repository = repository_metadata (List.sort pkg_compare pkgs) in
   Output.write ~directory:dir ~repository;
   memoizer_pkgs#commit ()
+
+type repository_opts = {
+  generate : string;
+}
+
+let main opts =
+  let l = [
+    "--generate", (fun ~accu n o ->
+      { accu with generate = Args.(get string n o) })
+  ]
+  in
+  let init = { generate = "" } in
+  let opts = Args.foo ~where:"--repository" ~init l opts in
+  generate opts.generate
+
+let cli_spec =
+  let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
+  mk ~n:"--repository" ~h:"" [
+    mk ~n:"--generate" ~h:"generate repository data" [];
+  ];

@@ -26,142 +26,16 @@ let cmd_line_spec =
     mk ~n:"--prefix" ~h:"prefix yypkg will be working in" [];
     mk ~n:"--init" ~h:"setups a directory tree for yypkg (run once)" [];
     mk ~n:"--install" ~h:"install a package (extension is .txz)" [];
-    mk ~n:"--web-install" ~h:"download and install a package by name" [
-      mk ~n:"--follow-dependencies" ~h:"also fetch and install dependencies" [];
-      mk ~n:"--download-only" ~h:"download packages" [];
-      mk ~n:"--download-folder" 
-        ~h:("where to put downloaded files (instead of " ^ Yylib.default_download_path ^ ")") [];
-    ];
+    Web_install.cli_spec;
     mk ~n:"--upgrade" ~h: "upgrade with package (extension is .txz)" [
       mk ~n:"--install-new" ~h:"If package isn't already installed, install it." [];
     ];
     mk ~n:"--uninstall" ~h:"uninstall a package by name" [];
     mk ~n:"--list" ~h:"list the packages installed" [];
-    mk ~n:"--config" ~h:"parent option for:" [
-      mk ~n:"--predicates" ~h:"" [
-        mk ~n:"--set" ~h:"set predicates (e.g. \"host=x86_64-w64-mingw32\")" [];
-        mk ~n:"--delete" ~h:"delete predicates" [];
-        mk ~n:"--list" ~h:"list predicates" [];
-      ];
-      mk ~n:"--set-mirror" ~h:"set the mirror to use" [];
-      (* add --print *)
-    ];
-    mk ~n:"--repository" ~h:"" [
-      mk ~n:"--generate" ~h:"generate repository data" [];
-    ];
-    mk ~n:"--makepkg" ~h:"" [
-      mk ~n:"--output" ~h:"output directory (defaults to current dir)" [];
-      mk ~n:"--script" ~h:"package script file (- for stdin)" [];
-      mk ~n:"--iscripts" ~h:"directory of install scripts" [];
-      mk ~n:"--directory" ~h:"directory to package" [];
-      mk ~n:"--template" ~h:"write a template script on stdout" [];
-    ];
+    Config.cli_spec;
+    Repository.cli_spec;
+    Makepkg.cli_spec;
 ]
-
-type repository_opts = {
-  generate : string;
-}
-
-type web_install_opts = {
-  follow_dependencies : bool;
-  download_only : bool;
-  dest : string;
-  packages : string list;
-}
-
-let makepkg opts =
-  let init =
-    { Makepkg.output = ""; script = ""; install_scripts = None;
-      directory = Makepkg.dir_of_path ""; template = false } in
-  let l = [
-    "--output", (fun ~accu n o ->
-      { accu with Makepkg.output = Args.(get string n o) });
-    "--script", (fun ~accu n o ->
-      { accu with Makepkg.script = Args.(get string n o) });
-    "--iscripts", (fun ~accu n o ->
-      { accu with Makepkg.install_scripts = Some (Makepkg.dir_of_path Args.(get string n o)) });
-    "--directory", (fun ~accu n o ->
-      { accu with Makepkg.directory = Makepkg.dir_of_path Args.(get string n o) });
-    "--template", (fun ~accu n o ->
-      { accu with Makepkg.template = Args.(get bool n o) });
-  ]
-  in
-  let opts = Args.foo ~where:"--makepkg" ~init l opts in
-  Makepkg.main opts
-
-let repository opts =
-  let l = [
-    "--generate", (fun ~accu n o ->
-      { accu with generate = Args.(get string n o) })
-  ]
-  in
-  let init = { generate = "" } in
-  let opts = Args.foo ~where:"--repository" ~init l opts in
-  Repository.generate opts.generate
-
-let web_install ~start_dir opts =
-  let init = { follow_dependencies = false; download_only = false;
-    packages = []; dest = Yylib.default_download_path } in
-  let l = [
-    "--download-only", (fun ~accu n o ->
-      { accu with download_only = Args.(get bool n o) });
-    "--follow-dependencies", (fun ~accu n o ->
-      { accu with follow_dependencies = Args.(get bool n o) });
-    "--download-folder", (fun ~accu n o ->
-      { accu with dest = FilePath.make_absolute start_dir Args.(get string n o) });
-    "--packages", (fun ~accu n o ->
-      { accu with packages = Args.(get string n o) :: accu.packages });
-  ] in
-  let o = Args.foo ~init ~where:"--web-install" l opts in
-  let conf = Conf.read () in
-  let packages = get_packages ~conf ~follow:o.follow_dependencies ~dest:o.dest ~packages:o.packages in
-  (if not o.download_only then Db.update (Install.install conf packages))
-
-type predicates = {
-  list : bool;
-  set : string list;
-  delete : string list;
-}
-
-let predicates opts =
-  let init = { list = false; set = []; delete = [] } in
-  let l = [
-    "--list", (fun ~accu n o ->
-      { accu with list = Args.(get bool n o) });
-    "--set", (fun ~accu n o ->
-      { accu with set = Args.(get string n o) :: accu.set });
-    "--delete", (fun ~accu n o ->
-      { accu with delete = Args.(get string n o) :: accu.delete });
-  ] in
-  let o = Args.foo ~init ~where:"--predicates" l opts in
-  match o.list, o.set, o.delete with
-  | true, [], [] ->
-      Conf.print_predicates (Conf.read ())
-  | true, _, _ ->
-      Lib.ep "WARNING: both --list and --(un)set given to --config; only --list is executed.\n%!";
-      Conf.print_predicates (Conf.read ())
-  | false, [], [] ->
-      Lib.ep "WARNING: none of --list, --set, --unset given to --config.\n%!";
-  | _, _, [] ->
-      Conf.update (fun conf -> List.fold_left Config.setpred conf o.set)
-  | _, [], _ ->
-      Conf.update (fun conf -> List.fold_left Config.delpred conf o.delete)
-  | _, _, _ ->
-      Lib.ep "WARNING: both --set and --unset given to --config; doing nothing.\n%!"
-
-let config opts =
-  ListLabels.iter opts ~f:(function
-  | Args.Opt ("--predicates", subopts) ->
-      predicates opts
-  | Args.Opt ("--set-mirror", [ Args.Val mirror ]) ->
-      Conf.update (fun conf -> Config.set_mirror conf mirror)
-  | Args.Opt ("--set-mirror", _) ->
-     raise (Args.Parsing_failed "--set-mirror requires a string as argument.")
-  | Args.Opt (name, _) ->
-     raise (Args.Parsing_failed (Lib.sp "Unknown argument `%s'." name))
-  | Args.Val v ->
-     raise (Args.Parsing_failed (Lib.sp "--config requires a sub-option, not `%s'." v))
-  )
 
 (* upgrade with or without -install-new *)
 let upgrade old_cwd cmd_line = 
@@ -202,7 +76,7 @@ let main b =
             (Args.to_string_list actionopts) in
           Db.update (Install.install (Conf.read ()) l)
       (* web-install, accepts several packages at once *)
-      | Some "--web-install" -> web_install ~start_dir actionopts
+      | Some "--web-install" -> Web_install.main ~start_dir actionopts
       (* upgrade, accepts several packages at once *)
       | Some "--upgrade" -> upgrade old_cwd actionopts
       (* uninstall, accepts several packages at once *)
@@ -214,9 +88,11 @@ let main b =
           let l = Args.to_string_list actionopts in
           Yylist.list (Db.read ()) l
       (* config does nothing on its own but has suboptions *)
-      | Some "--config" -> config actionopts
+      | Some "--config" -> Config.main actionopts
       (* *)
-      | Some "--repository" -> repository actionopts
+      | Some "makepkg" -> Makepkg.main actionopts
+      (* *)
+      | Some "--repository" -> Repository.main actionopts
       (* if an option was different, Args.parse would already have
        * complained, so this final pattern will never be matched *)
       | _ -> assert false

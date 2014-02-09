@@ -18,6 +18,8 @@ val metadata_of_pkg : Types.package -> Types.metadata
 val metadata_of_script : Types.script -> Types.metadata
 val package_is_named : string -> Types.package -> bool
 val find_all_by_name_regex : Types.db -> Str.regexp -> Types.db
+val find_all_by_name :
+  pkglist:Types.pkg list -> name_list:string list -> Types.pkg list
 val is_installed : Types.db -> string -> bool
 val sanity_checks : unit -> unit
 val prefix_of_cmd_line : Args.opt list -> string * Args.opt list
@@ -27,6 +29,6 @@ val symlink :
   kind:Types.filekind -> unit
 val predicate_holds : Types.predicate list -> string * string -> bool
 
-val get_packages :
+(* val get_packages :
   conf:Types.conf -> follow:bool ->
-  dest:FilePath.filename -> packages:string list -> string list
+  dest:FilePath.filename -> packages:string list -> string list *)

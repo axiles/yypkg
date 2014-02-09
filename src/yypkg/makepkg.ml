@@ -266,8 +266,35 @@ let generate settings =
   Unix.unlink script_path;
   Printf.printf "Package created as: %s\n." output_file
 
-let main settings =
-  if settings.template then
+let main opts =
+  let init =
+    { output = ""; script = ""; install_scripts = None;
+      directory = dir_of_path ""; template = false } in
+  let l = [
+    "--output", (fun ~accu n o ->
+      { accu with output = Args.(get string n o) });
+    "--script", (fun ~accu n o ->
+      { accu with script = Args.(get string n o) });
+    "--iscripts", (fun ~accu n o ->
+      { accu with install_scripts = Some (dir_of_path Args.(get string n o)) });
+    "--directory", (fun ~accu n o ->
+      { accu with directory = dir_of_path Args.(get string n o) });
+    "--template", (fun ~accu n o ->
+      { accu with template = Args.(get bool n o) });
+  ]
+  in
+  let opts = Args.foo ~where:"--makepkg" ~init l opts in
+  if opts.template then
     print_endline (dummy_script ())
   else
-    generate settings
+    generate opts
+
+let cli_spec =
+  let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
+  mk ~n:"--makepkg" ~h:"" [
+    mk ~n:"--output" ~h:"output directory (defaults to current dir)" [];
+    mk ~n:"--script" ~h:"package script file (- for stdin)" [];
+    mk ~n:"--iscripts" ~h:"directory of install scripts" [];
+    mk ~n:"--directory" ~h:"directory to package" [];
+    mk ~n:"--template" ~h:"write a template script on stdout" [];
+  ];
