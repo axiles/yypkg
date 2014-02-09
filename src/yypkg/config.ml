@@ -18,6 +18,36 @@
 
 open Types
 
+let set conf (binding, value) =
+  let predicates = List.remove_assoc binding conf.predicates in
+  { conf with predicates = (binding, value) :: predicates }
+
+let unset conf binding = 
+  { conf with predicates = List.remove_assoc binding conf.predicates }
+
+let read () =
+  TypesSexp.To.conf (Disk.read Yylib.conf_path)
+
+let write conf =
+  (* Let's sort the predicates. Won't be faster but should be nicer to read
+   * when editing the file by hand. It'll also avoid requiring to sort the
+   * output when listing the configuration to the user.
+   * We use stable_sort so not to change anything if there are several bindings
+   * for the same value. *)
+  let conf = { conf with predicates = List.stable_sort compare conf.predicates } in
+  Disk.write Yylib.conf_path (TypesSexp.Of.conf conf)
+
+(* read the conf, run the function, write the database to disk
+ * if fail raises an exception, nothing will be written :-) *)
+let update f =
+  write (f (read ()))
+
+let print_predicates conf = 
+  let print_single_pred (binding, values) = 
+    Printf.printf "%s = %s\n" binding (String.concat "," values)
+  in
+  List.iter print_single_pred conf.predicates
+
 (* Split a string "X=A,B,C" into (X, [A; B; C]) *)
 let key_value_pair s =
   let l = String.length s in
@@ -25,16 +55,6 @@ let key_value_pair s =
   let key = String.sub s 0 i in
   let value = Str.split (Str.regexp ",") (String.sub s (i+1) (l-i-1)) in
   key, value
-
-(* updates the association list from "X=A,B,C" strings *)
-let setpred conf pred =
-  Conf.set conf (key_value_pair pred)
-
-let delpred conf pred =
-  Conf.unset conf pred
-
-let set_mirror conf mirror =
-  { conf with mirror }
 
 type predicates = {
   list : bool;
@@ -55,16 +75,17 @@ let predicates opts =
   let o = Args.foo ~init ~where:"--predicates" l opts in
   match o.list, o.set, o.delete with
   | true, [], [] ->
-      Conf.print_predicates (Conf.read ())
+      print_predicates (read ())
   | true, _, _ ->
       Lib.ep "WARNING: both --list and --(un)set given to --config; only --list is executed.\n%!";
-      Conf.print_predicates (Conf.read ())
+      print_predicates (read ())
   | false, [], [] ->
       Lib.ep "WARNING: none of --list, --set, --unset given to --config.\n%!";
   | _, _, [] ->
-      Conf.update (fun conf -> List.fold_left setpred conf o.set)
+      (* updates the association list from "X=A,B,C" strings *)
+      update (fun conf -> List.fold_left (fun conf p -> set conf (key_value_pair p)) conf o.set)
   | _, [], _ ->
-      Conf.update (fun conf -> List.fold_left delpred conf o.delete)
+      update (fun conf -> List.fold_left unset conf o.delete)
   | _, _, _ ->
       Lib.ep "WARNING: both --set and --unset given to --config; doing nothing.\n%!"
 
@@ -73,7 +94,7 @@ let main opts =
   | Args.Opt ("--predicates", subopts) ->
       predicates opts
   | Args.Opt ("--set-mirror", [ Args.Val mirror ]) ->
-      Conf.update (fun conf -> set_mirror conf mirror)
+      update (fun conf -> { conf with mirror })
   | Args.Opt ("--set-mirror", _) ->
      raise (Args.Parsing_failed "--set-mirror requires a string as argument.")
   | Args.Opt (name, _) ->

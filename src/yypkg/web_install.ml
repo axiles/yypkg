@@ -90,7 +90,7 @@ let main ~start_dir opts =
       { accu with packages = Args.(get string n o) :: accu.packages });
   ] in
   let o = Args.foo ~init ~where:"--web-install" l opts in
-  let conf = Conf.read () in
+  let conf = Config.read () in
   let packages = get_packages ~conf ~follow:o.follow_dependencies ~dest:o.dest ~packages:o.packages in
   (if not o.download_only then Db.update (Install.install conf packages))
 

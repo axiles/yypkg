@@ -42,7 +42,7 @@ let upgrade old_cwd cmd_line =
   let f ?install_new l =
     let l = Args.to_string_list l in
     let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
-    Db.update (Upgrade.upgrade ?install_new (Conf.read ()) l)
+    Db.update (Upgrade.upgrade ?install_new (Config.read ()) l)
   in
   match List.partition Args.is_opt cmd_line with
   | [ Args.Opt ("--install-new", l) ], [] -> f ~install_new:true l
@@ -74,7 +74,7 @@ let main b =
       | Some "--install" ->
           let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
             (Args.to_string_list actionopts) in
-          Db.update (Install.install (Conf.read ()) l)
+          Db.update (Install.install (Config.read ()) l)
       (* web-install, accepts several packages at once *)
       | Some "--web-install" -> Web_install.main ~start_dir actionopts
       (* upgrade, accepts several packages at once *)
