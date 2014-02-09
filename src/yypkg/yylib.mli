@@ -22,8 +22,6 @@ val find_all_by_name :
   pkglist:Types.pkg list -> name_list:string list -> Types.pkg list
 val is_installed : Types.db -> string -> bool
 val sanity_checks : unit -> unit
-val prefix_of_cmd_line : Args.opt list -> string * Args.opt list
-val action_of_cmd_line : Args.opt list -> string option * Args.opt list
 val symlink :
   target:FilePath.filename -> name:FilePath.filename ->
   kind:Types.filekind -> unit

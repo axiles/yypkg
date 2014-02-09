@@ -17,7 +17,6 @@
  *)
 
 open Types
-open Yylib
 
 (* all the options we accept *)
 let cmd_line_spec =
@@ -37,6 +36,35 @@ let cmd_line_spec =
     Makepkg.cli_spec;
 ]
 
+(* find the prefix from a command-line *)
+let prefix_of_cmd_line cmd_line =
+  let lt, lf = List.partition (Args.is_opt ~s:"--prefix") cmd_line in
+  match lt with
+  (* we've not been given --prefix, maybe ${YYPREFIX} ? *)
+  | [] when (try ignore (Sys.getenv "YYPREFIX");true with Not_found -> false) ->
+      Sys.getenv "YYPREFIX", lf
+  (* we've been given the --prefix with a string argument
+   * we also set it as an env var so it can be used in install scripts *)
+  | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
+      Unix.putenv "YYPREFIX" prefix;
+      prefix, lf
+  (* all other combinations are invalid: raise an exception that will be
+   * caught later on *)
+  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and --prefix not specified")
+
+(* find the action from a command-line, only one allowed at a time *)
+let action_of_cmd_line cmd_line = 
+  (* we want all options (Args.Opt _) and discard all values *)
+  let lt, _ = List.partition Args.is_opt cmd_line in
+  match lt with
+    (* exactly one action: everything ok *)
+    | [ Args.Opt (action, subopts) ] -> Some action, subopts
+    (* no action: whatever the default will be *)
+    | [] -> None, []
+    (* several actions is forbidden: raise an exception that will be caught
+     * later on *)
+    | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
+
 (* upgrade with or without -install-new *)
 let upgrade old_cwd cmd_line = 
   let f ?install_new l =
@@ -55,8 +83,8 @@ let main b =
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
-    let prefix, cmd_line = Yylib.prefix_of_cmd_line cmd_line in
-    let action, actionopts = Yylib.action_of_cmd_line cmd_line in
+    let prefix, cmd_line = prefix_of_cmd_line cmd_line in
+    let action, actionopts = action_of_cmd_line cmd_line in
     if action = Some "--init" && actionopts = [] then
       (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
       let prefix = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) prefix in
@@ -87,14 +115,13 @@ let main b =
       | Some "--list" ->
           let l = Args.to_string_list actionopts in
           Yylist.list (Db.read ()) l
-      (* config does nothing on its own but has suboptions *)
+      (* config, makepkg and repository do nothing on their own but have
+       * suboptions *)
       | Some "--config" -> Config.main actionopts
-      (* *)
-      | Some "makepkg" -> Makepkg.main actionopts
-      (* *)
+      | Some "--makepkg" -> Makepkg.main actionopts
       | Some "--repository" -> Repository.main actionopts
-      (* if an option was different, Args.parse would already have
-       * complained, so this final pattern will never be matched *)
+      (* if an option was different, Args.parse would already have complained,
+       * so this final pattern will never be matched *)
       | _ -> assert false
 
 let main_wrap b =

@@ -176,6 +176,6 @@ let main opts =
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
-  mk ~n:"--repository" ~h:"" [
+  mk ~n:"--repository" ~h:"operations related to managing whole repositories" [
     mk ~n:"--generate" ~h:"generate repository data" [];
   ];

@@ -217,44 +217,6 @@ let dummy_script () =
   in
   Pre_sexp.to_string_hum (TypesSexp.Of.script (metadata, [], []))
 
-  (*
-let parse_command_line () = 
-  let output, dir, iscripts, script, template =
-    ref (Sys.getcwd ()), ref "", ref "", ref "", ref false in
-  let lst = [
-    (* the output file*name* will be built from the other param values *)
-    "-o", Arg.Set_string output, "output directory (defaults to current dir)";
-    "-script", Arg.Set_string script, "package script file (- for stdin)";
-    "-iscripts", Arg.Set_string iscripts, "directory of install scripts";
-    "-template", Arg.Set template, "write a template script on stdout";
-  ]
-  in
-  let usage_msg = "\
-Create a yypkg package from a directory.
-Use either (-o, -script, -iscripts and a directory) XOR -template (see -help).
-Examples:
-  $ makeypkg -o /some/dir -script pcre.META -iscripts iscripts-atk package-atk
-  $ makeypkg -template"
-    in
-  (* the last argument is the directory to package *)
-  Arg.parse lst ((:=) dir) usage_msg;
-  if !template then
-    (print_endline (dummy_script ()); exit 0)
-  else
-    (* check if any argument has not been set (missing from the command-line *)
-    if List.mem "" [ !output; !dir; !script ] then
-      let () = prerr_endline usage_msg in
-      exit (-1)
-    else
-      {
-        output = !output;
-        directory = dir_of_path !dir;
-        install_scripts =
-          if !iscripts <> "" then Some (dir_of_path !iscripts) else None;
-        script = !script;
-      }
-      *)
-
 let generate settings =
   let pkg_size = fst (FileUtil.du [ settings.directory.path ]) in
   let script = Package_script.build ~pkg_size settings in
@@ -287,11 +249,20 @@ let main opts =
   if opts.template then
     print_endline (dummy_script ())
   else
-    generate opts
+    if (opts.output = "" || opts.script = "" || opts.directory.path = "") then
+      raise (Args.Parsing_failed "All of --output, --script and --directory are mandatory.")
+    else
+      generate opts
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
-  mk ~n:"--makepkg" ~h:"" [
+  (* let usage_msg = "\
+Use either (-o, -script, -iscripts and a directory) XOR -template (see -help).
+Examples:
+  $ makeypkg -o /some/dir -script pcre.META -iscripts iscripts-atk package-atk
+  $ makeypkg -template"
+  in *)
+  mk ~n:"--makepkg" ~h:"Create a yypkg package from a directory." [
     mk ~n:"--output" ~h:"output directory (defaults to current dir)" [];
     mk ~n:"--script" ~h:"package script file (- for stdin)" [];
     mk ~n:"--iscripts" ~h:"directory of install scripts" [];
