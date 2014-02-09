@@ -115,8 +115,8 @@ end = struct
   let sexp_of_db db = sexp_of_list sexp_of_package db
   let sexp_of_conf conf =
     List [
-      Atom "predicates"; sexp_of_list sexp_of_predicate conf.predicates;
-      Atom "mirror"; sexp_of_string conf.mirror;
+      List [ Atom "predicates"; sexp_of_list sexp_of_predicate conf.predicates ];
+      List [ Atom "mirror"; sexp_of_string conf.mirror ];
     ]
 
   let sexp_of_pkg pkg =
