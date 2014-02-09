@@ -142,20 +142,22 @@ let to_string_list l =
   else
     List.rev (List.rev_map (function Val s -> s | _ -> assert false) l)
 
-type 'a getter = (string -> 'a) * string
+type 'a getter = (string -> 'a) * 'a * string
 
-let bool = bool_of_string, "true or false"
-let string = (fun x -> x), "a string"
+let bool = bool_of_string, true, "true or false"
+let string = (fun x -> x), "", "a string"
 
-let get getter name opt =
+let get (f, default, valid) name opt =
   let fail name valid issue =
     let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
     raise (Invalid_argument msg)
   in
-  match getter, opt with
-  | (_, valid), Opt _ ->
+  match opt with
+  | None ->
+      default
+  | Some (Opt _) ->
       fail name valid "switches"
-  | (f, valid), Val opt ->
+  | Some (Val opt) ->
       (try f opt with Invalid_argument _ -> fail name valid opt)
 
 let fold_values ~where ~init l opts =
@@ -169,7 +171,9 @@ let fold_values ~where ~init l opts =
         let f = (try List.assoc o l with
         | Not_found -> fail (sp "Unknown option `%s' to %s." o where))
         in
-        List.fold_left (fun accu v -> f ~accu o v) accu v
+        (match v with
+        | [] -> f ~accu o None
+        | _ -> List.fold_left (fun accu v -> f ~accu o (Some v)) accu v)
     | Val v ->
         fail (sp "%s requires a sub-option, not `%s'." where v))
 

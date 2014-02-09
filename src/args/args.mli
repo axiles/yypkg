@@ -13,10 +13,10 @@ val usage_msg : child list -> string -> child
 val is_opt : ?s:string -> opt -> bool
 val to_string_list : opt list -> string list
 
-type 'a getter = (string -> 'a) * string
+type 'a getter = (string -> 'a) * 'a * string
 val bool : bool getter
 val string : string getter
-val get : 'a getter -> string -> opt -> 'a
+val get : 'a getter -> string -> opt option -> 'a
 val fold_values :
   where:string -> init:'a ->
-  (string * (accu:'a -> string -> opt -> 'a)) list -> opt list -> 'a
+  (string * (accu:'a -> string -> opt option -> 'a)) list -> opt list -> 'a
