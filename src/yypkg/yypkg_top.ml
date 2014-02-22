@@ -38,19 +38,18 @@ let cmd_line_spec =
 
 (* find the prefix from a command-line *)
 let prefix_of_cmd_line cmd_line =
-  let lt, lf = List.partition (Args.is_opt ~s:"--prefix") cmd_line in
-  match lt with
+  match List.partition (Args.is_opt ~s:"--prefix") cmd_line with
   (* we've not been given --prefix, maybe ${YYPREFIX} ? *)
-  | [] when (try ignore (Sys.getenv "YYPREFIX");true with Not_found -> false) ->
-      Sys.getenv "YYPREFIX", lf
+  | [], lf ->
+      (try Some (Sys.getenv "YYPREFIX") with Not_found -> None), lf
   (* we've been given the --prefix with a string argument
    * we also set it as an env var so it can be used in install scripts *)
-  | [ Args.Opt (_, [ Args.Val prefix ]) ] -> 
+  | [ Args.Opt (_, [ Args.Val prefix ]) ], lf ->
       Unix.putenv "YYPREFIX" prefix;
-      prefix, lf
-  (* all other combinations are invalid: raise an exception that will be
-   * caught later on *)
-  | _ -> raise (Args.Parsing_failed "YYPREFIX environment variable not found and --prefix not specified")
+      Some prefix, lf
+  (* all other combinations are invalid: raise an exception that will be caught
+   * later on *)
+  | _, lf -> None, lf
 
 (* find the action from a command-line, only one allowed at a time *)
 let action_of_cmd_line cmd_line = 
@@ -77,6 +76,15 @@ let upgrade old_cwd cmd_line =
   | [], l -> f l
   | _ -> assert false
 
+let prefix_not_set () =
+  raise (Args.Parsing_failed
+    "YYPREFIX environment variable not found and --prefix not specified")
+
+(* Some operations are relative to the prefix and yypkg will chdir to it. *)
+let enter = function
+  | Some prefix -> Sys.chdir prefix; Yylib.sanity_checks ()
+  | None -> prefix_not_set ()
+
 let main b =
   if Args.wants_help () then
     Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
@@ -85,46 +93,54 @@ let main b =
     (* the second cmd_line is the first with occurences of "-prefix" removed *)
     let prefix, cmd_line = prefix_of_cmd_line cmd_line in
     let action, actionopts = action_of_cmd_line cmd_line in
-    if action = Some "--init" && actionopts = [] then
-      (* setups a few things for correct operation of yypkg, see yypkg/init.ml*)
-      let prefix = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) prefix in
-      Init.init prefix
-    else
-      (* Keep track of the original working dir. *)
-      let old_cwd = Sys.getcwd () in
-      (* Some operations are relative to the prefix so chdir to it. *)
-      Sys.chdir prefix;
-      Yylib.sanity_checks ();
-      match action with
-      | None -> ()
-      (* install, accepts several packages at once *)
-      | Some "--install" ->
-          let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
-            (Args.to_string_list actionopts) in
-          Db.update (Install.install (Config.read ()) l)
-      (* web-install, accepts several packages at once *)
-      | Some "--web-install" -> Web_install.main ~start_dir:old_cwd actionopts
-      (* upgrade, accepts several packages at once *)
-      | Some "--upgrade" -> upgrade old_cwd actionopts
-      (* uninstall, accepts several packages at once *)
-      | Some "--uninstall" ->
-          let l = Args.to_string_list actionopts in
-          Db.update (Uninstall.uninstall l)
-      (* list the installed packages *)
-      | Some "--list" ->
-          let l = Args.to_string_list actionopts in
-          Yylist.list (Db.read ()) l
-      (* config, makepkg and repository do nothing on their own but have
-       * suboptions *)
-      | Some "--config" -> Config.main actionopts
-      | Some "--makepkg" -> Makepkg.main actionopts
-      | Some "--repository" -> Repository.main actionopts
-      (* if an option was different, Args.parse would already have complained,
-       * so this final pattern will never be matched *)
-      | _ -> assert false
+    (* Keep track of the original working dir. *)
+    let old_cwd = Sys.getcwd () in
+    match action with
+    (* init, setups a few things for correct operation of yypkg *)
+    | Some "--init" ->
+        (match prefix with
+        | Some prefix ->
+            Init.init (FilePath.DefaultPath.make_absolute old_cwd prefix)
+        | None -> prefix_not_set ())
+    (* install, accepts several packages at once *)
+    | Some "--install" ->
+        enter prefix;
+        let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
+          (Args.to_string_list actionopts) in
+        Db.update (Install.install (Config.read ()) l)
+    (* web-install, accepts several packages at once *)
+    | Some "--web-install" ->
+        enter prefix;
+        Web_install.main ~start_dir:old_cwd actionopts
+    (* upgrade, accepts several packages at once *)
+    | Some "--upgrade" ->
+        enter prefix;
+        upgrade old_cwd actionopts
+    (* uninstall, accepts several packages at once *)
+    | Some "--uninstall" ->
+        enter prefix;
+        let l = Args.to_string_list actionopts in
+        Db.update (Uninstall.uninstall l)
+    (* list the installed packages *)
+    | Some "--list" ->
+        enter prefix;
+        let l = Args.to_string_list actionopts in
+        Yylist.list (Db.read ()) l
+    (* config, makepkg and repository do nothing on their own but have
+     * suboptions *)
+    | Some "--config" ->
+        enter prefix;
+        Config.main actionopts
+    | Some "--makepkg" ->
+        Makepkg.main actionopts
+    | Some "--repository" ->
+        Repository.main actionopts
+    (* if an option was different, Args.parse would already have complained,
+     * so this final pattern will never be matched *)
+    | _ -> assert false
 
 let main_wrap b =
-  try main b with 
+  try main b with
   | Args.Incomplete_parsing (opts, sl) as e ->
       Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg");
       raise e
