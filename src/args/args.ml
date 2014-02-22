@@ -100,8 +100,9 @@ let parse spec args =
  * has given no argument at all. *)
 let wants_help () = 
   match Array.to_list Sys.argv with
-  | t :: q -> List.exists (ListLabels.mem ~set:[ "-help"; "--help";  "-h" ]) q
   (* If there is only one element in argv, then no argument has been given. *)
+  | [ _ ] -> true
+  | t :: q -> List.exists (ListLabels.mem ~set:[ "-help"; "--help";  "-h" ]) q
   | _ -> true
 
 let usage_msg spec what =
