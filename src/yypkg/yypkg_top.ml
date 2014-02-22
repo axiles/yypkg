@@ -52,20 +52,19 @@ let prefix_of_cmd_line cmd_line =
   | _, lf -> None, lf
 
 (* find the action from a command-line, only one allowed at a time *)
-let action_of_cmd_line cmd_line = 
+let action_of_cmd_line cmd_line =
   (* we want all options (Args.Opt _) and discard all values *)
-  let lt, _ = List.partition Args.is_opt cmd_line in
-  match lt with
-    (* exactly one action: everything ok *)
-    | [ Args.Opt (action, subopts) ] -> Some action, subopts
-    (* no action: whatever the default will be *)
-    | [] -> None, []
-    (* several actions is forbidden: raise an exception that will be caught
-     * later on *)
-    | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
+  match List.filter Args.is_opt cmd_line with
+  (* exactly one action: everything ok *)
+  | [ Args.Opt (action, subopts) ] -> Some action, subopts
+  (* no action: whatever the default will be *)
+  | [] -> None, []
+  (* several actions is forbidden: raise an exception that will be caught
+   * later on *)
+  | _ -> raise (Args.Parsing_failed "Exactly one action is allowed at once.")
 
 (* upgrade with or without -install-new *)
-let upgrade old_cwd cmd_line = 
+let upgrade old_cwd cmd_line =
   let f ?install_new l =
     let l = Args.to_string_list l in
     let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd) l in
