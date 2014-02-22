@@ -75,7 +75,7 @@ let opt_of_string opts s =
 
 let rec parse opts accu = function
   (* starts with a dash, it's an option, maybe a valid one *)
-  | ( t :: q ) as l when t.[0] = '-' && t.[1] = '-' -> begin
+  | t :: q as l when String.length t > 2 && t.[0] = '-' && t.[1] = '-' -> begin
       try 
         (* what are the corresponding suboptions? *)
         let { children = subopts } = opt_of_string opts t in
