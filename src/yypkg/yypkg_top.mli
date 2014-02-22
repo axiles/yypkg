@@ -1,1 +1,1 @@
-val main_wrap_wrap : Buffer.t -> unit
+val main_wrap : Buffer.t -> unit

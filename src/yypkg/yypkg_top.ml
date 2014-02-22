@@ -139,23 +139,24 @@ let main b =
     | _ -> assert false
 
 let main_wrap b =
-  try main b with
-  | Args.Incomplete_parsing (opts, sl) as e ->
-      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg");
-      raise e
-  | Args.Parsing_failed s as e -> raise e
-  | File_not_found p as e when Yylib.db_path = p || Yylib.conf_path = p ->
-      Buffer.add_string b "You forgot to run -init or something got corrupted.";
-      raise e
-  | File_not_found p as e -> raise e
-  | Unmatched_predicates l as e ->
-      let f (p, v) = Printf.bprintf b "Predicate %s = %s doesn't hold.\n" p v in
-      List.iter f l;
-      raise e
-
-let main_wrap_wrap b =
-  try main_wrap b with e ->
+  let fail e =
     Buffer.add_string b "\nFailure. An exception has been raised:\n";
     Buffer.add_string b (Printexc.to_string e);
     Buffer.add_string b "\n\nThe backtrace is as folllows:\n";
     Buffer.add_string b (Printexc.get_backtrace ())
+  in
+  try main b with
+  | Args.Incomplete_parsing (opts, sl) as e ->
+      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg");
+      fail e
+  | Args.Parsing_failed s as e -> fail e
+  | File_not_found p as e when Yylib.db_path = p || Yylib.conf_path = p ->
+      Buffer.add_string b "You forgot to run -init or something got corrupted.";
+      fail e
+  | File_not_found p as e -> fail e
+  | Unmatched_predicates l as e ->
+      let f (p, v) = Printf.bprintf b "Predicate %s = %s doesn't hold.\n" p v in
+      List.iter f l;
+      fail e
+  | e -> fail e
+

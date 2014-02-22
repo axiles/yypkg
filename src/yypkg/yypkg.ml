@@ -22,7 +22,7 @@
 let () =
   Printexc.record_backtrace true;
   let b = Buffer.create 1000 in
-  Yypkg_top.main_wrap_wrap b;
+  Yypkg_top.main_wrap b;
   Buffer.output_buffer stderr b;
   if Buffer.length b <> 0 then
     exit 1
