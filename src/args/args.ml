@@ -96,12 +96,13 @@ let parse spec args =
   | opts, [] -> opts
   | opts, q -> raise (Incomplete_parsing (opts, q))
 
+(* Return true if the user has either given -h, -help or --help as argument, or
+ * has given no argument at all. *)
 let wants_help () = 
-  let argv = Array.to_list Sys.argv in
-  [] = argv || List.exists (ListLabels.mem ~set:[ "-help"; "--help";  "-h" ]) argv
-
-let nothing_given () =
-  1 = Array.length Sys.argv
+  match Array.to_list Sys.argv with
+  | t :: q -> List.exists (ListLabels.mem ~set:[ "-help"; "--help";  "-h" ]) q
+  (* If there is only one element in argv, then no argument has been given. *)
+  | _ -> true
 
 let usage_msg spec what =
   { name = "Usage"; children = spec; help = "command-line arguments to " ^ what}

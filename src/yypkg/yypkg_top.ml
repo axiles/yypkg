@@ -78,7 +78,7 @@ let upgrade old_cwd cmd_line =
   | _ -> assert false
 
 let main b =
-  if Args.wants_help () || Args.nothing_given () then
+  if Args.wants_help () then
     Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
