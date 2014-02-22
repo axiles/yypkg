@@ -91,9 +91,8 @@ let main b =
       Init.init prefix
     else
       (* Keep track of the original working dir. *)
-      let start_dir = Sys.getcwd () in
-      (* Some operations are relative to the prefix so chdir to it. *)
       let old_cwd = Sys.getcwd () in
+      (* Some operations are relative to the prefix so chdir to it. *)
       Sys.chdir prefix;
       Yylib.sanity_checks ();
       match action with
@@ -104,7 +103,7 @@ let main b =
             (Args.to_string_list actionopts) in
           Db.update (Install.install (Config.read ()) l)
       (* web-install, accepts several packages at once *)
-      | Some "--web-install" -> Web_install.main ~start_dir actionopts
+      | Some "--web-install" -> Web_install.main ~start_dir:old_cwd actionopts
       (* upgrade, accepts several packages at once *)
       | Some "--upgrade" -> upgrade old_cwd actionopts
       (* uninstall, accepts several packages at once *)
