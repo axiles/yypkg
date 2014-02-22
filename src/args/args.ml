@@ -108,21 +108,25 @@ let usage_msg spec what =
   { name = "Usage"; children = spec; help = "command-line arguments to " ^ what}
 
 (* this is a little test:
-  let spec = [ "-install", []; "-uninstall", []]
-  let _ = parse spec [| "-install"; "foo"; "-uninstall" -] *)
+  let spec = [
+    { name = "--install"; children = []; help = "install" };
+    { name = "--uninstall"; children = []; help = "uninstall" };
+  ]
+  let _ = parse spec [| "--install"; "foo"; "--uninstall" |] *)
 
 (* another one:
   let spec = [
-  "-install", [];
-  "-uninstall", [];
-  "-list", [];
-  "-config", [
-    "-preds", [];
-    "-regen", [];
+    { name = "--install"; help = "install"; children = [] };
+    { name = "--uninstall"; help = "uninstall"; children = [] };
+    { name = "--list"; help = "list"; children = [] };
+    { name = "--config"; help = "config"; children = [
+      { name = "--preds"; help = "preds"; children = [] };
+      { name = "--regen"; help = "regen"; children = [] };
+    ] }
   ]
   in
-  parse spec [| "-install"; "a"; "b"; "c"; "-config"; "x"; "-preds"; "y";
-  "-uninstall"; "d"; "e" |]
+  parse spec [| "--install"; "a"; "b"; "c"; "--config"; "x"; "--preds"; "y";
+  "--uninstall"; "d"; "e" |]
 *)
 
 
