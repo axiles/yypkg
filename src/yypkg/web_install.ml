@@ -12,12 +12,14 @@ let get_uri uri output =
   ignore (Lib.run_and_read [| Lib.wget; "-nv"; "-O"; output; uri |] `stdout);
   Printf.eprintf " DONE\n%!"
 
-let download_to_folder ~conf folder p =
-  let uri = String.concat "/" [ conf.mirror; p.filename ] in
-  let output = Lib.filename_concat [ folder; p.filename ] in
+let download_to_folder ~conf folder packages =
   FileUtil.mkdir ~parent:true ~mode:0o755 folder;
-  get_uri uri output;
-  output
+  ListLabels.map packages ~f:(fun p ->
+    let uri = String.concat "/" [ conf.mirror; p.filename ] in
+    let output = Lib.filename_concat [ folder; p.filename ] in
+    get_uri uri output;
+    output
+  )
 
 let package_is_applicable ~conf pkg =
   let f = predicate_holds conf.predicates in
@@ -67,7 +69,7 @@ let get_packages ~conf ~follow ~dest ~packages =
     in
     if follow then get_deps pkglist packages else packages
   in
-  List.map (download_to_folder ~conf dest) pkglist
+  download_to_folder ~conf dest pkglist
 
 type web_install_opts = {
   follow_dependencies : bool;
