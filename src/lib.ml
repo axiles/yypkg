@@ -188,8 +188,7 @@ let chop_list list i =
   let rec chop_list_rc j = function
     | l when j = 0 -> l
     | t :: q -> chop_list_rc  (j-1) q
-    | [] ->
-        raise (ChopList_ChopingTooMuch (List.length list, i))
+    | [] -> raise (ChopList_ChopingTooMuch (i - j, i))
     (* this means we're trying to chop more than possible, 'l when i = 0'
      * handles the case when we're trying to chop as much as we have so we
      * can simply always yell here *)
