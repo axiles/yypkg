@@ -22,9 +22,6 @@ module Tar : sig
   val list : from:string -> string list
 end
 val split_path : ?dir_sep:string -> string -> string list
-val chop_list : 'a list -> int -> 'a list
-val strip_component :
-  ?prefix:string -> ?dir_sep:string -> int -> string -> string
 val read_file : string -> string Queue.t
 val overwrite_file : string -> string Queue.t -> unit
 val search_and_replace_in_file : string -> string -> string -> unit

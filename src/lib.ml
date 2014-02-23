@@ -182,29 +182,6 @@ end
 let split_path ?(dir_sep=Filename.dir_sep) path =
   Str.split_delim (Str.regexp dir_sep) path
 
-(* chop_list list i removes the first i elements of list and raises
- * ChopList_ChopingTooMuch if the list is shorter than i *)
-let chop_list list i =
-  let rec chop_list_rc j = function
-    | l when j = 0 -> l
-    | t :: q -> chop_list_rc  (j-1) q
-    | [] -> raise (ChopList_ChopingTooMuch (i - j, i))
-    (* this means we're trying to chop more than possible, 'l when i = 0'
-     * handles the case when we're trying to chop as much as we have so we
-     * can simply always yell here *)
-  in
-  chop_list_rc i list
-
-(* Remove the first 'n' components of a path (string list) and optionaly
- * prepends a prefix
- * That sounds a bit weird because I started changing how yypkg handled this but
- * never finished *)
-let strip_component ?prefix ?dir_sep n path =
-  let common = chop_list (split_path ?dir_sep path) n in
-  match prefix with
-  | None -> filename_concat common
-  | Some prefix -> filename_concat (prefix :: common)
-
 (* read a file line-by-line and return its contents in a string Queue.t *)
 let read_file file =
   let in_channel = open_in_bin file in
