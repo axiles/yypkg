@@ -18,7 +18,6 @@
 
 open Types
 
-exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
 exception Skip
 

@@ -1,4 +1,3 @@
-exception ChopList_ChopingTooMuch of (int * int)
 exception ProcessFailed of (string * string option)
 val cri : int
 val err : int
