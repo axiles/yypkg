@@ -86,8 +86,9 @@ let expand pkg in_ p =
   if not (Sys.file_exists p) then ignore (mkdir p) else ();
   let x = Lib.Tar.extract ~from:pkg (pq, string_of_int l, iq) in
   (* bsdtar already strips the beginning of the path *)
-  let xx = Lib.list_rev_map_skip filter_bsdtar_output x in
-  List.rev_map (Lib.strip_component ~prefix:p ~dir_sep:"/" 0) xx
+  List.rev (Lib.list_rev_map_skip x ~f:(fun path ->
+    Filename.concat p (filter_bsdtar_output path)
+  ))
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist
