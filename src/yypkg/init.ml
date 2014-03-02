@@ -25,12 +25,6 @@
 open Types
 open Yylib
 
-(*
-let is_binary x =
-  let exts = [ "dll"; "exe" ] in
-  List.fold_left (fun b e -> b || FilePath.check_extension x e) false exts
-  *)
-
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
@@ -41,11 +35,6 @@ let init prefix =
   let folders = dl_folder :: (List.map mk_absolute folders) in
   List.iter (fun f -> FileUtil.mkdir ~parent:true ~mode:0o755 f) folders;
   Sys.chdir prefix;
-  (* (if `Windows = Lib.os_type then
-    let module FU = FileUtil in
-    let fl = FU.find FU.Is_file Lib.binary_path (Lib.prepend_if is_binary) [] in
-    FU.cp fl (mk_absolute "sbin"));
-    *)
   Disk.write db_path (TypesSexp.Of.db []);
   let base_conf = { mirror = ""; predicates = [] } in
   Disk.write conf_path (TypesSexp.Of.conf base_conf);
