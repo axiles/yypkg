@@ -42,10 +42,12 @@ let write conf =
 (* read the conf, run the function, write the database to disk
  * if fail raises an exception, nothing will be written :-) *)
 let update f =
-  write (f (read ()))
+  let c = f (read ()) in
+  write c;
+  c
 
-let print_predicates conf = 
-  let print_single_pred (binding, values) = 
+let print_predicates conf =
+  let print_single_pred (binding, values) =
     Printf.printf "%s = %s\n" binding (String.concat "," values)
   in
   List.iter print_single_pred conf.predicates
@@ -85,9 +87,9 @@ let predicates opts =
       Lib.ep "WARNING: none of --list, --set, --unset given to --config.\n%!";
   | _, _, [] ->
       (* updates the association list from "X=A,B,C" strings *)
-      update (fun conf -> List.fold_left (fun conf p -> Predicates.set conf (key_value_pair p)) conf o.set)
+      ignore (update (fun conf -> List.fold_left (fun conf p -> Predicates.set conf (key_value_pair p)) conf o.set))
   | _, [], _ ->
-      update (fun conf -> List.fold_left Predicates.unset conf o.delete)
+      ignore (update (fun conf -> List.fold_left Predicates.unset conf o.delete))
   | _, _, _ ->
       Lib.ep "WARNING: both --set and --unset given to --config; doing nothing.\n%!"
 
@@ -96,7 +98,7 @@ let main opts =
   | Args.Opt ("--predicates", subopts) ->
       predicates opts
   | Args.Opt ("--set-mirror", [ Args.Val mirror ]) ->
-      update (fun conf -> { conf with mirror })
+      ignore (update (fun conf -> { conf with mirror }))
   | Args.Opt ("--set-mirror", _) ->
      raise (Args.Parsing_failed "--set-mirror requires a string as argument.")
   | Args.Opt (name, _) ->
