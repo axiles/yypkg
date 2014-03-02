@@ -231,13 +231,6 @@ let open_package package =
 let prepend_if pred accu x =
   if pred x then x :: accu else accu
 
-let rev_may_value l =
-  let f = function
-    | Some x -> x
-    | None -> assert false
-  in
-  List.rev_map f (List.filter ((<>) None) l)
-
 (* check a file exists: raises an exception with the name of the missing file if
   * it doesn't *)
 let assert_file_exists f =
@@ -252,3 +245,6 @@ let list_rev_map_skip ~f l =
     | [] -> accu
   in
   aux f [] l
+
+let rev_may_value l =
+  list_rev_map_skip (function Some x -> x | None -> raise Skip) l
