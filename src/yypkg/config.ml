@@ -18,12 +18,14 @@
 
 open Types
 
-let set conf (binding, value) =
-  let predicates = List.remove_assoc binding conf.predicates in
-  { conf with predicates = (binding, value) :: predicates }
+module Predicates = struct
+  let set conf (binding, value) =
+    let predicates = List.remove_assoc binding conf.predicates in
+    { conf with predicates = (binding, value) :: predicates }
 
-let unset conf binding = 
-  { conf with predicates = List.remove_assoc binding conf.predicates }
+  let unset conf binding =
+    { conf with predicates = List.remove_assoc binding conf.predicates }
+end
 
 let read () =
   TypesSexp.To.conf (Disk.read Yylib.conf_path)
@@ -83,9 +85,9 @@ let predicates opts =
       Lib.ep "WARNING: none of --list, --set, --unset given to --config.\n%!";
   | _, _, [] ->
       (* updates the association list from "X=A,B,C" strings *)
-      update (fun conf -> List.fold_left (fun conf p -> set conf (key_value_pair p)) conf o.set)
+      update (fun conf -> List.fold_left (fun conf p -> Predicates.set conf (key_value_pair p)) conf o.set)
   | _, [], _ ->
-      update (fun conf -> List.fold_left unset conf o.delete)
+      update (fun conf -> List.fold_left Predicates.unset conf o.delete)
   | _, _, _ ->
       Lib.ep "WARNING: both --set and --unset given to --config; doing nothing.\n%!"
 
