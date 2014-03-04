@@ -12,7 +12,7 @@ val usage_msg : child list -> string -> child
 val is_opt : ?s:string -> opt -> bool
 val to_string_list : opt list -> string list
 
-type 'a getter = (string -> 'a) * 'a * string
+type 'a getter = (string -> 'a) * 'a option * string
 val bool : bool getter
 val string : string getter
 val get : 'a getter -> string -> opt option -> 'a

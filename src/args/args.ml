@@ -148,10 +148,10 @@ let to_string_list l =
   else
     List.rev (List.rev_map (function Val s -> s | _ -> assert false) l)
 
-type 'a getter = (string -> 'a) * 'a * string
+type 'a getter = (string -> 'a) * 'a option * string
 
-let bool = bool_of_string, true, "true or false"
-let string = (fun x -> x), "", "a string"
+let bool = bool_of_string, None, "true or false"
+let string = (fun x -> x), None, "a string"
 
 let get (f, default, valid) name opt =
   let fail name valid issue =
