@@ -158,13 +158,11 @@ let get (f, default, valid) name opt =
     let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
     raise (Invalid_argument msg)
   in
-  match opt with
-  | None ->
-      default
-  | Some (Opt _) ->
-      fail name valid "switches"
-  | Some (Val opt) ->
-      (try f opt with Invalid_argument _ -> fail name valid opt)
+  match opt, default with
+  | None, Some default -> default
+  | None, None -> fail name valid "nothing"
+  | Some (Opt _), _ -> fail name valid "switches"
+  | Some (Val opt), _ -> (try f opt with e -> fail name valid opt)
 
 let fold_values ~where ~init l opts =
   let sp = Printf.sprintf in
