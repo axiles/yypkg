@@ -234,15 +234,15 @@ let main opts =
       directory = dir_of_path ""; template = false } in
   let l = [
     "--output", (fun ~accu n o ->
-      { accu with output = Args.(get string n o) });
+      { accu with output = Args.Get.string n o });
     "--script", (fun ~accu n o ->
-      { accu with script = Args.(get string n o) });
+      { accu with script = Args.Get.string n o });
     "--iscripts", (fun ~accu n o ->
-      { accu with install_scripts = Some (dir_of_path Args.(get string n o)) });
+      { accu with install_scripts = Some (dir_of_path (Args.Get.string n o)) });
     "--directory", (fun ~accu n o ->
-      { accu with directory = dir_of_path Args.(get string n o) });
+      { accu with directory = dir_of_path (Args.Get.string n o) });
     "--template", (fun ~accu n o ->
-      { accu with template = Args.(get bool n o) });
+      { accu with template = Args.Get.bool n o });
   ]
   in
   let opts = Args.fold_values ~where:"--makepkg" ~init l opts in

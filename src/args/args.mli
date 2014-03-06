@@ -11,11 +11,12 @@ val wants_help : unit -> bool
 val usage_msg : child list -> string -> child
 val is_opt : ?s:string -> opt -> bool
 val to_string_list : opt list -> string list
-
-type 'a getter = (string -> 'a) * 'a option * string
-val bool : bool getter
-val string : string getter
-val get : 'a getter -> string -> opt option -> 'a
 val fold_values :
   where:string -> init:'a ->
   (string * (accu:'a -> string -> opt option -> 'a)) list -> opt list -> 'a
+
+module Get : sig
+  val of_stringmatcher : 'a StringMatcher.t -> string -> opt option -> 'a
+  val bool : string -> opt option -> bool
+  val string : string -> opt option -> string
+end

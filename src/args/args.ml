@@ -148,22 +148,6 @@ let to_string_list l =
   else
     List.rev (List.rev_map (function Val s -> s | _ -> assert false) l)
 
-type 'a getter = (string -> 'a) * 'a option * string
-
-let bool = bool_of_string, None, "true or false"
-let string = (fun x -> x), None, "a string"
-
-let get (f, default, valid) name opt =
-  let fail name valid issue =
-    let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
-    raise (Invalid_argument msg)
-  in
-  match opt, default with
-  | None, Some default -> default
-  | None, None -> fail name valid "nothing"
-  | Some (Opt _), _ -> fail name valid "switches"
-  | Some (Val opt), _ -> (try f opt with e -> fail name valid opt)
-
 let fold_values ~where ~init l opts =
   let sp = Printf.sprintf in
   let fail msg =
@@ -180,4 +164,29 @@ let fold_values ~where ~init l opts =
         | _ -> List.fold_left (fun accu v -> f ~accu o (Some v)) accu v)
     | Val v ->
         fail (sp "%s requires a sub-option, not `%s'." where v))
+
+module Get = struct
+  type 'a t = (string -> 'a) * 'a option * string
+
+  let get (f, default, valid) name opt =
+    let fail name valid issue =
+      let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
+      raise (Invalid_argument msg)
+    in
+    match opt, default with
+    | None, Some default -> default
+    | None, None -> fail name valid "nothing"
+    | Some (Opt _), _ -> fail name valid "switches"
+    | Some (Val opt), _ -> (try f opt with e -> fail name valid opt)
+
+  let of_stringmatcher sm name opt =
+    get
+      (StringMatcher.of_string ~t:sm, None, StringMatcher.possible_values ~t:sm)
+      name
+      opt
+
+  let bool name opt = of_stringmatcher StringMatcher.bool name opt
+
+  let string name opt = get ((fun x -> x), None, "a string") name opt
+end
 

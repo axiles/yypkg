@@ -83,13 +83,13 @@ let main ~start_dir opts =
     packages = []; dest = Yylib.default_download_path } in
   let l = [
     "--download-only", (fun ~accu n o ->
-      { accu with download_only = Args.(get bool n o) });
+      { accu with download_only = Args.Get.bool n o });
     "--follow-dependencies", (fun ~accu n o ->
-      { accu with follow_dependencies = Args.(get bool n o) });
+      { accu with follow_dependencies = Args.Get.bool n o });
     "--download-folder", (fun ~accu n o ->
-      { accu with dest = FilePath.make_absolute start_dir Args.(get string n o) });
+      { accu with dest = FilePath.make_absolute start_dir (Args.Get.string n o) });
     "--packages", (fun ~accu n o ->
-      { accu with packages = Args.(get string n o) :: accu.packages });
+      { accu with packages = Args.Get.string n o :: accu.packages });
   ] in
   let o = Args.fold_values ~init ~where:"--web-install" l opts in
   (* TODO: check sanity of arguments *)
@@ -105,4 +105,4 @@ let cli_spec =
     mk ~n:"--download-folder" 
       ~h:("where to put downloaded files (instead of " ^ Yylib.default_download_path ^ ")") [];
     mk ~n:"--packages" ~h:"packages to install" [];
-  ];
+  ]

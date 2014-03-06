@@ -167,7 +167,7 @@ type repository_opts = {
 let main opts =
   let l = [
     "--generate", (fun ~accu n o ->
-      { accu with generate = Args.(get string n o) })
+      { accu with generate = Args.Get.string n o })
   ]
   in
   let init = { generate = "" } in

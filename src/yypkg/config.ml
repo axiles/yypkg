@@ -70,11 +70,11 @@ let predicates opts =
   let init = { list = false; set = []; delete = [] } in
   let l = [
     "--list", (fun ~accu n o ->
-      { accu with list = Args.(get bool n o) });
+      { accu with list = Args.Get.bool n o });
     "--set", (fun ~accu n o ->
-      { accu with set = Args.(get string n o) :: accu.set });
+      { accu with set = Args.Get.string n o :: accu.set });
     "--delete", (fun ~accu n o ->
-      { accu with delete = Args.(get string n o) :: accu.delete });
+      { accu with delete = Args.Get.string n o :: accu.delete });
   ] in
   let o = Args.fold_values ~init ~where:"--predicates" l opts in
   match o.list, o.set, o.delete with
