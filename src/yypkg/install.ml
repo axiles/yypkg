@@ -23,7 +23,7 @@ let execute_install_action package = function
   | AHK p -> command (ahk_bin :: p)
   | Expand (in_, p) -> expand package in_ p
   | Exec p -> command p
-  | MKdir p -> mkdir p
+  | MKdir p -> [ mkdir p ]
   | SearchReplace (p, search, replace) ->
       let replace = expand_environment_variables replace in
       Lib.search_and_replace_in_file p search replace;

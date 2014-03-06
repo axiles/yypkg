@@ -73,7 +73,7 @@ let command cmd =
 let mkdir path_unexpanded =
   let path = expand_environment_variables path_unexpanded in
   FileUtil.mkdir ~parent:true ~mode:0o755 path;
-  [ path_unexpanded ]
+  path
 
 (* tar xf the folder 'in_' from the package 'pkg' to the folder 'p' *)
 let expand pkg in_ p =

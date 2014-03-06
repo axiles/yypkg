@@ -10,7 +10,7 @@ val default_download_path : string
 val conf_path : string
 val expand_environment_variables : string -> string
 val command : string list -> string list
-val mkdir : FilePath.filename -> FilePath.filename list
+val mkdir : FilePath.filename -> FilePath.filename
 val expand : string -> string -> FilePath.filename -> string list
 val rm : FilePath.DefaultPath.filename -> unit
 val file_exists_in_package : string -> Types.package -> bool
