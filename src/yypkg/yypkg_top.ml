@@ -34,6 +34,7 @@ let cmd_line_spec =
     Config.cli_spec;
     Repository.cli_spec;
     Makepkg.cli_spec;
+    Deploy.cli_spec;
 ]
 
 (* find the prefix from a command-line *)
@@ -134,6 +135,8 @@ let main b =
         Makepkg.main actionopts
     | Some "--repository" ->
         Repository.main actionopts
+    | Some "--deploy" ->
+        Deploy.main actionopts
     (* if an option was different, Args.parse would already have complained,
      * so this final pattern will never be matched *)
     | _ -> assert false
