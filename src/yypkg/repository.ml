@@ -53,6 +53,9 @@ let pkg_of_file ~memoizer file =
   else
     let metadata = Yylib.metadata_of_script (Lib.open_package file) in
     let files = Lib.Tar.list ~from:file in
+    let ic = open_in_bin file in
+    let sha3 = Cryptokit.hash_channel (Cryptokit.Hash.sha3 512) ic in
+    close_in ic;
     let pkg = {
       metadata;
       size_compressed = (FileUtil.stat file).FileUtil.size;
@@ -60,6 +63,7 @@ let pkg_of_file ~memoizer file =
       signature = None;
       files;
       deps = [];
+      sha3;
     } in
     memoizer#add file pkg;
     pkg

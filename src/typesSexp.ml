@@ -127,6 +127,7 @@ end = struct
       List [ Atom "signature"; sexp_of_option sexp_of_string pkg.signature ];
       List [ Atom "files"; sexp_of_string_list pkg.files ];
       List [ Atom "deps"; sexp_of_string_list pkg.deps ];
+      List [ Atom "sha3"; sexp_of_string pkg.sha3 ];
     ]
 
   let sexp_of_repository repository =
@@ -369,7 +370,8 @@ end = struct
   let pkg_of_sexp sexp =
     let func = "pkg_of_sexp" in
     let metadata = ref None and size_compressed = ref None and files = ref None
-    and filename = ref None and signature = ref None and deps = ref None in
+    and filename = ref None and signature = ref None and deps = ref None
+    and sha3 = ref None in
     let fields = Record.([
       field_spec "metadata" metadata metadata_of_sexp;
       field_spec "size_compressed" size_compressed size_of_sexp;
@@ -377,14 +379,15 @@ end = struct
       field_spec "signature" signature (option_of_sexp string_of_sexp);
       field_spec "files" files string_list_of_sexp;
       field_spec "deps" deps string_list_of_sexp;
+      field_spec "sha3" sha3 string_of_sexp;
     ])
     in
     let build_value () =
-      match (!metadata, !size_compressed, !filename, !signature, !files, !deps)
+      match !metadata, !size_compressed, !filename, !signature, !files, !deps, !sha3
       with
       | Some metadata, Some size_compressed, Some filename, Some signature,
-        Some files, Some deps ->
-          { metadata; size_compressed; filename; signature; files; deps }
+        Some files, Some deps, Some sha3 ->
+          { metadata; size_compressed; filename; signature; files; deps; sha3 }
       | _ ->
           Record.undefined_fields ~func ~sexp ~fields
     in

@@ -88,6 +88,7 @@ type pkg = {
   signature : string option;
   files : string list;
   deps : string list;
+  sha3 : string;
 }
 
 type repository = {
