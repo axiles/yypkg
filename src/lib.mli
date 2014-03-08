@@ -1,4 +1,5 @@
 exception ProcessFailed of (string * string option)
+exception Skip
 val cri : int
 val err : int
 val wrn : int
@@ -33,7 +34,6 @@ val open_package : string -> Types.script
 val prepend_if : ('a -> bool) -> 'a list -> 'a -> 'a list
 val rev_may_value : 'a option list -> 'a list
 val assert_file_exists : string -> unit
-exception Skip
 val list_rev_map_skip : f:('a -> 'b) -> 'a list -> 'b list
 val ep : ('a, out_channel, unit) format -> 'a
 val sp : ('a, unit, string) format -> 'a
