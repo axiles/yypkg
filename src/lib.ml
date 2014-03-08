@@ -257,12 +257,9 @@ let read_file_q file =
   q
 
 let overwrite_file file contents =
-  (* TODO: use the right permissions (same as original file) *)
-  let out_channel = open_out_gen [ Open_binary; Open_trunc; Open_wronly ] 0o644
-  file in
-  let output_end_line oc s = output_string oc s; output_char oc '\n' in
-  Queue.iter (output_end_line out_channel) contents;
-  close_out out_channel
+  let oc = open_out_gen [ Open_binary; Open_trunc; Open_wronly ] 0o644 file in
+  Queue.iter (fun s -> output_string oc s; output_char oc '\n') contents;
+  close_out oc
 
 (* The sadly non-existant Queue.map *)
 let queue_map f q =
