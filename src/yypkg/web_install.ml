@@ -17,7 +17,7 @@ let download_to_folder ~conf folder packages =
   ListLabels.map packages ~f:(fun p ->
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
     let output = Lib.filename_concat [ folder; p.filename ] in
-    (if not (Sys.file_exists output || Lib.sha3_file output = p.sha3) then
+    (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
       get_uri uri output);
     output
   )
