@@ -245,7 +245,7 @@ module Archive = struct
 end
 
 (* read a file line-by-line and return its contents in a string Queue.t *)
-let read_file file =
+let read_file_q file =
   let in_channel = open_in_bin file in
   let q : string Queue.t = Queue.create () in
   (try
@@ -274,7 +274,7 @@ let queue_map f q =
 (* FIXME: is this function really needed and used? *)
 let search_and_replace_in_file file search replace =
   let search = Str.regexp search in
-  let contents = read_file file in
+  let contents = read_file_q file in
   (* It's possible that one replace makes a previously-impossible replace
    * possible. An example is simplifying "foo/bar/baz/../..". If we simply do
    * 's;[^/]\+/\+\.\.;/;', we'll be left with "foo/bar/.." 

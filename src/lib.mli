@@ -27,7 +27,6 @@ module Archive : sig
   val extract : ?transform:(ArchiveLow.Entry.t -> bool) -> string -> string list
   val list : string -> string list
 end
-val read_file : string -> string Queue.t
 val overwrite_file : string -> string Queue.t -> unit
 val search_and_replace_in_file : string -> string -> string -> unit
 val open_package : string -> Types.script
