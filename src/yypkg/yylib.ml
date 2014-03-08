@@ -130,11 +130,12 @@ let is_installed db p =
 
 (* various sanity checks:
   * do etc/yypkg.conf and /var/log/packages/yypkg_db exist?
-  * TODO: check the external binaries are available 
   * ... *)
 let sanity_checks () =
-  let required_files = [ db_path; conf_path ] in
-  List.iter Lib.assert_file_exists required_files
+  List.iter Lib.assert_file_exists [
+    db_path;
+    conf_path
+  ]
 
 let symlink ~target ~name ~kind =
   let log_unix_error (error, f, arg) =
