@@ -15,12 +15,18 @@ val install_path : string
 val tar : string
 val xz : string
 val wget : string
-module Tar : sig
-  val extract : from:string -> (string * string * string) -> string list
-  val get : from:string -> string -> string
-  val list : from:string -> string list
+module Archive : sig
+  module Transform : sig
+    type t = string -> string option
+    val strip_component : int -> t
+    val filter : Str.regexp -> t
+    val c : string -> t
+    val wrap : t list -> ArchiveLow.Entry.t -> bool
+  end
+  val get_contents : archive:string -> file:string -> string
+  val extract : ?transform:(ArchiveLow.Entry.t -> bool) -> string -> string list
+  val list : string -> string list
 end
-val split_path : ?dir_sep:string -> string -> string list
 val read_file : string -> string Queue.t
 val overwrite_file : string -> string Queue.t -> unit
 val search_and_replace_in_file : string -> string -> string -> unit
@@ -32,3 +38,4 @@ exception Skip
 val list_rev_map_skip : f:('a -> 'b) -> 'a list -> 'b list
 val ep : ('a, out_channel, unit) format -> 'a
 val sp : ('a, unit, string) format -> 'a
+val string_count : string -> char -> int

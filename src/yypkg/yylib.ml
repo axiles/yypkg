@@ -50,19 +50,6 @@ let expand_environment_variables s =
   else
     s
 
-(* Strip the 'x ' prefix that bsdtar puts in front of paths during extraction
- * and skip the warning lines (those which start with "bsdtar:" *)
-let filter_bsdtar_output x =
-  if String.length x >= 7 && x.[0] = 'b' && x.[1] = 's' && x.[2] = 'd'
-    && x.[3] = 't' && x.[4] = 'a' && x.[5] = 'r' && x.[6] = ':' then
-      (prerr_endline x;
-      raise Lib.Skip)
-  else
-    if String.length x >= 2 && x.[0] = 'x' && x.[1] = ' ' then
-      String.sub x 2 (String.length x - 2)
-    else
-      x
-
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
   (* TODO: quote the commands? *)
@@ -75,20 +62,19 @@ let mkdir path_unexpanded =
   FileUtil.mkdir ~parent:true ~mode:0o755 path;
   path
 
-(* tar xf the folder 'in_' from the package 'pkg' to the folder 'p' *)
-let expand pkg in_ p =
+(* tar xf the directory 'in_' from the package 'pkg' to the directory 'p' *)
+let expand archive in_ p =
   (* NOTE: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
-  let l = (List.length (Lib.split_path ~dir_sep:"/" in_)) - 1 in
-  let pkg = expand_environment_variables pkg in
+  let archive = expand_environment_variables archive in
   let iq = expand_environment_variables in_ in
   let pq = expand_environment_variables p in
-  if not (Sys.file_exists p) then ignore (mkdir p) else ();
-  let x = Lib.Tar.extract ~from:pkg (pq, string_of_int l, iq) in
-  (* bsdtar already strips the beginning of the path *)
-  List.rev (Lib.list_rev_map_skip x ~f:(fun path ->
-    Filename.concat p (filter_bsdtar_output path)
-  ))
+  if not (Sys.file_exists pq) then ignore (mkdir pq) else ();
+  Lib.Archive.extract archive ~transform:Lib.Archive.Transform.(wrap [
+    filter (Str.regexp_case_fold iq);
+    strip_component (Lib.string_count iq '/');
+    c pq;
+  ])
 
 (* rm with verbose output
  *   doesn't fail if a file doesn't exist

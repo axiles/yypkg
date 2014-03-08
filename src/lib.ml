@@ -149,37 +149,100 @@ let tar, xz, wget =
       filename_concat [ binary_path; "xz.exe" ],
       filename_concat [ binary_path; "wget.exe" ]
 
-(* decompress + untar, "f" will read the output from bsdtar:
- *   'bsdtar xv -O' outputs the content of files to stdout
- *   'bsdtar xv' outputs the list of files expanded to stderr
- *   'bsdtar t' outputs the list of files to stdout *)
-module Tar = struct
-  let extract ~from (pq, strip, iq) =
-    split_by_line (run_and_read
-      [|
-        tar;
-        "xvf";
-        from;
-        (* bsdtar will store extended attributes when creating the archive and
-         * will try to restore them during extraction if run as root; however
-         * not all filesystems support the same flags and bsdtar might try to
-         * restore flags which make no sense to the target filesystem. *)
-        "--no-same-permissions";
-        "--strip-components";
-        strip;
-        "-C"; pq;
-        iq
-      |]
-      `stderr
-    )
-  let get ~from file =
-    run_and_read [| tar; "xf"; from; "-qO"; file |] `stdout
-  let list ~from =
-    split_by_line (run_and_read [| tar; "tf"; from |] `stdout)
-end
+module Archive = struct
+  module A = ArchiveLow
 
-let split_path ?(dir_sep=Filename.dir_sep) path =
-  Str.split_delim (Str.regexp dir_sep) path
+  module Transform = struct
+    type t = string -> string option
+    let strip_component n =
+      fun path ->
+        try
+          let i = String.index path '/' in
+          if i = String.length path - 1 then
+            None
+          else
+            Some (String.sub path (i+1) (String.length path - (i+1)))
+        with Not_found ->
+          None
+
+    let filter re =
+      fun s ->
+        if Str.string_match re s 0 then
+          Some s
+        else
+          None
+
+    let c prefix =
+      fun s ->
+        Some (String.concat "/" [ prefix; s ])
+
+    let wrap fl =
+      let may_map_r v f =
+        match v with
+        | None -> None
+        | Some v -> f v
+      in
+      fun e ->
+        let p = List.fold_left may_map_r (Some (A.Entry.pathname e)) fl in
+        may (A.Entry.set_pathname e) p;
+        p <> None
+  end
+
+  let with_archive_and_entry ~archive ~f =
+    let t = A.Read.create () in
+    let e = A.Entry.create () in
+    A.Read.support_filter_all t;
+    A.Read.support_format_all t;
+    A.Read.open_filename t archive (16 * 1024);
+    try
+      let res = f t e in
+      A.Read.close t;
+      res
+    with exn ->
+      A.Read.close t;
+      raise exn
+
+  let rec get_contents file t e =
+    if A.Read.next_header2 t e then
+      if A.Entry.pathname e = file then
+        let l = Int64.to_int (A.Entry.stat e).Unix.LargeFile.st_size in
+        let b = String.create l in
+        let _len = A.Read.data t b 0 l in
+        b
+      else
+        get_contents file t e
+    else
+      raise Not_found
+
+  let get_contents ~archive ~file =
+    with_archive_and_entry ~f:(get_contents file) ~archive
+
+  let extract ?(transform=(fun _ -> true)) t e =
+    let flags = A.Read.([ OWNER; PERM; TIME ]) in
+    let rec aux accu =
+      if A.Read.next_header2 t e then
+        if transform e then
+          let () = A.Read.extract t e flags in
+          aux (A.Entry.pathname e :: accu)
+        else
+          aux accu
+      else
+        List.rev accu
+    in
+    aux []
+
+  let extract ?transform archive =
+    with_archive_and_entry ~f:(extract ?transform) ~archive
+
+  let rec list accu t e =
+    if A.Read.next_header2 t e then
+      list (A.Entry.pathname e :: accu) t e
+    else
+      List.rev accu
+
+  let list archive =
+    with_archive_and_entry ~f:(list []) ~archive
+end
 
 (* read a file line-by-line and return its contents in a string Queue.t *)
 let read_file file =
@@ -225,7 +288,7 @@ let search_and_replace_in_file file search replace =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let s = Tar.get ~from:package "package_script.el" in
+  let s = Archive.get_contents ~archive:package ~file:"package_script.el" in
   TypesSexp.To.script (Pre_sexp.of_string s)
 
 let prepend_if pred accu x =
@@ -248,3 +311,8 @@ let list_rev_map_skip ~f l =
 
 let rev_may_value l =
   list_rev_map_skip (function Some x -> x | None -> raise Skip) l
+
+let string_count s c =
+  let n = ref 0 in
+  String.iter (fun c2 -> if c2 = c then incr n) s;
+  !n

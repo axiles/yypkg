@@ -1,3 +1,3 @@
 <{args,yypkg,sexplib}>: include
-<*> or <{sexplib,yypkg}/*>: package(bigarray), package(fileutils.str), package(cryptokit), debug
+<*> or <{sexplib,yypkg}/*>: package(bigarray), package(fileutils.str), package(cryptokit), package(archive), debug
 
