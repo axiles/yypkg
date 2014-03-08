@@ -313,3 +313,9 @@ let string_count s c =
   let n = ref 0 in
   String.iter (fun c2 -> if c2 = c then incr n) s;
   !n
+
+let sha3_file file =
+  let ic = open_in_bin file in
+  let sha3 = Cryptokit.hash_channel (Cryptokit.Hash.sha3 512) ic in
+  close_in ic;
+  sha3

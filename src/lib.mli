@@ -38,3 +38,4 @@ val list_rev_map_skip : f:('a -> 'b) -> 'a list -> 'b list
 val ep : ('a, out_channel, unit) format -> 'a
 val sp : ('a, unit, string) format -> 'a
 val string_count : string -> char -> int
+val sha3_file : string -> string
