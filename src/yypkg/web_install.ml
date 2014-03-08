@@ -51,10 +51,13 @@ let get_deps pkglist packages =
   find_all_by_name ~pkglist ~name_list:names
 
 let repo_of_uri uri =
-  TypesSexp.To.repository (Pre_sexp.of_string (get_uri_contents uri))
+  let list_el_xz = get_uri_contents uri in
+  let archive = Lib.Archive.String list_el_xz in
+  let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
+  TypesSexp.To.repository (Pre_sexp.of_string list_el)
 
 let repository ~conf () =
-  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el"])
+  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el.tar.xz"])
 
 let pkglist ~conf  =
   let repository = repository ~conf () in
