@@ -26,6 +26,8 @@ val symlink :
   target:FilePath.filename -> name:FilePath.filename ->
   kind:Types.filekind -> unit
 val predicate_holds : Types.predicate list -> string * string -> bool
+val xz_opt : int64 -> string
+val tar_xz : tar_args:(string array list) -> xz_opt:string -> out:string -> unit
 
 (* val get_packages :
   conf:Types.conf -> follow:bool ->

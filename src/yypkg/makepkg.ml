@@ -19,37 +19,6 @@
 open Types
 open Lib
 
-let xz_opt size =
-  let max_dict = 1 lsl 26 in (* 64MB *)
-  let min_dict = 1 lsl 18 in (* 256kB *)
-  let smallest_bigger_power_of_two size =
-    let log = Pervasives.log in
-    2 lsl (int_of_float (log (Int64.to_float size) /. (log 2.)))
-  in
-  let lzma_settings ~fastest size =
-    if fastest then
-      sp "dict=%d,mf=%s,mode=%s,nice=%d" min_dict "hc3" "fast" 3
-    else
-      let dict = max min_dict (smallest_bigger_power_of_two size) in
-      let dict = min max_dict dict in
-      sp "dict=%d,mf=%s,mode=%s,nice=%d" dict "bt4" "normal" 128
-  in
-  (* YYLOWCOMPRESS is mostly a quick hack, no need to make it very clean *)
-  let fastest = try Sys.getenv "YYLOWCOMPRESS" != "" with _ -> false in
-  let lzma_settings = lzma_settings ~fastest size in
-  String.concat " " [ "-vv"; "--x86"; sp "--lzma2=%s" lzma_settings ]
-
-(* tar + xz *)
-let tar_xz tar_args xz_opt out =
-  let module U = Unix in
-  let tar_args = Array.concat
-    ([| tar; "cvf"; out; "--use-compress-program"; xz |] :: tar_args) in
-  let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
-  let pid = U.create_process_env tar tar_args env U.stdin U.stdout U.stderr in
-  match U.waitpid [] pid with
-  | _, U.WEXITED 0 -> ()
-  | _ -> process_failed tar_args
-
 let rec strip_trailing_slash s =
   (* dir_sep's length is always 1 *)
   if s <> "" && s.[String.length s - 1] = Filename.dir_sep.[0] then
@@ -202,9 +171,9 @@ let archive settings (meta, install_actions, _) script_dir script_name =
     [| "-C"; settings.directory.dirname; settings.directory.basename |]
   ]
   in
-  let xz_opt = xz_opt (FileUtil.byte_of_size meta.size_expanded) in
+  let xz_opt = Yylib.xz_opt (FileUtil.byte_of_size meta.size_expanded) in
   let output_path = Filename.concat settings.output (output_file meta) in
-  tar_xz tar_args xz_opt output_path;
+  Yylib.tar_xz ~tar_args ~xz_opt ~out:output_path;
   output_path
 
 let dummy_script () =
