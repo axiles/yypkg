@@ -188,12 +188,20 @@ module Archive = struct
         p <> None
   end
 
+  type archive =
+    | Filename of string
+    | String of string
+    | Bigarray of (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
+
   let with_archive_and_entry ~archive ~f =
     let t = A.Read.create () in
     let e = A.Entry.create () in
     A.Read.support_filter_all t;
     A.Read.support_format_all t;
-    A.Read.open_filename t archive (16 * 1024);
+    (match archive with
+    | Filename file -> A.Read.open_filename t file (16 * 1024)
+    | String ba -> A.Read.open_string t ba
+    | Bigarray ba -> A.Read.open_bigarray t ba);
     try
       let res = f t e in
       A.Read.close t;
@@ -285,7 +293,8 @@ let search_and_replace_in_file file search replace =
 
 (* reads 'package_script.el' from a package *)
 let open_package package =
-  let s = Archive.get_contents ~archive:package ~file:"package_script.el" in
+  let archive = Archive.Filename package in
+  let s = Archive.get_contents ~archive ~file:"package_script.el" in
   TypesSexp.To.script (Pre_sexp.of_string s)
 
 let prepend_if pred accu x =

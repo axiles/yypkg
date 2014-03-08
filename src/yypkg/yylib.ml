@@ -66,7 +66,7 @@ let mkdir path_unexpanded =
 let expand archive in_ p =
   (* NOTE: package_script.el should always use "/" separators, otherwise we have
    * a problem between platforms: maybe add an entry to set the separator *)
-  let archive = expand_environment_variables archive in
+  let archive = Lib.Archive.Filename (expand_environment_variables archive) in
   let iq = expand_environment_variables in_ in
   let pq = expand_environment_variables p in
   if not (Sys.file_exists pq) then ignore (mkdir pq) else ();

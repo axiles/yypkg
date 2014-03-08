@@ -24,9 +24,13 @@ module Archive : sig
     val c : string -> t
     val wrap : t list -> ArchiveLow.Entry.t -> bool
   end
-  val get_contents : archive:string -> file:string -> string
-  val extract : ?transform:(ArchiveLow.Entry.t -> bool) -> string -> string list
-  val list : string -> string list
+  type archive =
+    | Filename of string
+    | String of string
+    | Bigarray of (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
+  val get_contents : archive:archive -> file:string -> string
+  val extract : ?transform:(ArchiveLow.Entry.t -> bool) -> archive -> string list
+  val list : archive -> string list
 end
 val overwrite_file : string -> string Queue.t -> unit
 val search_and_replace_in_file : string -> string -> string -> unit
