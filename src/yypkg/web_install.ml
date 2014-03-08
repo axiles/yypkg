@@ -1,6 +1,8 @@
 open Types
 open Yylib
 
+exception Hash_failure of string
+
 let get_uri_contents uri =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
   let content = Lib.run_and_read [| Lib.wget; "-O"; "-"; "-nv"; uri |] `stdout in
@@ -18,7 +20,16 @@ let download_to_folder ~conf folder packages =
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
     let output = Lib.filename_concat [ folder; p.filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
-      get_uri uri output);
+      get_uri uri output;
+      if Lib.sha3_file output <> p.sha3 then (
+        Printf.eprintf "File downloaded but hash is wrong. Trying again.\n";
+        get_uri uri output;
+        if Lib.sha3_file output <> p.sha3 then (
+          Printf.eprintf "File downloaded but hash is wrong AGAIN! Aborting.\n";
+          raise (Hash_failure output)
+        )
+      )
+    );
     output
   )
 
