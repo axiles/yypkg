@@ -1,3 +1,3 @@
-<{args,yypkg,sexplib}>: include
-<*> or <{sexplib,yypkg}/*>: package(bigarray), package(fileutils.str), package(cryptokit), package(archive), debug
+<{args,yypkg,sexplib,http_get}>: include
+<*> or <{sexplib,http_get,yypkg}/*>: package(bigarray), package(fileutils.str), package(libocaml_http), package(cryptokit), package(archive), debug
 

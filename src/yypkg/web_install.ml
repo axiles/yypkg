@@ -1,17 +1,38 @@
 open Types
 open Yylib
 
+module WebGet = struct
+  let to_file ~file ~uri =
+    let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
+    let out ~string ~offset ~length =
+      ignore (Unix.write fd string offset length)
+    in
+    (try
+      ignore (Http_get.body ~agent:"lapin" ~uri ~out)
+    with exn ->
+      Unix.close fd; raise exn);
+    Unix.close fd
+
+  let to_string ?(b_size = 32*1024) uri =
+    let b = Buffer.create b_size in
+    let out ~string ~offset ~length =
+      Buffer.add_substring b string offset length
+    in
+    ignore (Http_get.body ~agent:"lapin" ~uri ~out);
+    Buffer.contents b
+end
+
 exception Hash_failure of string
 
 let get_uri_contents uri =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  let content = Lib.run_and_read [| Lib.wget; "-O"; "-"; "-nv"; uri |] `stdout in
+  let content = WebGet.to_string uri in
   Printf.eprintf " DONE\n%!";
   content
 
 let get_uri uri output =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  ignore (Lib.run_and_read [| Lib.wget; "-nv"; "-O"; output; uri |] `stdout);
+  WebGet.to_file ~file:output ~uri;
   Printf.eprintf " DONE\n%!"
 
 let download_to_folder ~conf folder packages =
