@@ -52,7 +52,7 @@ let pkg_of_file ~memoizer file =
     memoizer#get file
   else
     let metadata = Yylib.metadata_of_script (Lib.open_package file) in
-    let files = Lib.Archive.list (Filename file) in
+    let files = Lib.Archive.list (Lib.Archive.Filename file) in
     let pkg = {
       metadata;
       size_compressed = (FileUtil.stat file).FileUtil.size;
