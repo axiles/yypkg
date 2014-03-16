@@ -68,11 +68,11 @@ let pkg_of_file ~memoizer file =
 let repository_metadata pkglist =
   let hosts =
     let triplets = List.rev_map (fun p -> p.metadata.host) pkglist in
-    List.sort_uniq compare triplets
+    Lib.rev_uniq (List.sort compare triplets)
   in
   let targets =
     let triplets = List.rev_map (fun p -> p.metadata.target) pkglist in
-    List.sort_uniq compare (Lib.rev_may_value triplets)
+    Lib.rev_uniq (List.sort compare (Lib.rev_may_value triplets))
   in
   match targets, hosts with
   | [ target ], [ host ] -> { target; host; pkglist }
