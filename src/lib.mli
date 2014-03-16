@@ -15,7 +15,6 @@ val binary_path : string
 val install_path : string
 val tar : string
 val xz : string
-val wget : string
 module Archive : sig
   module Transform : sig
     type t = string -> string option
