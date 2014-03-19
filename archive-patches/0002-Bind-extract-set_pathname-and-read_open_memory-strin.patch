@@ -1,7 +1,7 @@
-From e90e4ffc793f5246aaef31389f91b106386d8b8c Mon Sep 17 00:00:00 2001
+From e5bebc01816f46ed7117c858ac5df368990c988d Mon Sep 17 00:00:00 2001
 From: Adrien Nader <adrien@notk.org>
 Date: Sun, 16 Mar 2014 19:24:32 +0100
-Subject: [PATCH 2/2] Bind extract(), set_pathname() and read_open_memory()
+Subject: [PATCH 2/4] Bind extract(), set_pathname() and read_open_memory()
  (strings/bigarrays).
 
 extract() can be used to easily extract to disk.
@@ -18,7 +18,7 @@ bigarrays.
  3 files changed, 172 insertions(+), 5 deletions(-)
 
 diff --git a/_oasis b/_oasis
-index 7fc2f6f..dbce2c5 100644
+index 3758ae6..8075120 100644
 --- a/_oasis
 +++ b/_oasis
 @@ -30,7 +30,7 @@ Library "archive-ocaml"
