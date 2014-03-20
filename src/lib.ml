@@ -179,10 +179,19 @@ module Archive = struct
         | None -> None
         | Some v -> f v
       in
+      let process ~get ~set ~e =
+        let s = List.fold_left may_map_r (Some (get e)) fl in
+        may (set e) s;
+        s <> None
+      in
+      let not_required f ~get ~set ~e =
+        try f ~get ~set ~e with Failure "Field not set." -> true
+      in
       fun e ->
-        let p = List.fold_left may_map_r (Some (A.Entry.pathname e)) fl in
-        may (A.Entry.set_pathname e) p;
-        p <> None
+        let open A.Entry in
+        process ~get:pathname ~set:set_pathname ~e
+        && not_required process ~get:symlink ~set:set_symlink ~e
+        && not_required process ~get:hardlink ~set:set_hardlink ~e
   end
 
   type archive =
