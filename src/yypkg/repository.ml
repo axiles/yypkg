@@ -132,13 +132,13 @@ module Output = struct
   end
 
   let package_list ~directory ~repository =
-    let file = "package_list.el" in
-    let el_oc = FilePath.concat directory file in
-    let el_oc = open_out_bin el_oc in
-    Pre_sexp.output_hum el_oc (TypesSexp.Of.repository repository);
-    close_out el_oc;
+    let el = "package_list.el" in
+    let file = FilePath.concat directory el in
+    let oc = open_out_bin file in
+    Pre_sexp.output_hum oc (TypesSexp.Of.repository repository);
+    close_out oc;
     let xz_opt = Yylib.xz_opt Unix.LargeFile.((stat file).st_size) in
-    let tar_args = [ [| "-C"; directory; file |] ] in
+    let tar_args = [ [| "-C"; directory; el |] ] in
     Yylib.tar_xz ~tar_args ~xz_opt ~out:(file ^ ".tar.xz")
 
   let html ~directory ~repository =
