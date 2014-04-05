@@ -115,6 +115,7 @@ module Output = struct
         `Left, m.host;
         `Left, (match m.target with Some target -> target | None -> "N/A");
         `Left, (String.concat ", " (List.map sp_predicate m.predicates));
+        `Left, m.description;
         `Left, String.concat ", " deps
       ]
 
