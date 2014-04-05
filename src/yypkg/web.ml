@@ -112,6 +112,13 @@ let packages ~conf ~follow ~wishes =
     in
     if follow then get_deps pkglist l else l
 
+let needs_update ~db pkg =
+  try
+    let package = List.find (package_is_named pkg.metadata.name) db in
+    (metadata_of_pkg package).version <> pkg.metadata.version
+  with
+    Not_found -> true
+
 type web_install_opts = {
   follow_dependencies : bool;
   download_only : bool;
@@ -135,9 +142,15 @@ let main ~start_dir opts =
   let o = Args.fold_values ~init ~where:"--web-install" l opts in
   (* TODO: check sanity of arguments *)
   let conf = Config.read () in
+  let db = Db.read () in
   let l = packages ~conf ~follow:o.follow_dependencies ~wishes:o.packages in
-  let packages = download ~conf ~dest:o.dest l in
-  (if not o.download_only then Db.update (Install.install conf packages))
+  let need_update = List.filter (needs_update ~db) l in
+  Printf.eprintf "%d packages to update.\n%!" (List.length need_update);
+  let packages = download ~conf ~dest:o.dest need_update in
+  if not o.download_only then
+    Db.update (Upgrade.upgrade ~install_new:true conf packages)
+  else
+    ()
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
