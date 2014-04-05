@@ -77,35 +77,28 @@ let repo_of_uri uri =
   let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
   TypesSexp.To.repository (Pre_sexp.of_string list_el)
 
-let repository ~conf () =
+let repository ~conf  =
   repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el.tar.xz"])
 
-let pkglist ~conf  =
-  let repository = repository ~conf () in
-  List.filter (package_is_applicable ~conf) repository.pkglist
-
 let get_packages ~conf ~follow ~dest ~packages =
-  (* NOT used in sherpa_gui so the call to repository() isn't redoing the
-   * download *)
-  let pkglist =
-    let repository = repository ~conf () in
-    let pkglist = List.filter (package_is_applicable ~conf) repository.pkglist in
-    Lib.ep "%d/%d packages available after filtering through predicates.\n"
-      (List.length pkglist)
-      (List.length repository.pkglist);
-    let packages =
-      if packages = [ "all" ] then
-        pkglist
-      else
-        ListLabels.rev_map packages ~f:(fun p ->
-          try
-            List.find (fun p' -> p = p'.metadata.name) pkglist 
-          with Not_found -> raise (Unknown_package p)
-        )
-    in
-    if follow then get_deps pkglist packages else packages
+  let repository = repository ~conf in
+  let pkglist = List.filter (package_is_applicable ~conf) repository.pkglist in
+  Lib.ep "%d/%d packages available after filtering through predicates.\n"
+    (List.length pkglist)
+    (List.length repository.pkglist);
+  let packages =
+    if packages = [ "all" ] then
+      pkglist
+    else
+      let l = ListLabels.rev_map packages ~f:(fun p ->
+        try
+          List.find (fun p' -> p = p'.metadata.name) pkglist
+        with Not_found -> raise (Unknown_package p)
+      )
+      in
+      if follow then get_deps pkglist l else l
   in
-  download_to_folder ~conf dest pkglist
+  download_to_folder ~conf dest packages
 
 type web_install_opts = {
   follow_dependencies : bool;
