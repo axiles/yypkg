@@ -2,27 +2,39 @@ open Types
 open Yylib
 
 module Get = struct
-  let to_file ~file ~uri =
+  let to_file ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     let out ~string ~offset ~length =
       ignore (Unix.write fd string offset length)
     in
     (try
-      ignore (Http_get.body ~agent:"lapin" ~uri ~out)
+      ignore (Http_get.body ~agent ~uri ~out)
     with exn ->
       Unix.close fd; raise exn);
     Unix.close fd
 
-  let to_string ?(b_size = 32*1024) uri =
+  let to_string ~agent ?(b_size = 32*1024) uri =
     let b = Buffer.create b_size in
     let out ~string ~offset ~length =
       Buffer.add_substring b string offset length
     in
-    ignore (Http_get.body ~agent:"lapin" ~uri ~out);
+    ignore (Http_get.body ~agent ~uri ~out);
     Buffer.contents b
 end
 
 exception Hash_failure of string
+
+let agent conf =
+  match Sys.os_type with
+  | "Unix" -> "Yypkg Unix"
+  | "Cygwin" -> "Yypkg Cygwin"
+  | "Win32" -> (
+      try
+        let h = String.concat "-" (List.assoc "host_system" conf.predicates) in
+        Lib.sp "Yypkg Windows (%s)" h
+      with Not_found -> "Yypkg Windows"
+    )
+  | _ -> assert false
 
 let get_uri_contents uri =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
@@ -30,21 +42,22 @@ let get_uri_contents uri =
   Printf.eprintf " DONE\n%!";
   content
 
-let get_uri uri output =
+let get_uri ~agent uri output =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  Get.to_file ~file:output ~uri;
+  Get.to_file ~agent ~file:output ~uri;
   Printf.eprintf " DONE\n%!"
 
 let download ~conf ~dest packages =
+  let agent = agent conf in
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
   ListLabels.map packages ~f:(fun p ->
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
     let output = Lib.filename_concat [ dest; p.filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
-      get_uri uri output;
+      get_uri ~agent uri output;
       if Lib.sha3_file output <> p.sha3 then (
         Printf.eprintf "File downloaded but hash is wrong. Trying again.\n";
-        get_uri uri output;
+        get_uri ~agent uri output;
         if Lib.sha3_file output <> p.sha3 then (
           Printf.eprintf "File downloaded but hash is wrong AGAIN! Aborting.\n";
           raise (Hash_failure output)
@@ -71,14 +84,16 @@ let get_deps pkglist packages =
   let names = List.fold_left add [] packages in
   find_all_by_name ~pkglist ~name_list:names
 
-let repo_of_uri uri =
-  let list_el_xz = get_uri_contents uri in
+let repo_of_uri ~agent uri =
+  let list_el_xz = get_uri_contents ~agent uri in
   let archive = Lib.Archive.String list_el_xz in
   let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
   TypesSexp.To.repository (Pre_sexp.of_string list_el)
 
-let repository ~conf  =
-  repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el.tar.xz"])
+let repository ~conf =
+  let uri = String.concat "/" [ conf.mirror; "package_list.el.tar.xz"] in
+  let agent = agent conf in
+  repo_of_uri ~agent uri
 
 let packages ~conf ~follow ~wishes =
   let repository = repository ~conf in

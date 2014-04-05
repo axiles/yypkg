@@ -85,10 +85,12 @@ let foo ~cwd ~host ~arch =
         Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   in
 
+  let host_system = StringMatcher.to_string ~t:host_spec host in
+
   p "Installing win-builds %d in %S for %S. Press return to continue.\n"
     bits
     prefix
-    (StringMatcher.to_string ~t:host_spec host);
+    host_system;
   ignore (read_line ());
 
   Init.init prefix;
@@ -96,12 +98,13 @@ let foo ~cwd ~host ~arch =
     let p_set = Config.Predicates.set in
     let conf = p_set conf ("host", [ host_triplet ]) in
     let conf = p_set conf ("target", [ host_triplet ]) in
+    let conf = p_set conf ("host_system", [ host_system ]) in
     { conf with
       mirror = Lib.sp "http://win-builds.org/1.3.0/packages/windows_%d" bits }
   )
   in
-  let l = Web_install.packages ~conf ~follow:true ~wishes:["all"] in
-  let packages = Web_install.download ~conf ~dest:Yylib.default_download_path l in
+  let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
+  let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
   Db.update (Install.install conf packages)
 
 let main opts =
