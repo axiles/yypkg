@@ -35,11 +35,11 @@ let get_uri uri output =
   WebGet.to_file ~file:output ~uri;
   Printf.eprintf " DONE\n%!"
 
-let download_to_folder ~conf folder packages =
-  FileUtil.mkdir ~parent:true ~mode:0o755 folder;
+let download ~conf ~dest packages =
+  FileUtil.mkdir ~parent:true ~mode:0o755 dest;
   ListLabels.map packages ~f:(fun p ->
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
-    let output = Lib.filename_concat [ folder; p.filename ] in
+    let output = Lib.filename_concat [ dest; p.filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
       get_uri uri output;
       if Lib.sha3_file output <> p.sha3 then (
@@ -80,25 +80,22 @@ let repo_of_uri uri =
 let repository ~conf  =
   repo_of_uri (String.concat "/" [ conf.mirror; "package_list.el.tar.xz"])
 
-let get_packages ~conf ~follow ~dest ~packages =
+let packages ~conf ~follow ~wishes =
   let repository = repository ~conf in
   let pkglist = List.filter (package_is_applicable ~conf) repository.pkglist in
   Lib.ep "%d/%d packages available after filtering through predicates.\n"
     (List.length pkglist)
     (List.length repository.pkglist);
-  let packages =
-    if packages = [ "all" ] then
-      pkglist
-    else
-      let l = ListLabels.rev_map packages ~f:(fun p ->
-        try
-          List.find (fun p' -> p = p'.metadata.name) pkglist
-        with Not_found -> raise (Unknown_package p)
-      )
-      in
-      if follow then get_deps pkglist l else l
-  in
-  download_to_folder ~conf dest packages
+  if wishes = [ "all" ] then
+    pkglist
+  else
+    let l = ListLabels.rev_map wishes ~f:(fun p ->
+      try
+        List.find (fun p' -> p = p'.metadata.name) pkglist
+      with Not_found -> raise (Unknown_package p)
+    )
+    in
+    if follow then get_deps pkglist l else l
 
 type web_install_opts = {
   follow_dependencies : bool;
@@ -123,7 +120,8 @@ let main ~start_dir opts =
   let o = Args.fold_values ~init ~where:"--web-install" l opts in
   (* TODO: check sanity of arguments *)
   let conf = Config.read () in
-  let packages = get_packages ~conf ~follow:o.follow_dependencies ~dest:o.dest ~packages:o.packages in
+  let l = packages ~conf ~follow:o.follow_dependencies ~wishes:o.packages in
+  let packages = download ~conf ~dest:o.dest l in
   (if not o.download_only then Db.update (Install.install conf packages))
 
 let cli_spec =
@@ -131,7 +129,7 @@ let cli_spec =
   mk ~n:"--web-install" ~h:"download and install a package by name" [
     mk ~n:"--follow-dependencies" ~h:"also fetch and install dependencies" [];
     mk ~n:"--download-only" ~h:"only download packages, don't install them" [];
-    mk ~n:"--download-folder" 
+    mk ~n:"--download-folder"
       ~h:("where to put downloaded files (instead of " ^ Yylib.default_download_path ^ ")") [];
     mk ~n:"--packages" ~h:"packages to install" [];
   ]

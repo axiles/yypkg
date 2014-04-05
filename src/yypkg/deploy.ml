@@ -100,7 +100,8 @@ let foo ~cwd ~host ~arch =
       mirror = Lib.sp "http://win-builds.org/1.3.0/packages/windows_%d" bits }
   )
   in
-  let packages = Web_install.get_packages ~conf ~follow:true ~dest:Yylib.default_download_path ~packages:["all"] in
+  let l = Web_install.packages ~conf ~follow:true ~wishes:["all"] in
+  let packages = Web_install.download ~conf ~dest:Yylib.default_download_path l in
   Db.update (Install.install conf packages)
 
 let main opts =
