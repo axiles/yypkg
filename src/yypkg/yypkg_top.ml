@@ -25,7 +25,7 @@ let cmd_line_spec =
     mk ~n:"--prefix" ~h:"prefix yypkg will be working in" [];
     mk ~n:"--init" ~h:"setups a directory tree for yypkg (run once)" [];
     mk ~n:"--install" ~h:"install a package (extension is .txz)" [];
-    Web_install.cli_spec;
+    Web.cli_spec;
     mk ~n:"--upgrade" ~h: "upgrade with package (extension is .txz)" [
       mk ~n:"--install-new" ~h:"If package isn't already installed, install it." [];
     ];
@@ -111,7 +111,7 @@ let main b =
     (* web-install, accepts several packages at once *)
     | Some "--web-install" ->
         enter prefix;
-        Web_install.main ~start_dir:old_cwd actionopts
+        Web.main ~start_dir:old_cwd actionopts
     (* upgrade, accepts several packages at once *)
     | Some "--upgrade" ->
         enter prefix;

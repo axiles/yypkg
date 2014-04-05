@@ -1,7 +1,7 @@
 open Types
 open Yylib
 
-module WebGet = struct
+module Get = struct
   let to_file ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     let out ~string ~offset ~length =
@@ -26,13 +26,13 @@ exception Hash_failure of string
 
 let get_uri_contents uri =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  let content = WebGet.to_string uri in
+  let content = Get.to_string uri in
   Printf.eprintf " DONE\n%!";
   content
 
 let get_uri uri output =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  WebGet.to_file ~file:output ~uri;
+  Get.to_file ~file:output ~uri;
   Printf.eprintf " DONE\n%!"
 
 let download ~conf ~dest packages =
