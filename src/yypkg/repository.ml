@@ -89,37 +89,33 @@ let repository_metadata pkglist =
 
 module Output = struct
   module HTML = struct
-    let tds l =
-      let td = function
-        | `Left s -> [ "<td>"; s; "</td>" ]
-        | `Right s -> [ "<td align=\"right\">"; s; "</td>" ]
-      in
-      String.concat " " (List.concat (List.rev (List.rev_map td l)))
+    let td (a, s) =
+      Lib.sp "<td align=%S>%s</td>" (match a with `Right -> "right" | _ -> "") s
     let tr l =
-      String.concat " " [ "<tr>"; tds l; "</tr>" ]
+      String.concat " " [ "<tr>"; String.concat " " (List.map td l); "</tr>" ]
     let tr_header =
       tr [
-        `Left "Package name";
-        `Right "Version";
-        `Right "Size compressed";
-        `Right "Size expanded";
-        `Left "Host";
-        `Left "Target";
-        `Left "Constraints";
-        `Left "Dependencies";
+        `Left, "Package name";
+        `Right, "Version";
+        `Right, "Size compressed";
+        `Right, "Size expanded";
+        `Left, "Host";
+        `Left, "Target";
+        `Left, "Constraints";
+        `Left, "Dependencies";
       ]
     let tr_pkg { deps; size_compressed; metadata = m } =
       let of_size = FileUtil.string_of_size ~fuzzy:true in
       let sp_predicate (k, v) = String.concat "=" [ k; v ] in
       tr [
-        `Left (m.name);
-        `Right (string_of_version m.version);
-        `Right (of_size size_compressed);
-        `Right (of_size m.size_expanded);
-        `Left m.host;
-        `Left (match m.target with Some target -> target | None -> "N/A");
-        `Left (String.concat ", " (List.map sp_predicate m.predicates));
-        `Left ((String.concat ", " deps))
+        `Left, m.name;
+        `Right, string_of_version m.version;
+        `Right, of_size size_compressed;
+        `Right, of_size m.size_expanded;
+        `Left, m.host;
+        `Left, (match m.target with Some target -> target | None -> "N/A");
+        `Left, (String.concat ", " (List.map sp_predicate m.predicates));
+        `Left, String.concat ", " deps
       ]
 
     let table pkgs =
