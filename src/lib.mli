@@ -43,3 +43,4 @@ val ep : ('a, out_channel, unit) format -> 'a
 val sp : ('a, unit, string) format -> 'a
 val string_count : string -> char -> int
 val sha3_file : string -> string
+val started_from_windows_gui : unit -> bool

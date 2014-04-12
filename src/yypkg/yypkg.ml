@@ -162,12 +162,16 @@ let main_wrap b =
 
 let () =
   Printexc.record_backtrace true;
-  let b = Buffer.create 1000 in
-  (if Args.nothing_given () || Args.wants_help () then
-    Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
+  (if Args.nothing_given () && Lib.started_from_windows_gui () then
+    VBUI.main ()
   else
-    main_wrap b);
-  Buffer.output_buffer stderr b;
-  if Buffer.length b <> 0 then
-    exit 1
+    let b = Buffer.create 1000 in
+    (if Args.nothing_given () || Args.wants_help () then
+      Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
+    else
+      main_wrap b);
+    Buffer.output_buffer stderr b;
+    if Buffer.length b <> 0 then
+      exit 1
+  );
 

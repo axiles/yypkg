@@ -19,8 +19,7 @@
 (* Init a yypkg installation in the given folder, this means:
   * create /etc and an empty conf in /etc/yypkg.conf
   * create /sbin
-  * create /var/log/packages and an empty db in /var/log/packages/yypkg_db
-  * put the required binaries in /sbin (xz, (bsd)tar,...) *)
+  * create /var/log/packages and an empty db in /var/log/packages/yypkg_db *)
 
 open Types
 open Yylib

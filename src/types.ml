@@ -18,7 +18,7 @@
 
 type source_version = string
 
-type version = string * int
+type version = source_version * int
 
 (* create a string from a version *)
 let string_of_version (source_version, iteration) =

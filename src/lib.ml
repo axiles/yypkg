@@ -344,3 +344,15 @@ let sha3_file file =
   let sha3 = Cryptokit.hash_channel (Cryptokit.Hash.sha3 512) ic in
   close_in ic;
   sha3
+
+let started_from_windows_gui () =
+  if os_type = `Windows then
+    let ppid = Unix.getppid () in
+    let cmd = sp
+      "tasklist /FI \"IMAGENAME eq cmd.exe\" /FI \"PID eq %d\" | find %S"
+        ppid
+        "cmd.exe" (* the argument to find has to be enclosed in quotes *)
+    in
+    1 = Sys.command cmd
+  else
+    false
