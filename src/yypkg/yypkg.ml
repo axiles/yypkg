@@ -88,58 +88,55 @@ let enter = function
   | None -> prefix_not_set ()
 
 let main b =
-  if Args.nothing_given () || Args.wants_help () then
-    Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
-  else
-    let cmd_line = Args.parse cmd_line_spec Sys.argv in
-    (* the second cmd_line is the first with occurences of "-prefix" removed *)
-    let prefix, cmd_line = prefix_of_cmd_line cmd_line in
-    let action, actionopts = action_of_cmd_line cmd_line in
-    (* Keep track of the original working dir. *)
-    let old_cwd = Sys.getcwd () in
-    match action with
-    (* init, setups a few things for correct operation of yypkg *)
-    | Some "--init" ->
-        (match prefix with
-        | Some prefix ->
-            Init.init (FilePath.DefaultPath.make_absolute old_cwd prefix)
-        | None -> prefix_not_set ())
-    (* install, accepts several packages at once *)
-    | Some "--install" ->
-        enter prefix;
-        let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
-          (Args.to_string_list actionopts) in
-        Db.update (Install.install (Config.read ()) l)
-    (* web-install, accepts several packages at once *)
-    | Some "--web-install" ->
-        enter prefix;
-        Web.main ~start_dir:old_cwd actionopts
-    (* upgrade, accepts several packages at once *)
-    | Some "--upgrade" ->
-        enter prefix;
-        upgrade old_cwd actionopts
-    (* uninstall, accepts several packages at once *)
-    | Some "--uninstall" ->
-        enter prefix;
-        Db.update (Uninstall.uninstall (Args.to_string_list actionopts))
-    (* list the installed packages *)
-    | Some "--list" ->
-        enter prefix;
-        Yylist.list (Db.read ()) (Args.to_string_list actionopts)
-    (* config, makepkg and repository do nothing on their own but have
-     * suboptions *)
-    | Some "--config" ->
-        enter prefix;
-        Config.main actionopts
-    | Some "--makepkg" ->
-        Makepkg.main actionopts
-    | Some "--repository" ->
-        Repository.main actionopts
-    | Some "--deploy" ->
-        Deploy.main actionopts
-    (* if an option was different, Args.parse would already have complained,
-     * so this final pattern will never be matched *)
-    | _ -> assert false
+  let cmd_line = Args.parse cmd_line_spec Sys.argv in
+  (* the second cmd_line is the first with occurences of "-prefix" removed *)
+  let prefix, cmd_line = prefix_of_cmd_line cmd_line in
+  let action, actionopts = action_of_cmd_line cmd_line in
+  (* Keep track of the original working dir. *)
+  let old_cwd = Sys.getcwd () in
+  match action with
+  (* init, setups a few things for correct operation of yypkg *)
+  | Some "--init" ->
+      (match prefix with
+      | Some prefix ->
+          Init.init (FilePath.DefaultPath.make_absolute old_cwd prefix)
+      | None -> prefix_not_set ())
+  (* install, accepts several packages at once *)
+  | Some "--install" ->
+      enter prefix;
+      let l = List.rev_map (FilePath.DefaultPath.make_absolute old_cwd)
+        (Args.to_string_list actionopts) in
+      Db.update (Install.install (Config.read ()) l)
+  (* web-install, accepts several packages at once *)
+  | Some "--web-install" ->
+      enter prefix;
+      Web.main ~start_dir:old_cwd actionopts
+  (* upgrade, accepts several packages at once *)
+  | Some "--upgrade" ->
+      enter prefix;
+      upgrade old_cwd actionopts
+  (* uninstall, accepts several packages at once *)
+  | Some "--uninstall" ->
+      enter prefix;
+      Db.update (Uninstall.uninstall (Args.to_string_list actionopts))
+  (* list the installed packages *)
+  | Some "--list" ->
+      enter prefix;
+      Yylist.list (Db.read ()) (Args.to_string_list actionopts)
+  (* config, makepkg and repository do nothing on their own but have
+   * suboptions *)
+  | Some "--config" ->
+      enter prefix;
+      Config.main actionopts
+  | Some "--makepkg" ->
+      Makepkg.main actionopts
+  | Some "--repository" ->
+      Repository.main actionopts
+  | Some "--deploy" ->
+      Deploy.main actionopts
+  (* if an option was different, Args.parse would already have complained,
+   * so this final pattern will never be matched *)
+  | _ -> assert false
 
 let main_wrap b =
   let fail e =
@@ -166,7 +163,10 @@ let main_wrap b =
 let () =
   Printexc.record_backtrace true;
   let b = Buffer.create 1000 in
-  main_wrap b;
+  (if Args.nothing_given () || Args.wants_help () then
+    Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
+  else
+    main_wrap b);
   Buffer.output_buffer stderr b;
   if Buffer.length b <> 0 then
     exit 1
