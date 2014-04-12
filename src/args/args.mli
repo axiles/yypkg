@@ -7,6 +7,7 @@ exception Incomplete_parsing of (opt list * string list)
 exception Parsing_failed of string
 val bprint_spec : Buffer.t -> int -> child -> unit
 val parse : child list -> string array -> opt list
+val nothing_given : unit -> bool
 val wants_help : unit -> bool
 val usage_msg : child list -> string -> child
 val is_opt : ?s:string -> opt -> bool

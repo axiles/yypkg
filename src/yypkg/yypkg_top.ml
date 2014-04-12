@@ -86,7 +86,7 @@ let enter = function
   | None -> prefix_not_set ()
 
 let main b =
-  if Args.wants_help () then
+  if Args.nothing_given () || Args.wants_help () then
     Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg")
   else
     let cmd_line = Args.parse cmd_line_spec Sys.argv in
