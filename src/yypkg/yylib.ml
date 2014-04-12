@@ -26,20 +26,20 @@ external create_reparse_point : string -> string -> unit = "create_reparse_point
 let ahk_bin =
   Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
 
-let conf_folder =
+let conf_dir =
   Lib.filename_concat [ "etc"; "yypkg.d" ]
 
-let db_folder =
+let db_dir =
   Lib.filename_concat [ "var"; "log"; "packages" ]
 
 let db_path =
-  Lib.filename_concat [ db_folder; "yypkg_db" ]
+  Lib.filename_concat [ db_dir; "yypkg_db" ]
 
 let default_download_path =
   Lib.filename_concat [ "var"; "cache"; "packages" ]
 
 let conf_path =
-  Lib.filename_concat [ "etc"; "yypkg.d"; "yypkg.conf" ]
+  Lib.filename_concat [ conf_dir; "yypkg.conf" ]
 
 (* replace env var of the form ${windir} *)
 let expand_environment_variables s =

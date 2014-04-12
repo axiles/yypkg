@@ -3,8 +3,8 @@ external remove : string -> unit = "yy_remove"
 external create_reparse_point : string -> string -> unit
   = "create_reparse_point"
 val ahk_bin : string
-val conf_folder : string
-val db_folder : string
+val conf_dir : string
+val db_dir : string
 val db_path : string
 val default_download_path : string
 val conf_path : string

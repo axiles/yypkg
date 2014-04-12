@@ -31,7 +31,7 @@ let init prefix =
   let yypkg = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) Sys.argv.(0) in
   mkdir prefix;
   Sys.chdir prefix;
-  List.iter mkdir [ default_download_path; conf_folder; db_folder ];
+  List.iter mkdir [ default_download_path; conf_dir; db_dir ];
   FileUtil.cp [ yypkg ] "bin";
   Disk.write db_path (TypesSexp.Of.db []);
   Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; predicates = [] })

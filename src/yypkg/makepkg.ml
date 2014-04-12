@@ -71,7 +71,7 @@ module Package_script = struct
           && FileUtil.test FileUtil.Is_exec path
         then
           let path_in = Lib.filename_concat [ dir.basename; e ] in
-          let dir_out = Lib.filename_concat [ Yylib.db_folder; dir.basename ] in
+          let dir_out = Lib.filename_concat [ Yylib.db_dir; dir.basename ] in
           let path_out = Lib.filename_concat [ dir_out; e ] in
           (e ^ "_pre", Expand (path_in, dir_out))
           :: (e, Exec [ "bash"; path_out ])
