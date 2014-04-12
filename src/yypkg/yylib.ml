@@ -131,10 +131,10 @@ let is_installed db p =
 (* various sanity checks:
   * do etc/yypkg.conf and /var/log/packages/yypkg_db exist?
   * ... *)
-let sanity_checks () =
+let sanity_checks prefix =
   List.iter Lib.assert_file_exists [
-    db_path;
-    conf_path
+    Filename.concat prefix db_path;
+    Filename.concat prefix conf_path
   ]
 
 let symlink ~target ~name ~kind =

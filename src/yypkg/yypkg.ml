@@ -84,7 +84,7 @@ let prefix_not_set () =
 
 (* Some operations are relative to the prefix and yypkg will chdir to it. *)
 let enter = function
-  | Some prefix -> Sys.chdir prefix; Yylib.sanity_checks ()
+  | Some prefix -> Yylib.sanity_checks prefix; Sys.chdir prefix
   | None -> prefix_not_set ()
 
 let main b =

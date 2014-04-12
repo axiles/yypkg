@@ -21,7 +21,7 @@ val find_all_by_name_regex : Types.db -> Str.regexp -> Types.db
 val find_all_by_name :
   pkglist:Types.pkg list -> name_list:string list -> Types.pkg list
 val is_installed : Types.db -> string -> bool
-val sanity_checks : unit -> unit
+val sanity_checks : string -> unit
 val symlink :
   target:FilePath.filename -> name:FilePath.filename ->
   kind:Types.filekind -> unit
