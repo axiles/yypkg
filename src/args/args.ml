@@ -151,21 +151,18 @@ let to_string_list l =
     List.rev (List.rev_map (function Val s -> s | _ -> assert false) l)
 
 let fold_values ~where ~init l opts =
-  let sp = Printf.sprintf in
-  let fail msg =
-    raise (Parsing_failed msg)
-  in
   ListLabels.fold_left opts ~init ~f:(fun accu a ->
     match a with
+    | Opt (o, []) ->
+        let f = List.assoc o l in
+        f ~accu o None
     | Opt (o, v) ->
-        let f = (try List.assoc o l with
-        | Not_found -> fail (sp "Unknown option `%s' to %s." o where))
-        in
-        (match v with
-        | [] -> f ~accu o None
-        | _ -> List.fold_left (fun accu v -> f ~accu o (Some v)) accu v)
+        let f = List.assoc o l in
+        List.fold_left (fun accu v -> f ~accu o (Some v)) accu v
     | Val v ->
-        fail (sp "%s requires a sub-option, not `%s'." where v))
+        let msg = Printf.sprintf "%s requires a sub-option, not %S." where v in
+        raise (Parsing_failed msg)
+  )
 
 module Get = struct
   type 'a t = (string -> 'a) * 'a option * string
