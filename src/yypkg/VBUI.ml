@@ -51,9 +51,7 @@ let run s =
 let msgbox ?(title = "Question") ~buttons text =
   run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " | " buttons) title)
 
-let main_real () =
-  Sys.chdir Lib.install_path;
-  Yylib.sanity_checks ();
+let main () =
   let conf = Config.read () in
   let db = Db.read () in
   let l = Web.packages ~conf ~follow:false ~wishes:[] in
@@ -86,14 +84,3 @@ let main_real () =
       )
       else
         ()
-
-let main () =
-  try
-    main_real ()
-  with e ->
-    let msg = String.concat "\n" [
-      Printexc.to_string e;
-      Printexc.get_backtrace ();
-    ]
-    in
-    ignore (msgbox ~title:"No update available" ~buttons:[ Button.ok ] msg)

@@ -87,6 +87,13 @@ let enter = function
   | Some prefix -> Yylib.sanity_checks prefix; Sys.chdir prefix
   | None -> prefix_not_set ()
 
+let installed prefix =
+  try
+    Yylib.sanity_checks prefix;
+    true
+  with e ->
+    false
+
 let main b =
   let cmd_line = Args.parse cmd_line_spec Sys.argv in
   (* the second cmd_line is the first with occurences of "-prefix" removed *)
@@ -162,8 +169,19 @@ let main_wrap b =
 
 let () =
   Printexc.record_backtrace true;
-  (if Args.nothing_given () && Lib.started_from_windows_gui () then
-    VBUI.main ()
+  if Args.nothing_given () && Lib.started_from_windows_gui () then
+    if installed Lib.install_path then
+      try
+        VBUI.main ()
+      with e ->
+        let msg = String.concat "\n" [
+          Printexc.to_string e;
+          Printexc.get_backtrace ();
+        ]
+        in
+        ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.abort ] msg)
+    else
+      Deploy.main Args.([ Opt ("--host", [ Val "Native Windows" ]) ])
   else
     let b = Buffer.create 1000 in
     (if Args.nothing_given () || Args.wants_help () then
@@ -173,5 +191,4 @@ let () =
     Buffer.output_buffer stderr b;
     if Buffer.length b <> 0 then
       exit 1
-  );
 
