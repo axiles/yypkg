@@ -27,15 +27,11 @@ open Yylib
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
-  (* On windows, we need an absolute filename it seems *)
-  let mk_absolute p = FilePath.DefaultPath.make_absolute prefix p in
-  let dl_folder = mk_absolute default_download_path in
-  let bin = mk_absolute "bin" in
-  let folders = [conf_folder; db_folder] in
-  let folders = dl_folder :: bin :: (List.map mk_absolute folders) in
-  List.iter (fun f -> FileUtil.mkdir ~parent:true ~mode:0o755 f) folders;
-  FileUtil.cp [ Sys.argv.(0) ] bin;
+  let mkdir p = FileUtil.mkdir ~parent:true ~mode:0o755 p in
+  let yypkg = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) Sys.argv.(0) in
+  mkdir prefix;
   Sys.chdir prefix;
+  List.iter mkdir [ default_download_path; conf_folder; db_folder ];
+  FileUtil.cp [ yypkg ] "bin";
   Disk.write db_path (TypesSexp.Of.db []);
-  let base_conf = { mirror = ""; predicates = [] } in
-  Disk.write conf_path (TypesSexp.Of.conf base_conf);
+  Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; predicates = [] })
