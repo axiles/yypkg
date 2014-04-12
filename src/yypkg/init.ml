@@ -30,9 +30,11 @@ let init prefix =
   (* On windows, we need an absolute filename it seems *)
   let mk_absolute p = FilePath.DefaultPath.make_absolute prefix p in
   let dl_folder = mk_absolute default_download_path in
-  let folders = [conf_folder; "sbin"; db_folder] in
-  let folders = dl_folder :: (List.map mk_absolute folders) in
+  let bin = mk_absolute "bin" in
+  let folders = [conf_folder; db_folder] in
+  let folders = dl_folder :: bin :: (List.map mk_absolute folders) in
   List.iter (fun f -> FileUtil.mkdir ~parent:true ~mode:0o755 f) folders;
+  FileUtil.cp [ Sys.argv.(0) ] bin;
   Sys.chdir prefix;
   Disk.write db_path (TypesSexp.Of.db []);
   let base_conf = { mirror = ""; predicates = [] } in
