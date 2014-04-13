@@ -102,6 +102,7 @@ module Output = struct
         `Left, "Host";
         `Left, "Target";
         `Left, "Constraints";
+        `Left, "Description";
         `Left, "Dependencies";
       ]
     let tr_pkg { deps; size_compressed; metadata = m } =
