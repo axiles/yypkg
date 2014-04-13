@@ -95,7 +95,7 @@ module Output = struct
       String.concat " " [ "<tr>"; String.concat " " (List.map td l); "</tr>" ]
     let tr_header =
       tr [
-        `Left, "Package name";
+        `Left, "Name";
         `Right, "Version";
         `Right, "Size compressed";
         `Right, "Size expanded";
