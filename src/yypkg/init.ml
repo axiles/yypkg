@@ -17,18 +17,24 @@
  *)
 
 (* Init a yypkg installation in the given folder, this means:
-  * create /etc and an empty conf in /etc/yypkg.conf
-  * create /sbin
+  * create /etc and an empty conf in /etc/yypkg.d/yypkg.conf
+  * create /bin
   * create /var/log/packages and an empty db in /var/log/packages/yypkg_db *)
 
 open Types
 open Yylib
 
+let make_absolute_if_not rel path =
+  if FilePath.DefaultPath.is_absolute path then
+    path
+  else
+    FilePath.DefaultPath.make_absolute rel path
+
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
   let mkdir p = FileUtil.mkdir ~parent:true ~mode:0o755 p in
-  let yypkg = FilePath.DefaultPath.make_absolute (Sys.getcwd ()) Sys.argv.(0) in
+  let yypkg = make_absolute_if_not (Sys.getcwd ()) Sys.executable_name in
   mkdir prefix;
   Sys.chdir prefix;
   List.iter mkdir [ "bin"; default_download_path; conf_dir; db_dir ];
