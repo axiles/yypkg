@@ -25,10 +25,10 @@ open Types
 open Yylib
 
 let make_absolute_if_not rel path =
-  if FilePath.DefaultPath.is_absolute path then
-    path
-  else
+  if FilePath.DefaultPath.is_relative path then
     FilePath.DefaultPath.make_absolute rel path
+  else
+    path
 
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
