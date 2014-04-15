@@ -49,6 +49,10 @@ let run s =
   ret
 
 let msgbox ?(title = "Question") ~buttons text =
+  let replace_double_quotes s =
+    Str.global_replace (Str.regexp "\"") "'" s
+  in
+  let text = replace_double_quotes text in
   run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " | " buttons) title)
 
 let main () =
