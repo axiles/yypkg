@@ -38,7 +38,7 @@ module Arch = struct
   let get name = function
     | Some b -> b
     | None -> 
-        Lib.ep "Do you want to install for %s?\n" name;
+        Printf.printf "Do you want to install for %s?\n%!" name;
         Questions.Choice.get StringMatcher.bool
 end
 
