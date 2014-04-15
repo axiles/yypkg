@@ -170,7 +170,8 @@ let main_wrap b =
 let () =
   Printexc.record_backtrace true;
   if Args.nothing_given () && Lib.started_from_windows_gui () then
-    if installed Lib.install_path then
+    if installed Lib.install_path then (
+      enter (Some Lib.install_path);
       try
         VBUI.main ()
       with e ->
@@ -180,6 +181,7 @@ let () =
         ]
         in
         ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.abort ] msg)
+    )
     else
       Deploy.main Args.([ Opt ("--host", [ Val "Native Windows" ]) ])
   else
