@@ -29,13 +29,21 @@ module ReturnCode = struct
 end
 
 module Button = struct
-  let ok = "vbOK"
-  let cancel = "vbCancel"
-  let abort = "vbAbort"
-  let retry = "vbRetry"
-  let ignore = "vbIgnore"
-  let yes = "vbYes"
-  let no = "vbNo"
+  let okOnly = "vbOKOnly"
+  let okCancel = "vbOKCancel"
+  let abortRetryIgnore = "vbAbortRetryIgnore"
+  let yesNoCancel = "vbYesNoCancel"
+  let yesNo = "vbYesNo"
+  let retryCancel = "vbRetryCancel"
+  let critical = "vbCritical"
+  let question = "vbQuestion"
+  let exclamation = "vbExclamation"
+  let information = "vbInformation"
+  let defaultButton1 = "vbDefaultButton1"
+  let defaultButton2 = "vbDefaultButton2"
+  let defaultButton3 = "vbDefaultButton3"
+  let defaultButton4 = "vbDefaultButton4"
+  let msgBoxHelpButton = "vbMsgBoxHelpButton"
 end
 
 let run s =
@@ -53,7 +61,7 @@ let msgbox ?(title = "Question") ~buttons text =
     Str.global_replace (Str.regexp "\"") "'" s
   in
   let text = replace_double_quotes text in
-  run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " | " buttons) title)
+  run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " + " buttons) title)
 
 let main () =
   let conf = Config.read () in
@@ -63,7 +71,7 @@ let main () =
   | [] ->
       ignore (msgbox
         ~title:"No update available"
-        ~buttons:[ Button.ok ]
+        ~buttons:[ Button.okOnly ]
         "There is no package update available")
   | l ->
       let summary =
@@ -73,7 +81,7 @@ let main () =
       in
       let ret = msgbox
         ~title:"Update available"
-        ~buttons:Button.([ yes; no ])
+        ~buttons:Button.([ yesNo ])
         (Lib.sp "There are %d packages to update: %s" (List.length l) summary)
       in
       if ret = ReturnCode.ok then (
@@ -81,7 +89,7 @@ let main () =
         Db.update (Upgrade.upgrade ~install_new:true conf packages);
         ignore (msgbox
           ~title:"Update successful"
-          ~buttons:[ Button.ok ]
+          ~buttons:[ Button.okOnly ]
           (Lib.sp "The following packages have been updated successfully: %s"
             summary)
         )

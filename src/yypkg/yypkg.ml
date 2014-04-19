@@ -175,12 +175,12 @@ let () =
       try
         VBUI.main ()
       with e ->
-        let msg = String.concat "\n" [
-          Printexc.to_string e;
-          Printexc.get_backtrace ();
-        ]
-        in
-        ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.abort ] msg)
+        ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.critical ] (
+          String.concat "\n" [
+            Printexc.to_string e;
+            Printexc.get_backtrace ();
+          ]
+        ))
     )
     else
       Deploy.main Args.([ Opt ("--host", [ Val "Native Windows" ]) ])
