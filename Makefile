@@ -1,3 +1,6 @@
+test:
+	cd src && ocamlbuild -use-ocamlfind http_get_repro.native
+
 all:
 	cd src && ocamlbuild -use-ocamlfind \
 		-cflags -ccopt,-Wall,-ccopt,-Wextra,-ccopt,-O2 -lflags yypkg/win.o \

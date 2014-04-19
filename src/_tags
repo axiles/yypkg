@@ -10,4 +10,5 @@
 
 <yypkg/*>: package(fileutils.str), package(cryptokit)
 
+<http_get_repro.{native,byte}>: package(libocaml_http)
 <yypkg/yypkg.{native,byte}>: package(bigarray), package(archive), package(libocaml_http)
