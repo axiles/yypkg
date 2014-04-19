@@ -232,7 +232,11 @@ module Archive = struct
     with_archive_and_entry ~f:(get_contents file) ~archive
 
   let extract ?(transform=(fun _ -> true)) t e =
-    let flags = A.Read.([ OWNER; PERM; TIME ]) in
+    let flags = List.concat [
+      if Unix.geteuid () = 0 then [ A.Read.OWNER ] else [];
+      A.Read.([ PERM; TIME ])
+    ]
+    in
     let rec aux accu =
       if A.Read.next_header2 t e then
         if transform e then
