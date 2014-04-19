@@ -100,7 +100,7 @@ let foo ~cwd ~host ~arch =
     let conf = p_set conf ("target", [ host_triplet ]) in
     let conf = p_set conf ("host_system", [ host_system ]) in
     { conf with
-      mirror = Lib.sp "http://win-builds.org/1.3.0/packages/windows_%d" bits }
+      mirror = Lib.sp "http://win-builds.org/1.4-dev3/packages/windows_%d" bits }
   )
   in
   let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
