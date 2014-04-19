@@ -279,7 +279,7 @@ index 5f38cf9..949192d 100644
 +  caml_leave_blocking_section();
 +
 +  if (res < 0) {
-+    caml_archive_check_error(archive_errno(*ptr), *ptr);
++    caml_archive_check_error(res, *ptr);
 +  }
 +
 +  CAMLreturn(Val_unit);
