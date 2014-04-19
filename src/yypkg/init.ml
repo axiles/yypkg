@@ -39,6 +39,10 @@ let absolute_executable_name () =
     else
       Sys.executable_name
 
+let yypkg_dest () =
+  Filename.concat "bin"
+    (if Lib.os_type = `Windows then "yypkg.exe" else "yypkg")
+
 (* we Sys.chdir to prefix but also need the value of prefix for make_absolute *)
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
@@ -47,6 +51,6 @@ let init prefix =
   mkdir prefix;
   Sys.chdir prefix;
   List.iter mkdir [ "bin"; default_download_path; conf_dir; db_dir ];
-  FileUtil.cp [ yypkg ] "bin";
+  FileUtil.cp [ yypkg ] (yypkg_dest ());
   Disk.write db_path (TypesSexp.Of.db []);
   Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; predicates = [] })
