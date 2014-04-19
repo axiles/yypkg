@@ -48,7 +48,7 @@ module System
 		 = struct
 			let string
 			 = fun ~context ochn string ->
-				Pervasives.prerr_string (">[[32m[1m"^(string)^"[m]");
+				(* Pervasives.prerr_string (">[" ^ string ^ "]"); *)
 				Unix_error.t (Pervasives.output_string ochn string)
 			let flush
 			 = fun ~context ochn ->
