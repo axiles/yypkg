@@ -44,9 +44,9 @@ let agent conf =
     )
   | _ -> assert false
 
-let get_uri_contents uri =
+let get_uri_contents ~agent uri =
   Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
-  let content = Get.to_string uri in
+  let content = Get.to_string ~agent uri in
   Printf.eprintf " DONE\n%!";
   content
 
