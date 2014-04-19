@@ -27,7 +27,15 @@ module Get = struct
         Buffer.add_substring b string offset length
     in
     ignore (Http_get.body ~agent ~uri ~out:(out ()));
-    Buffer.contents b
+    let s = Buffer.contents b in
+    let i = Str.search_forward (Str.regexp "\r\n\r\n") s 0 in
+    String.sub s (i+4) (String.length s - (i+4))
+
+  let to_file ~agent ~file ~uri =
+    let x = to_string ~agent uri in
+    let oc = open_out_bin file in
+    output_string oc x;
+    close_out oc
 end
 
 exception Hash_failure of string
