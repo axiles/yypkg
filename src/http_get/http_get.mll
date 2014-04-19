@@ -249,6 +249,13 @@ module Async
 		= parse
 		| (_* as string) { return string }
 {
+let rec body return lexbuf =
+    __ocaml_lex_body_rec return lexbuf 0
+and __ocaml_lex_body_rec return lexbuf __ocaml_lex_state =
+  match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
+  | 0 -> return (Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos)
+  | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf (fun () -> __ocaml_lex_body_rec return lexbuf __ocaml_lex_state)
+
  end
 module Sync
  = Async(Lexing__)
