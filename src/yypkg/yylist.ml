@@ -17,7 +17,6 @@
  *)
 
 open Types
-open Lib
 open Yylib
 
 let print_package p =
