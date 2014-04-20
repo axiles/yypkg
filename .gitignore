@@ -4,3 +4,5 @@ _build
 *.sw[po]
 *.haux
 *.htoc
+
+deps
