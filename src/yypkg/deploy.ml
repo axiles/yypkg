@@ -62,13 +62,6 @@ let get_host = function
       p "\n";
       s
 
-type deploy_opts = {
-  mirror : string option;
-  host : [ `Cygwin | `MSYS | `Windows ] option;
-  i686 : bool option;
-  x86_64 : bool option;
-}
-
 let mirror () =
   let re =
     let base = "yypkg-\\([-._0-9a-zA-Z]+\\)" in
@@ -127,6 +120,13 @@ let install ~cwd ~host ~mirror ~arch =
   let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
   let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
   Db.update (Install.install conf packages)
+
+type deploy_opts = {
+  mirror : string option;
+  host : [ `Cygwin | `MSYS | `Windows ] option;
+  i686 : bool option;
+  x86_64 : bool option;
+}
 
 let main opts =
   let init = {
