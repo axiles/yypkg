@@ -1,8 +1,7 @@
-KIND=native
-TARGETS=yypkg.$(KIND)
-
 all:
-	cd src && OCAMLFIND_COMMANDS="ocamlc=ocamlopt" ocamlbuild -use-ocamlfind -cflags -passopt,-compact,-passopt,-nodynlink -cflags -ccopt,-Wall,-ccopt,-Wextra,-ccopt,-O2 -lflags yypkg/win.o win.o $(TARGETS)
+	cd src && ocamlbuild -use-ocamlfind \
+		-cflags -ccopt,-Wall,-ccopt,-Wextra,-ccopt,-O2 -lflags yypkg/win.o \
+		win.o yypkg.native
 
 release-tarball:
 	git archive --prefix=yypkg-$(VERSION)/ $(VERSION) --format=tar \
@@ -10,5 +9,4 @@ release-tarball:
 	  > yypkg-$(VERSION).tar.gz
 
 clean:
-	cd src && ocamlbuild -clean
-	cd src && rm -f $(TARGETS)
+	cd src && ocamlbuild -clean && rm -f yypkg.native
