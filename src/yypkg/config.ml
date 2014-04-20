@@ -20,11 +20,11 @@ open Types
 
 module Predicates = struct
   let set conf (binding, value) =
-    let predicates = List.remove_assoc binding conf.predicates in
-    { conf with predicates = (binding, value) :: predicates }
+    let predicates = List.remove_assoc binding conf.preds in
+    { conf with preds = (binding, value) :: predicates }
 
   let unset conf binding =
-    { conf with predicates = List.remove_assoc binding conf.predicates }
+    { conf with preds = List.remove_assoc binding conf.preds }
 end
 
 let read () =
@@ -36,7 +36,7 @@ let write conf =
    * output when listing the configuration to the user.
    * We use stable_sort so not to change anything if there are several bindings
    * for the same value. *)
-  let conf = { conf with predicates = List.stable_sort compare conf.predicates } in
+  let conf = { conf with preds = List.stable_sort compare conf.preds } in
   Disk.write Yylib.conf_path (TypesSexp.Of.conf conf)
 
 (* read the conf, run the function, write the database to disk
@@ -50,7 +50,7 @@ let print_predicates conf =
   let print_single_pred (binding, values) =
     Printf.printf "%s = %s\n" binding (String.concat "," values)
   in
-  List.iter print_single_pred conf.predicates
+  List.iter print_single_pred conf.preds
 
 (* Split a string "X=A,B,C" into (X, [A; B; C]) *)
 let key_value_pair s =

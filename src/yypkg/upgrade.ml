@@ -24,7 +24,7 @@ open Yylib
 let upgrade ?(install_new=false) yypkg_conf db p =
   assert_file_exists p;
   let metadata = metadata_of_script (open_package p) in
-  let pred_holds = predicate_holds yypkg_conf.predicates in
+  let pred_holds = predicate_holds yypkg_conf.preds in
   match List.partition pred_holds metadata.predicates with
   | _, [] -> 
       if is_installed db metadata.name then

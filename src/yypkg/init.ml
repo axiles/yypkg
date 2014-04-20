@@ -53,4 +53,4 @@ let init prefix =
   List.iter mkdir [ "bin"; default_download_path; conf_dir; db_dir ];
   FileUtil.cp [ yypkg ] (yypkg_dest ());
   Disk.write db_path (TypesSexp.Of.db []);
-  Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; predicates = [] })
+  Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; preds = [] })

@@ -33,7 +33,7 @@ type script =
 type package = script * (action_id * result) list
 type db = package list
 type conf = {
-  predicates : predicate list;
+  preds : predicate list;
   mirror : string;
 }
 module Repo : sig

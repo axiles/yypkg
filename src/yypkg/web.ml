@@ -39,7 +39,7 @@ let agent conf =
   | "Cygwin" -> "Yypkg Cygwin"
   | "Win32" -> (
       try
-        let h = String.concat "-" (List.assoc "host_system" conf.predicates) in
+        let h = String.concat "-" (List.assoc "host_system" conf.preds) in
         Lib.sp "Yypkg Windows (%s)" h
       with Not_found -> "Yypkg Windows"
     )
@@ -77,7 +77,7 @@ let download ~conf ~dest packages =
   )
 
 let package_is_applicable ~conf pkg =
-  let f = predicate_holds conf.predicates in
+  let f = predicate_holds conf.preds in
   f ("host", pkg.metadata.host)
   && match pkg.metadata.target with
   | Some target -> f ("target", target)

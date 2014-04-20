@@ -77,7 +77,7 @@ type db = package list
   * stability=stable,release_candidate
  * It's mostly free-form, and left as a way to extend the format easily *)
 type conf = {
-  predicates : predicate list;
+  preds : predicate list;
   mirror : string;
 }
 

@@ -43,7 +43,7 @@ let execute_install_action_wrap package (id, action) =
 
 let install_package package conf db =
   let metadata, install_actions, _ as script = Lib.open_package package in
-  let pred_holds = predicate_holds conf.predicates in
+  let pred_holds = predicate_holds conf.preds in
   let _, false_preds = List.partition pred_holds metadata.predicates in
   if false_preds = [] then
     let func = execute_install_action_wrap package in

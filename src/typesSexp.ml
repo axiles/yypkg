@@ -115,7 +115,7 @@ end = struct
   let sexp_of_db db = sexp_of_list sexp_of_package db
   let sexp_of_conf conf =
     List [
-      List [ Atom "predicates"; sexp_of_list sexp_of_predicate conf.predicates ];
+      List [ Atom "preds"; sexp_of_list sexp_of_predicate conf.preds ];
       List [ Atom "mirror"; sexp_of_string conf.mirror ];
     ]
 
@@ -356,15 +356,15 @@ end = struct
 
   let conf_of_sexp sexp =
     let func = "conf_of_sexp" in
-    let predicates = ref None and mirror = ref None in
+    let preds = ref None and mirror = ref None in
     let fields = Record.([
-      field_spec "predicates" predicates (list_of_sexp predicate_of_sexp);
+      field_spec "preds" preds (list_of_sexp predicate_of_sexp);
       field_spec "mirror" mirror string_of_sexp;
     ])
     in
     let build_value () =
-      match (!predicates, !mirror) with
-      | Some predicates, Some mirror -> { predicates; mirror }
+      match (!preds, !mirror) with
+      | Some preds, Some mirror -> { preds; mirror }
       | _ -> Record.undefined_fields ~func ~sexp ~fields
     in
     Record.parse ~func ~sexp ~fields ~build_value
