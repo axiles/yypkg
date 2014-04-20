@@ -17,6 +17,7 @@
  *)
 
 open Types
+open Types.Repo
 
 module ReturnCode = struct
   let ok = 1

@@ -1,4 +1,5 @@
 open Types
+open Types.Repo
 open Yylib
 
 module Get = struct

@@ -24,7 +24,7 @@ module Of : sig
   val conf : conf -> t
   val db : db -> t
   val script : script -> t
-  val repository : repository -> t
+  val repository : Types.Repo.t -> t
 end = struct
 
   let sexp_of_int n = Atom (string_of_int n)
@@ -120,6 +120,7 @@ end = struct
     ]
 
   let sexp_of_pkg pkg =
+    let open Types.Repo in
     List [
       List [ Atom "metadata"; sexp_of_metadata pkg.metadata ];
       List [ Atom "size_compressed"; sexp_of_size pkg.size_compressed ];
@@ -131,6 +132,7 @@ end = struct
     ]
 
   let sexp_of_repository repository =
+    let open Types.Repo in
     List [
       List [ Atom "target"; Atom repository.target ];
       List [ Atom "host"; Atom repository.host ];
@@ -149,7 +151,7 @@ module To : sig
   val conf : t -> conf
   val db : t -> db
   val metadata : t -> metadata
-  val repository : t -> repository
+  val repository : t -> Types.Repo.t
 end = struct
   module Conv : sig
     val of_sexp_error : string -> Pre_sexp.t -> 'a
@@ -368,6 +370,7 @@ end = struct
     Record.parse ~func ~sexp ~fields ~build_value
 
   let pkg_of_sexp sexp =
+    let open Types.Repo in
     let func = "pkg_of_sexp" in
     let metadata = ref None and size_compressed = ref None and files = ref None
     and filename = ref None and signature = ref None and deps = ref None
@@ -394,6 +397,7 @@ end = struct
     Record.parse ~func ~sexp ~fields ~build_value
 
   let repository_of_sexp sexp =
+    let open Types.Repo in
     let func = "repository_of_sexp" in
     let target = ref None and host = ref None and pkglist = ref None in
     let fields = Record.([

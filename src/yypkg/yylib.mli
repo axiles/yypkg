@@ -19,7 +19,7 @@ val metadata_of_script : Types.script -> Types.metadata
 val package_is_named : string -> Types.package -> bool
 val find_all_by_name_regex : Types.db -> Str.regexp -> Types.db
 val find_all_by_name :
-  pkglist:Types.pkg list -> name_list:string list -> Types.pkg list
+  pkglist:Types.Repo.pkg list -> name_list:string list -> Types.Repo.pkg list
 val is_installed : Types.db -> string -> bool
 val sanity_checks : string -> unit
 val symlink :

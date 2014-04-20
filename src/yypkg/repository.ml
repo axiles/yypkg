@@ -17,6 +17,7 @@
  *)
 
 open Types
+open Types.Repo
 
 let filename_check_suffix ext s =
   try FilePath.check_extension s ext with FilePath.NoExtension _ -> false

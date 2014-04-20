@@ -186,6 +186,7 @@ let predicate_holds (conf : predicate list) (key, value) =
   with Not_found -> false
 
 let find_all_by_name ~pkglist ~name_list =
+  let open Types.Repo in
   List.filter (fun p -> List.mem p.metadata.name name_list) pkglist
 
 let xz_opt size =

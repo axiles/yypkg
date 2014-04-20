@@ -81,21 +81,23 @@ type conf = {
   mirror : string;
 }
 
-type pkg = {
-  metadata : metadata;
-  size_compressed : size;
-  filename : string;
-  signature : string option;
-  files : string list;
-  deps : string list;
-  sha3 : string;
-}
+module Repo = struct
+  type pkg = {
+    metadata : metadata;
+    size_compressed : size;
+    filename : string;
+    signature : string option;
+    files : string list;
+    deps : string list;
+    sha3 : string;
+  }
 
-type repository = {
-  target : string;
-  host : string;
-  pkglist : pkg list;
-}
+  type t = {
+    target : string;
+    host : string;
+    pkglist : pkg list;
+  }
+end
 
 exception Package_does_not_exist
 exception File_not_found of string
