@@ -91,10 +91,10 @@ let installed prefix =
   try
     Yylib.sanity_checks prefix;
     true
-  with e ->
+  with _ ->
     false
 
-let main b =
+let main () =
   let cmd_line = Args.parse cmd_line_spec Sys.argv in
   (* the second cmd_line is the first with occurences of "-prefix" removed *)
   let prefix, cmd_line = prefix_of_cmd_line cmd_line in
@@ -152,15 +152,17 @@ let main_wrap b =
     Buffer.add_string b "\n\nThe backtrace is as folllows:\n";
     Buffer.add_string b (Printexc.get_backtrace ())
   in
-  try main b with
-  | Args.Incomplete_parsing (opts, sl) as e ->
+  try main () with
+  | Args.Incomplete_parsing (_opts, _sl) as e ->
       Args.bprint_spec b 0 (Args.usage_msg cmd_line_spec "yypkg");
       fail e
-  | Args.Parsing_failed s as e -> fail e
+  | Args.Parsing_failed _s as e -> fail e
   | File_not_found p as e when Yylib.db_path = p || Yylib.conf_path = p ->
       Buffer.add_string b "You forgot to run -init or something got corrupted.";
       fail e
-  | File_not_found p as e -> fail e
+  | File_not_found p as e ->
+      Buffer.add_string b (Lib.sp "Couldn't find file %S." p);
+      fail e
   | Unmatched_predicates l as e ->
       let f (p, v) = Printf.bprintf b "Predicate %s = %s doesn't hold.\n" p v in
       List.iter f l;
