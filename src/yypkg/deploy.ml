@@ -48,6 +48,12 @@ let host_spec = [
   "Native Windows", [ "Windows" ], `Windows;
 ]
 
+let get_mirror = function
+  | Some host -> host
+  | None ->
+      p "Which mirror do you want to use? (e.g. http://win-builds.org/1.4.0/)\n";
+      Questions.String.get ()
+
 let get_host = function
   | Some host -> host
   | None ->
@@ -55,12 +61,25 @@ let get_host = function
       Questions.Choice.get host_spec
 
 type deploy_opts = {
+  mirror : string option;
   host : [ `Cygwin | `MSYS | `Windows ] option;
   i686 : bool option;
   x86_64 : bool option;
 }
 
-let foo ~cwd ~host ~arch =
+let mirror () =
+  let re =
+    let base = "yypkg-\\([-._0-9a-zA-Z]+\\)" in
+    let suf = if Lib.os_type = `Windows then "\\.exe" else "" in
+    Str.regexp (base ^ suf ^ "$")
+  in
+  let executable = Filename.basename Sys.executable_name in
+  if try Str.search_forward re executable 0 >= 0 with Not_found -> false then
+    Some ("http://win-builds.org/" ^ (Str.matched_group 1 executable))
+  else
+    None
+
+let foo ~cwd ~host ~mirror ~arch =
   let host_triplet, bits = match arch with
   | `I686 -> "i686-w64-mingw32", 32
   | `X86_64 -> "x86_64-w64-mingw32", 64
@@ -100,8 +119,7 @@ let foo ~cwd ~host ~arch =
     let conf = p_set conf ("host", [ host_triplet ]) in
     let conf = p_set conf ("target", [ host_triplet ]) in
     let conf = p_set conf ("host_system", [ host_system ]) in
-    { conf with
-      mirror = Lib.sp "http://win-builds.org/1.4-dev3/packages/windows_%d" bits }
+    { conf with mirror = Lib.sp "%s/packages/windows_%d" mirror bits }
   )
   in
   let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
@@ -110,11 +128,14 @@ let foo ~cwd ~host ~arch =
 
 let main opts =
   let init = {
+    mirror = mirror ();
     host = None;
     i686 = if not Arch.x86_64_is_available then Some true else None;
     x86_64 = if not Arch.x86_64_is_available then Some false else None;
   } in
   let l = [
+    "--mirror", (fun ~accu n o ->
+      { accu with mirror = Some (Args.Get.string n o) });
     "--i686", (fun ~accu n o ->
       { accu with i686 = Some (Args.Get.bool n o) });
     "--x86_64", (fun ~accu n o ->
@@ -123,13 +144,15 @@ let main opts =
       { accu with host = Some (Args.Get.of_stringmatcher host_spec n o) });
   ] in
   let o = Args.fold_values ~init ~where:"--deploy" l opts in
+  let mirror = get_mirror o.mirror in
+  p "Using mirror %S.\n" mirror;
   let host = get_host o.host in
   let i686 = Arch.get "i686" o.i686 in
   let x86_64 = Arch.get "x86_64" o.x86_64 in
 
   let cwd = Sys.getcwd () in
-  (if i686 then foo ~cwd ~host ~arch:`I686);
-  (if x86_64 then foo ~cwd ~host ~arch:`X86_64)
+  (if i686 then foo ~cwd ~host ~mirror ~arch:`I686);
+  (if x86_64 then foo ~cwd ~host ~mirror ~arch:`X86_64)
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in

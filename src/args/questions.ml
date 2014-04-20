@@ -28,3 +28,12 @@ module Choice = struct
         get sm
 end
 
+module String = struct
+  let rec get () =
+    let s = read_line () in
+    if String.length s = 0 then
+      (print_endline "Answer cannot be empty."; get ())
+    else
+      s
+end
+
