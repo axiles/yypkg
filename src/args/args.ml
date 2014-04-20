@@ -174,7 +174,7 @@ module Get = struct
     | None, Some default -> default
     | None, None -> fail name valid "nothing"
     | Some (Opt _), _ -> fail name valid "switches"
-    | Some (Val opt), _ -> (try f opt with e -> fail name valid opt)
+    | Some (Val opt), _ -> (try f opt with _ -> fail name valid opt)
 
   let of_stringmatcher sm name opt =
     get

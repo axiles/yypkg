@@ -23,7 +23,7 @@ let filename_check_suffix ext s =
 
 class ['a] memoizer ~directory ~name =
   let memo_file = FilePath.concat directory ("memo_" ^ name) in
-  object(self)
+  object
     val mutable memo : (string * 'a) list = []
     method exists file =
       let cs = Digest.file file in

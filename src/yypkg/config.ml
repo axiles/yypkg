@@ -95,7 +95,7 @@ let predicates opts =
 
 let main opts =
   ListLabels.iter opts ~f:(function
-  | Args.Opt ("--predicates", subopts) ->
+  | Args.Opt ("--predicates", _subopts) ->
       predicates opts
   | Args.Opt ("--set-mirror", [ Args.Val mirror ]) ->
       ignore (update (fun conf -> { conf with mirror }))

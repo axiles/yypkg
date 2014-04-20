@@ -29,11 +29,11 @@ let file_can_be_removed file other_packages =
 let execute_uninstall_action other_pkgs pkg =
   let (_, _, uninstall_actions), install_results = pkg in
   ListLabels.iter uninstall_actions ~f:(function
-    | RM p -> assert false
+    | RM _p -> assert false
     (* id, "" *)
     | Reverse id ->
         (* rm the files that have been added by 'id' *)
-        let pred (action_id, results) = action_id = id in
+        let pred (action_id, _results) = action_id = id in
         match List.find_all pred install_results with
         | [] ->
             Lib.ep "WARNING: asked to reverse action %S which doesn't exist" id

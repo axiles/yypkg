@@ -89,7 +89,7 @@ let read pid ~accumulate ~output =
     | 0, _ -> accumulate read_once accu; read_rc pid accumulate accu
     (* we know there won't be anything added now: we eat the remaining
      * characters and return right after that *)
-    | pid, status -> accumulate read_once accu; status
+    | _pid, status -> accumulate read_once accu; status
   in
   read_rc pid accumulate output
 
