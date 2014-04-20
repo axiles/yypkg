@@ -151,16 +151,15 @@ module Archive = struct
 
   module Transform = struct
     type t = string -> string option
-    let strip_component n =
-      fun path ->
-        try
-          let i = String.index path '/' in
-          if i = String.length path - 1 then
-            None
-          else
-            Some (String.sub path (i+1) (String.length path - (i+1)))
-        with Not_found ->
-          None
+    let strip_component ?(sep='/') n path =
+      let offs = ref 0 in
+      try
+        for _i = 0 to n - 1 do
+          offs := 1 + String.index_from path !offs sep
+        done;
+        Some (String.sub path (!offs + 1) (String.length path - (!offs + 1)))
+      with Not_found | Invalid_argument _ ->
+        None
 
     let filter re =
       fun s ->

@@ -18,7 +18,7 @@ val xz : string
 module Archive : sig
   module Transform : sig
     type t = string -> string option
-    val strip_component : int -> t
+    val strip_component : ?sep:char -> int -> t
     val filter : Str.regexp -> t
     val c : string -> t
     val wrap : t list -> ArchiveLow.Entry.t -> bool
