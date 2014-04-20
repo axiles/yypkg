@@ -165,8 +165,6 @@ let fold_values ~where ~init l opts =
   )
 
 module Get = struct
-  type 'a t = (string -> 'a) * 'a option * string
-
   let get (f, default, valid) name opt =
     let fail name valid issue =
       let msg = Printf.sprintf "%s requires %s, not %s." name valid issue in
