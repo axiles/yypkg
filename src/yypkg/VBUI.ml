@@ -21,12 +21,12 @@ open Types.Repo
 
 module ReturnCode = struct
   let ok = 1
-  let cancel = 2
+  (* let cancel = 2
   let abort = 3
   let retry = 4
   let ignore = 5
   let yes = 6
-  let no = 7
+  let no = 7 *)
 end
 
 module Button = struct
