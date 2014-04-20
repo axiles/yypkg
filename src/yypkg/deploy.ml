@@ -58,7 +58,9 @@ let get_host = function
   | Some host -> host
   | None ->
       p "Which system do you want to install for?\n";
-      Questions.Choice.get host_spec
+      let s = Questions.Choice.get host_spec in
+      p "\n";
+      s
 
 type deploy_opts = {
   mirror : string option;
@@ -110,7 +112,7 @@ let foo ~cwd ~host ~mirror ~arch =
     bits
     prefix
     host_system;
-  p "Press return to continue or Ctrl-C to abort.\n\n";
+  p "\nPress return to continue or Ctrl-C to abort.\n";
   ignore (read_line ());
 
   Init.init prefix;
@@ -145,7 +147,7 @@ let main opts =
   ] in
   let o = Args.fold_values ~init ~where:"--deploy" l opts in
   let mirror = get_mirror o.mirror in
-  p "Using mirror %S.\n" mirror;
+  p "Using mirror %S.\n\n" mirror;
   let host = get_host o.host in
   let i686 = Arch.get "i686" o.i686 in
   let x86_64 = Arch.get "x86_64" o.x86_64 in
