@@ -336,7 +336,7 @@ let list_rev_map_skip ~f l =
   aux f [] l
 
 let rev_may_value l =
-  list_rev_map_skip (function Some x -> x | None -> raise Skip) l
+  list_rev_map_skip ~f:(function Some x -> x | None -> raise Skip) l
 
 let string_count s c =
   let n = ref 0 in
