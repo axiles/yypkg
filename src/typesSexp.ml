@@ -132,11 +132,10 @@ end = struct
     ]
 
   let sexp_of_repository repository =
-    let open Types.Repo in
     List [
-      List [ Atom "target"; Atom repository.target ];
-      List [ Atom "host"; Atom repository.host ];
-      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repository.pkglist ]
+      List [ Atom "target"; Atom repository.Repo.target ];
+      List [ Atom "host"; Atom repository.Repo.host ];
+      List [ Atom "pkglist"; sexp_of_list sexp_of_pkg repository.Repo.pkglist ]
     ]
 
   let metadata = sexp_of_metadata
@@ -370,7 +369,6 @@ end = struct
     Record.parse ~func ~sexp ~fields ~build_value
 
   let pkg_of_sexp sexp =
-    let open Types.Repo in
     let func = "pkg_of_sexp" in
     let metadata = ref None and size_compressed = ref None and files = ref None
     and filename = ref None and signature = ref None and deps = ref None
@@ -390,6 +388,7 @@ end = struct
       with
       | Some metadata, Some size_compressed, Some filename, Some signature,
         Some files, Some deps, Some sha3 ->
+          let open Types.Repo in
           { metadata; size_compressed; filename; signature; files; deps; sha3 }
       | _ ->
           Record.undefined_fields ~func ~sexp ~fields
@@ -397,7 +396,6 @@ end = struct
     Record.parse ~func ~sexp ~fields ~build_value
 
   let repository_of_sexp sexp =
-    let open Types.Repo in
     let func = "repository_of_sexp" in
     let target = ref None and host = ref None and pkglist = ref None in
     let fields = Record.([
@@ -409,7 +407,7 @@ end = struct
     let build_value () =
       match !target, !host, !pkglist with
       | Some target, Some host, Some pkglist ->
-          { target; host; pkglist }
+          { Types.Repo.target; host; pkglist }
       | _ -> 
           Record.undefined_fields ~func ~sexp ~fields
     in

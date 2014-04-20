@@ -1,5 +1,4 @@
 open Types
-open Types.Repo
 open Yylib
 
 module Get = struct
@@ -60,6 +59,7 @@ let download ~conf ~dest packages =
   let agent = agent conf in
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
   ListLabels.map packages ~f:(fun p ->
+    let open Repo in
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
     let output = Lib.filename_concat [ dest; p.filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
@@ -78,15 +78,15 @@ let download ~conf ~dest packages =
 
 let package_is_applicable ~conf pkg =
   let f = predicate_holds conf.preds in
-  f ("host", pkg.metadata.host)
-  && match pkg.metadata.target with
+  f ("host", pkg.Repo.metadata.host)
+  && match pkg.Repo.metadata.target with
   | Some target -> f ("target", target)
   | None -> true
 
 let get_deps pkglist packages =
   let rec add accu p =
-    let name = p.metadata.name in
-    let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.deps) in
+    let name = p.Repo.metadata.name in
+    let l = List.filter (fun n -> not (List.mem n accu)) (name :: p.Repo.deps) in
     let accu = List.rev_append l accu in
     List.fold_left add accu (find_all_by_name ~pkglist ~name_list:l)
   in
@@ -107,16 +107,16 @@ let repository ~conf =
 
 let packages ~conf ~follow ~wishes =
   let repository = repository ~conf in
-  let pkglist = List.filter (package_is_applicable ~conf) repository.pkglist in
+  let pkglist = List.filter (package_is_applicable ~conf) repository.Repo.pkglist in
   Lib.ep "%d/%d packages available after filtering through predicates.\n"
     (List.length pkglist)
-    (List.length repository.pkglist);
+    (List.length repository.Repo.pkglist);
   if wishes = [ "all" ] then
     pkglist
   else
     let l = ListLabels.rev_map wishes ~f:(fun p ->
       try
-        List.find (fun p' -> p = p'.metadata.name) pkglist
+        List.find (fun p' -> p = p'.Repo.metadata.name) pkglist
       with Not_found -> raise (Unknown_package p)
     )
     in
@@ -124,8 +124,8 @@ let packages ~conf ~follow ~wishes =
 
 let needs_update ~db pkg =
   try
-    let package = List.find (package_is_named pkg.metadata.name) db in
-    (metadata_of_pkg package).version <> pkg.metadata.version
+    let package = List.find (package_is_named pkg.Repo.metadata.name) db in
+    (metadata_of_pkg package).version <> pkg.Repo.metadata.version
   with
     Not_found -> true
 

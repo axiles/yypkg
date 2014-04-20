@@ -17,7 +17,6 @@
  *)
 
 open Types
-open Types.Repo
 
 let filename_check_suffix ext s =
   try FilePath.check_extension s ext with FilePath.NoExtension _ -> false
@@ -55,7 +54,7 @@ let pkg_of_file ~memoizer file =
     let metadata = Yylib.metadata_of_script (Lib.open_package file) in
     let files = Lib.Archive.list (Lib.Archive.Filename file) in
     let pkg = {
-      metadata;
+      Repo.metadata;
       size_compressed = (FileUtil.stat file).FileUtil.size;
       filename = (FilePath.basename file);
       signature = None;
@@ -68,16 +67,16 @@ let pkg_of_file ~memoizer file =
 
 let repository_metadata pkglist =
   let hosts =
-    let triplets = List.rev_map (fun p -> p.metadata.host) pkglist in
+    let triplets = List.rev_map (fun p -> p.Repo.metadata.host) pkglist in
     Lib.rev_uniq (List.sort compare triplets)
   in
   let targets =
-    let triplets = List.rev_map (fun p -> p.metadata.target) pkglist in
+    let triplets = List.rev_map (fun p -> p.Repo.metadata.target) pkglist in
     Lib.rev_uniq (List.sort compare (Lib.rev_may_value triplets))
   in
   match targets, hosts with
-  | [ target ], [ host ] -> { target; host; pkglist }
-  | [], [ host ] -> { target = host; host; pkglist }
+  | [ target ], [ host ] -> { Repo.target; host; pkglist }
+  | [], [ host ] -> { Repo.target = host; host; pkglist }
   | [], [] ->
       Lib.ep "Error: no target and no host found";
       assert false
@@ -106,7 +105,7 @@ module Output = struct
         `Left, "Description";
         `Left, "Dependencies";
       ]
-    let tr_pkg { deps; size_compressed; metadata = m } =
+    let tr_pkg { Repo.deps; size_compressed; metadata = m } =
       let of_size = FileUtil.string_of_size ~fuzzy:true in
       let sp_predicate (k, v) = String.concat "=" [ k; v ] in
       tr [
@@ -143,7 +142,7 @@ module Output = struct
   let html ~directory ~repository =
     let html_oc = FilePath.concat directory "package_list.html" in
     let html_oc = open_out_bin html_oc in
-    output_string html_oc (HTML.table repository.pkglist);
+    output_string html_oc (HTML.table repository.Repo.pkglist);
     close_out html_oc
 
   let write ~directory ~repository =
@@ -159,7 +158,7 @@ let generate dir =
   let pkgs = ListLabels.rev_map files ~f:(fun f ->
     pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat dir f)) in
   (* Add deps during a second stage. *)
-  let pkg_compare a b = compare a.metadata.name b.metadata.name in
+  let pkg_compare a b = compare a.Repo.metadata.name b.Repo.metadata.name in
   let repository = repository_metadata (List.sort pkg_compare pkgs) in
   Output.write ~directory:dir ~repository;
   memoizer_pkgs#commit ()
@@ -182,4 +181,4 @@ let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
   mk ~n:"--repository" ~h:"operations related to managing whole repositories" [
     mk ~n:"--generate" ~h:"generate repository data" [];
-  ];
+  ]
