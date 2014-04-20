@@ -158,7 +158,7 @@ let main opts =
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
-  mk ~n:"--deploy" ~h:"parent option for:" [
-    mk ~n:"--host" ~h:"one of \"MSYS\", \"Cygwin\", \"Windows\"" [];
-    mk ~n:"--arch" ~h:"the architectures to install for (\"i686\" and/or \"x86_64\")" Arch.cli_spec;
-  ]
+  mk ~n:"--deploy" ~h:"parent option for:" (
+    ( mk ~n:"--host" ~h:"one of \"MSYS\", \"Cygwin\", \"Windows\"" [])
+    :: Arch.cli_spec
+  )
