@@ -101,7 +101,7 @@ let repo_of_uri ~agent uri =
 let repository ~conf =
   let uri = String.concat "/" [ conf.mirror; "package_list.el.tar.xz"] in
   let agent = agent conf in
-  Printf.eprintf "Using mirror %S\n%!" confi.mirror;
+  Printf.eprintf "Using mirror %S\n%!" conf.mirror;
   repo_of_uri ~agent uri
 
 let packages ~conf ~follow ~wishes =
