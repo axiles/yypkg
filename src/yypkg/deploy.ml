@@ -69,11 +69,11 @@ let foo ~cwd ~host ~arch =
   let mkdir x = ignore (mkdir x) in
   let prefix = match host with
   | `Windows -> 
-      p "Where do you want to install win-builds? (environment variables of the form ${FOO} accepted)\n";
+      p "Where do you want to install win-builds? (environment variables of the form ${FOO} are understood)\n";
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
-      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS (environment variables of the form ${FOO} accepted).\n";
+      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS (environment variables of the form ${FOO} are understood).\n";
       Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   | `Cygwin ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
@@ -81,16 +81,17 @@ let foo ~cwd ~host ~arch =
         Lib.run_and_read [| "cygpath"; "-m"; opt_path |] `stdout
       with _ ->
         p "Could not find the path to the Cygwin installation.\n";
-        p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} accepted).\n";
+        p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} are understood).\n";
         Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   in
 
   let host_system = StringMatcher.to_string ~t:host_spec host in
 
-  p "Installing win-builds %d in %S for %S. Press return to continue.\n"
+  p "\nInstalling win-builds %d in %S for %S.\n"
     bits
     prefix
     host_system;
+  p "Press return to continue or Ctrl-C to abort.\n\n";
   ignore (read_line ());
 
   Init.init prefix;
