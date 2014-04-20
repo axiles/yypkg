@@ -69,19 +69,19 @@ let foo ~cwd ~host ~arch =
   let mkdir x = ignore (mkdir x) in
   let prefix = match host with
   | `Windows -> 
-      p "Where do you want to install win-builds? (environment variables of the form ${FOO} accepted)";
+      p "Where do you want to install win-builds? (environment variables of the form ${FOO} accepted)\n";
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
-      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS (environment variables of the form ${FOO} accepted).";
+      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS (environment variables of the form ${FOO} accepted).\n";
       Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   | `Cygwin ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
       try
         Lib.run_and_read [| "cygpath"; "-m"; opt_path |] `stdout
       with _ ->
-        p "Could not find the path to the Cygwin installation.";
-        p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} accepted).";
+        p "Could not find the path to the Cygwin installation.\n";
+        p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} accepted).\n";
         Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   in
 
