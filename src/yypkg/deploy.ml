@@ -81,7 +81,7 @@ let mirror () =
   else
     None
 
-let foo ~cwd ~host ~mirror ~arch =
+let install ~cwd ~host ~mirror ~arch =
   let host_triplet, bits = match arch with
   | `I686 -> "i686-w64-mingw32", 32
   | `X86_64 -> "x86_64-w64-mingw32", 64
@@ -153,8 +153,8 @@ let main opts =
   let x86_64 = Arch.get "x86_64" o.x86_64 in
 
   let cwd = Sys.getcwd () in
-  (if i686 then foo ~cwd ~host ~mirror ~arch:`I686);
-  (if x86_64 then foo ~cwd ~host ~mirror ~arch:`X86_64)
+  (if i686 then install ~cwd ~host ~mirror ~arch:`I686);
+  (if x86_64 then install ~cwd ~host ~mirror ~arch:`X86_64)
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in

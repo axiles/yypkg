@@ -5,7 +5,8 @@ module Path = struct
       (print_endline "Path must not be empty."; get ~mkdir ~existing)
     else
       match existing, Sys.file_exists s with
-      | true, true -> s
+      | true, true ->
+          s
       | true, false ->
           print_endline "Path must currently exist.";
           get ~mkdir ~existing
