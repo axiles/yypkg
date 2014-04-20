@@ -1,6 +1,6 @@
 <{args,yypkg,sexplib,http_get}>: include
 
-<*> or <**/*>: debug, warn_A, warn(-4-9-23-27-44)
+<*> or <**/*>: debug, warn_A, warn(-4-9-23-44)
 
 <*>: package(fileutils.str), package(cryptokit), package(archive)
 
