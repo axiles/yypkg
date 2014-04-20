@@ -90,7 +90,7 @@ let install ~cwd ~host ~mirror ~arch =
   let mkdir x = ignore (mkdir x) in
   let prefix = match host with
   | `Windows -> 
-      p "Where do you want to install win-builds? (environment variables of the form ${FOO} are understood)\n";
+      p "Where do you want to install win-builds %d? (environment variables of the form ${FOO} are understood)\n" bits;
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
