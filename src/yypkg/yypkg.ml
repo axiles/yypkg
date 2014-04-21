@@ -172,8 +172,11 @@ let main_wrap b =
 let () =
   Printexc.record_backtrace true;
   if Args.nothing_given () && Lib.started_from_windows_gui () then
-    if installed Lib.install_path then (
-      enter (Some Lib.install_path);
+    let installed =
+      match Lib.install_path with None -> false | Some path -> installed path
+    in
+    if installed then (
+      enter Lib.install_path;
       try
         VBUI.main ()
       with e ->

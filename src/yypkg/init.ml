@@ -24,21 +24,6 @@
 open Types
 open Yylib
 
-let absolute_executable_name () =
-  (* Return an absolute path to the current executable, provided no chdir has
-   * been done so far.
-   * This starts with Sys.executable_name and uses FilePath to make it absolute
-   * under !Windows; on Windows, the path is already absolute.
-   * NOTE: FilePath's make_absolute below raises an exception under Windows;
-   * once this is fixed, the special case below can be removed. *)
-  if Lib.os_type = `Windows then
-    Sys.executable_name
-  else
-    if FilePath.DefaultPath.is_relative Sys.executable_name then
-      FilePath.DefaultPath.make_absolute (Sys.getcwd ()) Sys.executable_name
-    else
-      Sys.executable_name
-
 let yypkg_dest () =
   Filename.concat "bin"
     (if Lib.os_type = `Windows then "yypkg.exe" else "yypkg")
@@ -47,10 +32,9 @@ let yypkg_dest () =
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
   let mkdir p = FileUtil.mkdir ~parent:true ~mode:0o755 p in
-  let yypkg = absolute_executable_name () in
   mkdir prefix;
   Sys.chdir prefix;
   List.iter mkdir [ "bin"; default_download_path; conf_dir; db_dir ];
-  FileUtil.cp [ yypkg ] (yypkg_dest ());
+  FileUtil.cp [ Lib.absolute_executable_name () ] (yypkg_dest ());
   Disk.write db_path (TypesSexp.Of.db []);
   Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; preds = [] })

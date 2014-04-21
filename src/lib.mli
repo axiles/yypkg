@@ -12,8 +12,9 @@ val os_type : [> `Unix | `Windows ]
 val run_and_read : string array -> [< `stderr | `stdout ] -> string
 val split_by_line : string -> string list
 val filename_concat : string list -> string
-val binary_path : string
-val install_path : string
+val make_absolute_if_not : ?cwd:string -> string -> string
+val absolute_executable_name : unit -> string
+val install_path : string option
 module Archive : sig
   module Transform : sig
     type t = string -> string option

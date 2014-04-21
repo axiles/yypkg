@@ -41,15 +41,8 @@ type makepkg_opts = {
 }
 
 let dir_of_path path =
-  let module FP = FilePath in
-  let path =
-    let dir = strip_trailing_slash path in
-    if FP.is_relative dir then
-      FP.make_absolute (Sys.getcwd ()) dir
-    else
-      dir
-  in
-  { path; dirname = FP.dirname path; basename = FP.basename path }
+  let path = make_absolute_if_not (strip_trailing_slash path) in
+  { path; dirname = FilePath.dirname path; basename = FilePath.basename path }
 
 module Package_script = struct
   let script ~script ~pkg_size =

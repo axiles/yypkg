@@ -130,15 +130,28 @@ let filename_concat = function
   | t :: q -> List.fold_left Filename.concat t q
   | [] -> raise (Invalid_argument "filename_concat, nothing to concat")
 
-let binary_path =
-  let dirname = Filename.dirname Sys.argv.(0) in
-  if FilePath.DefaultPath.is_relative dirname then
-    filename_concat [ Sys.getcwd (); dirname ]
+let make_absolute_if_not ?(cwd=cwd) path =
+  if FilePath.is_relative path then
+    FilePath.make_absolute cwd path
   else
-    dirname
+    path
+
+let absolute_executable_name () =
+  (* Return an absolute path to the current executable, provided no chdir has
+   * been done so far.
+   * This starts with Sys.executable_name and uses FilePath to make it absolute
+   * under !Windows; on Windows, the path is already absolute.
+   * NOTE: FilePath's make_absolute below raises an exception under Windows;
+   * once this is fixed, the special case below can be removed. *)
+  if os_type = `Windows then
+    Sys.executable_name
+  else
+    make_absolute_if_not Sys.executable_name
 
 let install_path =
-  filename_concat [ binary_path; ".." ]
+  try
+    Some (Filename.dirname (Filename.dirname (absolute_executable_name ())))
+  with _ -> None
 
 module Archive = struct
   module A = ArchiveLow
