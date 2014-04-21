@@ -20,7 +20,6 @@ open Types
 open Yylib
 
 let execute_install_action package = function
-  | AHK p -> command (ahk_bin :: p)
   | Expand (in_, p) -> expand package in_ p
   | Exec p -> command p
   | MKdir p -> [ mkdir p ]

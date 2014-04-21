@@ -50,7 +50,6 @@ end = struct
 
   let sexp_of_install_action install_action =
     match install_action with
-    | AHK params -> List [ Atom "AHK"; sexp_of_string_list params ]
     | Exec argv -> List [ Atom "Exec"; sexp_of_string_list argv ]
     | Expand (orig, dest) -> List [ Atom "Expand"; Atom orig; Atom dest ]
     | MKdir dir -> List [ Atom "Exec"; Atom dir ]
@@ -255,7 +254,6 @@ end = struct
 
   let install_action_of_sexp sexp =
     match sexp with
-    | List [ Atom "AHK"; params ] -> AHK (string_list_of_sexp params)
     | List [ Atom "Exec"; argv ] -> Exec (string_list_of_sexp argv)
     | List [ Atom "Expand"; Atom orig; Atom dest ] -> Expand (orig, dest)
     | List [ Atom "MKdir"; Atom dir ] -> MKdir dir

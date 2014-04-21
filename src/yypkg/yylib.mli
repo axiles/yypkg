@@ -2,7 +2,6 @@ exception Unknown_package of string
 external remove : string -> unit = "yy_remove"
 external create_reparse_point : string -> string -> unit
   = "create_reparse_point"
-val ahk_bin : string
 val conf_dir : string
 val db_dir : string
 val db_path : string

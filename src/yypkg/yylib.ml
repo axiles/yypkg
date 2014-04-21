@@ -23,9 +23,6 @@ exception Unknown_package of string
 external remove : string -> unit = "yy_remove"
 external create_reparse_point : string -> string -> unit = "create_reparse_point"
 
-let ahk_bin =
-  Lib.filename_concat [ Lib.install_path; "ahk.exe" ]
-
 let conf_dir =
   Lib.filename_concat [ "etc"; "yypkg.d" ]
 

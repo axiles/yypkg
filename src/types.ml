@@ -31,7 +31,6 @@ let dummy_version () =
 type action_id = string
 type filekind = [ `Directory | `File | `Unhandled of string ]
 type install_action =
-  | AHK of string list (* params *)
   | Exec of string list (* argv *)
   | Expand of string * string (* extract from X to Y: from archive to system *)
   | MKdir of string (* mkdir X, path on the system *)

@@ -5,7 +5,6 @@ val dummy_version : unit -> string * int
 type action_id = string
 type filekind = [ `Directory | `File | `Unhandled of string ]
 type install_action =
-    AHK of string list
   | Exec of string list
   | Expand of string * string
   | MKdir of string
