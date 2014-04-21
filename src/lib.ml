@@ -21,6 +21,8 @@ open Types
 exception ProcessFailed of (string * string option)
 exception Skip
 
+let cwd = Sys.getcwd ()
+
 let ep = Printf.eprintf
 let sp = Printf.sprintf
 

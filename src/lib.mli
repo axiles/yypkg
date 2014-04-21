@@ -1,5 +1,6 @@
 exception ProcessFailed of (string * string option)
 exception Skip
+val cwd : string
 val cri : int
 val err : int
 val wrn : int
