@@ -138,14 +138,6 @@ let binary_path =
 let install_path =
   filename_concat [ binary_path; ".." ]
 
-(* absolute paths to bsdtar, xz and wget *)
-let tar, xz =
-  match os_type with
-  | `Unix -> "bsdtar", "xz"
-  | `Windows ->
-      filename_concat [ binary_path; "bsdtar.exe" ],
-      filename_concat [ binary_path; "xz.exe" ]
-
 module Archive = struct
   module A = ArchiveLow
 

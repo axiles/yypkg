@@ -13,8 +13,6 @@ val split_by_line : string -> string list
 val filename_concat : string list -> string
 val binary_path : string
 val install_path : string
-val tar : string
-val xz : string
 module Archive : sig
   module Transform : sig
     type t = string -> string option
