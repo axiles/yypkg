@@ -32,9 +32,11 @@ let yypkg_dest () =
 let init prefix =
   (* TODO: check that we don't overwrite any file that would already exist. *)
   let mkdir p = FileUtil.mkdir ~parent:true ~mode:0o755 p in
+  let yypkg_dest = yypkg_dest () in
   mkdir prefix;
   Sys.chdir prefix;
   List.iter mkdir [ "bin"; default_download_path; conf_dir; db_dir ];
-  FileUtil.cp [ Lib.absolute_executable_name () ] (yypkg_dest ());
+  FileUtil.cp [ Lib.absolute_executable_name () ] yypkg_dest;
+  Unix.chmod yypkg_dest 0o755;
   Disk.write db_path (TypesSexp.Of.db []);
   Disk.write conf_path (TypesSexp.Of.conf { mirror = ""; preds = [] })
