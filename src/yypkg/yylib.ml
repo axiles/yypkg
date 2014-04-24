@@ -210,7 +210,7 @@ let xz_opt size =
 let tar_xz ~tar_args ~xz_opt ~out =
   let module U = Unix in
   let tar_args = Array.concat (
-    [| "tar"; "cvf"; out; "--format"; "posix"; "--use-compress-program"; "xz" |]
+    [| "bsdtar"; "cvf"; out; "--use-compress-program"; "xz" |]
     :: tar_args
   ) in
   let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
