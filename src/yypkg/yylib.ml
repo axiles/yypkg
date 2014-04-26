@@ -66,7 +66,7 @@ let expand archive in_ p =
   let archive = Lib.Archive.Filename (expand_environment_variables archive) in
   let iq = expand_environment_variables in_ in
   let pq = expand_environment_variables p in
-  if not (Sys.file_exists pq) then ignore (mkdir pq) else ();
+  ignore (mkdir pq);
   Lib.Archive.extract archive ~transform:Lib.Archive.Transform.(wrap [
     filter (Str.regexp_case_fold iq);
     strip_prefix_length (try 1 + String.rindex iq '/' with Not_found -> 0);
