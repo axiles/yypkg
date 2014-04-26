@@ -18,7 +18,7 @@ val install_path : string option
 module Archive : sig
   module Transform : sig
     type t = string -> string option
-    val strip_component : ?sep:char -> int -> t
+    val strip_prefix_length : int -> t
     val filter : Str.regexp -> t
     val c : string -> t
     val wrap : t list -> ArchiveLow.Entry.t -> bool

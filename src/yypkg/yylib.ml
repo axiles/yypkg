@@ -69,7 +69,7 @@ let expand archive in_ p =
   if not (Sys.file_exists pq) then ignore (mkdir pq) else ();
   Lib.Archive.extract archive ~transform:Lib.Archive.Transform.(wrap [
     filter (Str.regexp_case_fold iq);
-    strip_component (Lib.string_count iq '/');
+    strip_prefix_length (try 1 + String.rindex iq '/' with Not_found -> 0);
     c pq;
   ])
 
