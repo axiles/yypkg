@@ -122,33 +122,33 @@ let install ~host ~mirror ~arch =
   Db.update (Install.install conf packages)
 
 type deploy_opts = {
-  mirror : string option;
-  host : [ `Cygwin | `MSYS | `Windows ] option;
+  mirror_ : string option;
+  host_ : [ `Cygwin | `MSYS | `Windows ] option;
   i686 : bool option;
   x86_64 : bool option;
 }
 
 let main opts =
   let init = {
-    mirror = mirror ();
-    host = None;
+    mirror_ = mirror ();
+    host_ = None;
     i686 = if not Arch.x86_64_is_available then Some true else None;
     x86_64 = if not Arch.x86_64_is_available then Some false else None;
   } in
   let l = [
     "--mirror", (fun ~accu n o ->
-      { accu with mirror = Some (Args.Get.string n o) });
+      { accu with mirror_ = Some (Args.Get.string n o) });
     "--i686", (fun ~accu n o ->
       { accu with i686 = Some (Args.Get.bool n o) });
     "--x86_64", (fun ~accu n o ->
       { accu with x86_64 = Some (Args.Get.bool n o) });
     "--host", (fun ~accu n o ->
-      { accu with host = Some (Args.Get.of_stringmatcher host_spec n o) });
+      { accu with host_ = Some (Args.Get.of_stringmatcher host_spec n o) });
   ] in
   let o = Args.fold_values ~init ~where:"--deploy" l opts in
-  let mirror = get_mirror o.mirror in
+  let mirror = get_mirror o.mirror_ in
   p "Using mirror %S.\n\n" mirror;
-  let host = get_host o.host in
+  let host = get_host o.host_ in
   let i686 = Arch.get "i686" o.i686 in
   let x86_64 = Arch.get "x86_64" o.x86_64 in
 
