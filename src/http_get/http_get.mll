@@ -47,11 +47,11 @@ module System
 		module Send
 		 = struct
 			let string
-			 = fun ~context ochn string ->
+			 = fun ~context:_ ochn string ->
 				(* Pervasives.prerr_string (">[" ^ string ^ "]"); *)
 				Unix_error.t (Pervasives.output_string ochn string)
 			let flush
-			 = fun ~context ochn ->
+			 = fun ~context:_ ochn ->
 				Unix_error.t (Pervasives.flush ochn)
 		 end
 	 end
@@ -62,7 +62,7 @@ module System
 			module Inet
 			 = struct
 				let t
-				 = fun ~context host ->
+				 = fun ~context:_ host ->
 					match (host:Addr.Host.t) with
 					| `IPv6 ipv6 -> K.t (IPv6_address.String.Inet_addr.t ipv6)
 					| `IPv4 ipv4 -> K.t (IPv4_address.String.Inet_addr.t ipv4)
@@ -92,7 +92,7 @@ module System
 				 ; ochn : Pervasives.out_channel
 				 }
 				let t
-				 = fun ~context ~port addr fct ->
+				 = fun ~context:_ ~port addr fct ->
 					let (ichn, ochn) = Unix.open_connection
 					 (Unix.ADDR_INET (addr, (port:URI.Port.t:>int))) in
 					K.t' fct {ichn; ochn}
@@ -226,12 +226,11 @@ module HTTP_
 				 { HTTP.Response
 				 . line=
 					 { HTTP.Response.Line
-					 . version
-					 ; status
-					 ; reason
+					 . status
+					 ; _
 					 }
-				 ; headers
 				 ; body=lexbuf
+				 ; _
 				 } ->
 				Match_failure.t'
 				 (function (`Success `OK:HTTP.Status.t) -> Match_failure.t {body=lexbuf})
@@ -246,7 +245,7 @@ module Async
  (Lexing:Lexing_.Async)
  = struct
 }
-	rule body
+	rule _dummy
 	 return
 		= parse
 		| (_* as string) { return string }
@@ -309,7 +308,7 @@ module Protocol
 			 { result : Result.t
 			 ; body   : Body.t
 			 }
-			let default =
+			let _default =
 				{ result = `KO
 				; body   = ""
 				}
