@@ -66,6 +66,7 @@ module System
 					match (host:Addr.Host.t) with
 					| `IPv6 ipv6 -> K.t (IPv6_address.String.Inet_addr.t ipv6)
 					| `IPv4 ipv4 -> K.t (IPv4_address.String.Inet_addr.t ipv4)
+					| `IPvF _ -> assert false
 					| `Name name ->
 						let service = ""
 						and info = [Unix.AI_FAMILY Unix.PF_INET]
