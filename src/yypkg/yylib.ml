@@ -50,7 +50,8 @@ let expand_environment_variables s =
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
   (* TODO: quote the commands? *)
-  Lib.split_by_line (Lib.run_and_read (Array.of_list cmd) `stdout)
+  let cmd = Array.map expand_environment_variables (Array.of_list cmd) in
+  Lib.split_by_line (Lib.run_and_read cmd `stdout)
 
 (* mkdir for use in installation scripts: it returns the path that got created
  * so it can be registered and reversed upon uninstallation *)
