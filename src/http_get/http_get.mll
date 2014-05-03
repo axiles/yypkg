@@ -61,6 +61,7 @@ module System
 		 = struct
 			module Inet
 			 = struct
+				exception Service_not_found
 				let t
 				 = fun ~context:_ host ->
 					match (host:Addr.Host.t) with
@@ -69,15 +70,20 @@ module System
 					| `IPvF _ -> assert false
 					| `Name name ->
 						let service = ""
-						and info = [Unix.AI_FAMILY Unix.PF_INET]
+						and info = [Unix.AI_SOCKTYPE Unix.SOCK_STREAM]
 						in
 						let rec loop
 						 = function
 						 | { Unix
 							 . ai_family=Unix.PF_INET
 							 ; ai_addr=Unix.ADDR_INET (inet, _)
-							 }::_ -> K.t inet
+							 } :: _ -> K.t inet
+						 | { Unix
+							 . ai_family=Unix.PF_INET6
+							 ; ai_addr=Unix.ADDR_INET (inet, _)
+							 } :: _ -> K.t inet
 						 | _::list -> loop list
+						 | [] -> raise Service_not_found
 						in
 						let name = Addr.Host.Name.String.t name ~encoded:false in
 						loop (Unix.getaddrinfo name service info)
@@ -216,6 +222,8 @@ module HTTP_
 		type t =
 		 { body : Lexing__.lexbuf
 		 }
+		exception Client_Error of HTTP.Status.Client_Error.t
+		exception Server_Error of HTTP.Status.Server_Error.t
 		let recv
 		 = fun
 		 { Conn
@@ -233,7 +241,11 @@ module HTTP_
 				 ; _
 				 } ->
 				Match_failure.t'
-				 (function (`Success `OK:HTTP.Status.t) -> Match_failure.t {body=lexbuf})
+				 (fun (x : HTTP.Status.t) -> match x with
+					| `Success `OK -> Match_failure.t {body=lexbuf}
+					| `Client_Error e -> raise (Client_Error e)
+					| `Server_Error e -> raise (Server_Error e)
+				 )
 				 status
 				 ~ko: Exception.ko
 				 ~ok: K.t

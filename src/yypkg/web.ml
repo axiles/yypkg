@@ -2,6 +2,17 @@ open Types
 open Yylib
 
 module Get = struct
+  exception Not_found
+  exception Internal_Server_Error
+
+  let body ~agent ~uri ~out =
+    ignore (try Http_get.body ~agent ~uri ~out with
+    | Http_get.HTTP_.Response.Client_Error `Not_Found ->
+        raise Not_found
+    | Http_get.HTTP_.Response.Server_Error `Internal_Server_Error ->
+        raise Internal_Server_Error
+    )
+
   let to_file ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     let out () =
@@ -12,7 +23,7 @@ module Get = struct
         ignore (Unix.write fd string offset length)
     in
     (try
-      ignore (Http_get.body ~agent ~uri ~out:(out ()))
+      body ~agent ~uri ~out:(out ())
     with exn ->
       Unix.close fd; raise exn);
     Unix.close fd
@@ -26,7 +37,7 @@ module Get = struct
         (if t' >= !t +. 1. then (prerr_char '.'; flush stderr; t := t'));
         Buffer.add_substring b string offset length
     in
-    ignore (Http_get.body ~agent ~uri ~out:(out ()));
+    body ~agent ~uri ~out:(out ());
     Buffer.contents b
 end
 

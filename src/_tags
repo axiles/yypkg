@@ -8,6 +8,6 @@
 
 <http_get/*>: package(libocaml_http)
 
-<yypkg/*>: package(fileutils.str), package(cryptokit)
+<yypkg/*>: package(fileutils.str), package(cryptokit), package(libocaml_http)
 
 <yypkg/yypkg.{native,byte}>: package(bigarray), package(archive), package(libocaml_http)
