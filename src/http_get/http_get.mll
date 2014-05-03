@@ -297,9 +297,7 @@ module Protocol
 			let send
 			 = fun
 			 conn
-			 ({ HTTP_.Request
-			 . agent
-			 } as http_request)
+			 http_request
 			 { user
 			 } ->
 				HTTP_.Request.send conn http_request
