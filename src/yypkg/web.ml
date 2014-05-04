@@ -4,13 +4,37 @@ open Yylib
 module Get = struct
   exception Not_found
   exception Internal_Server_Error
+  exception URI_parse_failure of string
+
+  let parse_uri uri =
+    let { URI.scheme; part } = Match_failure.Unsafe.t (URI.String.t' uri) in
+    let fail msg = raise (URI_parse_failure msg) in
+    match (scheme :> string), part with
+    | "http", `Authority ({ URI.Authority.host; port; user }, path) ->
+        let path = Match_failure.Unsafe.t (URI.Path.Absolute.t path) in
+        `HTTP (user, host, port, path)
+    | "http", _ ->
+        fail (Lib.sp "http:// downloads require a website.")
+    | "file", `Absolute path ->
+        `File path
+    | "file", _ ->
+        fail (Lib.sp "file:// downloads must be valid paths.")
+    | scheme, _ ->
+        fail (Lib.sp "Scheme %S is unsupported; use http:// or file://." scheme)
 
   let body ~agent ~uri ~out =
-    ignore (try Http_get.body ~agent ~uri ~out with
-    | Http_get.HTTP_.Response.Client_Error `Not_Found ->
-        raise Not_found
-    | Http_get.HTTP_.Response.Server_Error `Internal_Server_Error ->
-        raise Internal_Server_Error
+    match parse_uri uri with
+    | `HTTP (user, host, port, path) -> (
+        ignore (try Http_get.body ~agent ~user ~host ~port ~path ~out with
+        | Http_get.HTTP_.Response.Client_Error `Not_Found ->
+            raise Not_found
+        | Http_get.HTTP_.Response.Server_Error `Internal_Server_Error ->
+            raise Internal_Server_Error
+        )
+      )
+    | `File path -> (
+        (* TODO: Not yet implemented *)
+        assert false
     )
 
   let to_file ~agent ~file ~uri =

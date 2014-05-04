@@ -345,7 +345,7 @@ module Protocol
 	 end
  end
 
-let body ~agent ~uri ~out =
+let body ~agent ~user ~host ~port ~path ~out =
   let agent = Match_failure.t'
     HTTP_.Request.Agent.String.t' agent
     ~ko:(fun _ -> assert false)
@@ -354,13 +354,6 @@ let body ~agent ~uri ~out =
     HTTP_.Request.System.String.t' Sys.os_type
     ~ko:(fun _ -> assert false)
     ~ok: Exception.ok
-  and user, host, port, path =
-    match Match_failure.Unsafe.t (URI.String.t' uri) with
-    |{ URI.scheme
-     ; part=`Authority ({URI.Authority.host; port; user}, path)
-     } when (scheme:URI.Scheme.t:>string) = "http" ->
-      let path = Match_failure.Unsafe.t (URI.Path.Absolute.t path) in
-      user, host, port, path
   in
   let i = Protocol.Get.send
     {HTTP_.Request.path; agent; system}
