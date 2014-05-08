@@ -211,11 +211,11 @@ let xz_opt size =
 let tar_xz ~tar_args ~xz_opt ~out =
   let module U = Unix in
   let argv = Array.concat (
-    [| "bsdtar"; "cvf"; out; "--use-compress-program"; "xz" |]
+    [| "bsdtar"; "cvf"; out;
+       "--use-compress-program"; String.escaped ("xz " ^ xz_opt) |]
     :: tar_args
   ) in
-  let env = Array.concat [ [| "XZ_OPT=" ^ xz_opt |]; U.environment () ] in
-  let pid = U.create_process_env argv.(0) argv env U.stdin U.stdout U.stderr in
+  let pid = U.create_process argv.(0) argv U.stdin U.stdout U.stderr in
   match U.waitpid [] pid with
   | _, U.WEXITED 0 -> ()
   | _ -> Lib.process_failed argv
