@@ -224,6 +224,7 @@ module HTTP_
 		 }
 		exception Client_Error of HTTP.Status.Client_Error.t
 		exception Server_Error of HTTP.Status.Server_Error.t
+		exception Unhandled_Return_Code
 		let recv
 		 = fun
 		 { Conn
@@ -245,6 +246,9 @@ module HTTP_
 					| `Success `OK -> Match_failure.t {body=lexbuf}
 					| `Client_Error e -> raise (Client_Error e)
 					| `Server_Error e -> raise (Server_Error e)
+					| `Extension _ -> raise Unhandled_Return_Code
+					| `Informational _ -> raise Unhandled_Return_Code
+					| `Redirection _ -> raise Unhandled_Return_Code
 				 )
 				 status
 				 ~ko: Exception.ko
