@@ -246,6 +246,7 @@ module HTTP_
 					| `Success `OK -> Match_failure.t {body=lexbuf}
 					| `Client_Error e -> raise (Client_Error e)
 					| `Server_Error e -> raise (Server_Error e)
+					| `Success _ -> raise Unhandled_Return_Code
 					| `Extension _ -> raise Unhandled_Return_Code
 					| `Informational _ -> raise Unhandled_Return_Code
 					| `Redirection _ -> raise Unhandled_Return_Code
