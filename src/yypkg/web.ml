@@ -25,7 +25,7 @@ module Get = struct
   let body ~agent ~uri ~out =
     match parse_uri uri with
     | `HTTP (user, host, port, path) -> (
-        ignore (try Http_get.body ~agent ~user ~host ~port ~path ~out with
+        (try Http_get.body ~agent ~user ~host ~port ~path ~out with
         | Http_get.HTTP_.Response.Client_Error `Not_Found ->
             raise Not_found
         | Http_get.HTTP_.Response.Server_Error `Internal_Server_Error ->
@@ -37,32 +37,24 @@ module Get = struct
         assert false
     )
 
+  let progress () =
+    let t = ref (Unix.gettimeofday ()) in
+    fun ~string:_string ~offset:_offset ~length:_length ->
+      let t' = Unix.gettimeofday () in
+      (if t' >= !t +. 1. then (prerr_char '.'; flush stderr; t := t'))
+
   let to_file ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
-    let out () =
-      let t = ref (Unix.gettimeofday ()) in
-      fun ~string ~offset ~length ->
-        let t' = Unix.gettimeofday () in
-        (if t' >= !t +. 1. then (prerr_char '.'; flush stderr; t := t'));
-        ignore (Unix.write fd string offset length)
-    in
     (try
-      body ~agent ~uri ~out:(out ())
+      let data = body ~agent ~uri ~out:(progress ()) in
+      let l = String.length data in
+      assert (l = Unix.write fd data 0 l)
     with exn ->
       Unix.close fd; raise exn);
     Unix.close fd
 
-  let to_string ~agent ?(b_size = 32*1024) uri =
-    let b = Buffer.create b_size in
-    let out () =
-      let t = ref (Unix.gettimeofday ()) in
-      fun ~string ~offset ~length ->
-        let t' = Unix.gettimeofday () in
-        (if t' >= !t +. 1. then (prerr_char '.'; flush stderr; t := t'));
-        Buffer.add_substring b string offset length
-    in
-    body ~agent ~uri ~out:(out ());
-    Buffer.contents b
+  let to_string ~agent uri =
+    body ~agent ~uri ~out:(progress ())
 end
 
 exception Hash_failure of string
