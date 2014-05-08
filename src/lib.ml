@@ -357,12 +357,22 @@ let sha3_file file =
 
 let started_from_windows_gui () =
   if os_type = `Windows then
-    let ppid = Unix.getppid () in
-    let cmd = sp
-      "tasklist /FI \"IMAGENAME eq cmd.exe\" /FI \"PID eq %d\" | find %S"
-        ppid
-        "cmd.exe" (* the argument to find has to be enclosed in quotes *)
+    let pid = Unix.getpid () in
+    let cmd = String.concat "\n" [
+      sp "Set wmi = GetObject(\"winmgmts:\\\\root\\CIMV2\")";
+      sp "Set processes = wmi.ExecQuery(\"select * from Win32_Process where processid = %d\")" pid;
+      sp "For Each process In processes";
+      sp "  Set parents = wmi.ExecQuery(\"select * from Win32_Process where processid = \" & process.parentprocessid)";
+      sp "  For Each parent In parents";
+      sp "    If parent.name = \"cmd.exe\" Then";
+      sp "      WScript.Quit 1";
+      sp "    Else";
+      sp "      WScript.Quit 0";
+      sp "    End If";
+      sp "  Next";
+      sp "Next";
+    ]
     in
-    1 = Sys.command cmd
+    0 = Sys.command cmd
   else
     false
