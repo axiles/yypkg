@@ -211,7 +211,7 @@ let xz_opt size =
 let tar_xz ~tar_args ~xz_opt ~out =
   let module U = Unix in
   let argv = Array.concat (
-    [| "bsdtar"; "cvf"; out;
+    [| "bsdtar"; "-cvf"; out;
        "--use-compress-program"; String.escaped ("xz " ^ xz_opt) |]
     :: tar_args
   ) in
