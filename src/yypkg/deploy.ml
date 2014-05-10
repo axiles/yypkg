@@ -83,11 +83,11 @@ let install ~host ~mirror ~arch =
   let mkdir x = ignore (mkdir x) in
   let prefix = match host with
   | `Windows -> 
-      p "Where do you want to install win-builds %d? (environment variables of the form ${FOO} are understood)\n" bits;
+      p "Where do you want to install win-builds %d? The installation will create the directories bin, include, lib and others under this location (environment variables of the form ${FOO} are understood)\n" bits;
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
-      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS (environment variables of the form ${FOO} are understood).\n";
+      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS; toolchain would be put in C:/MSYS%s (environment variables of the form ${FOO} are understood).\n" opt_path;
       Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   | `Cygwin ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
