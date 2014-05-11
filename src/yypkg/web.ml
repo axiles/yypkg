@@ -182,7 +182,14 @@ let main ~start_dir opts =
   let db = Db.read () in
   let l = packages ~conf ~follow:o.follow_dependencies ~wishes:o.packages in
   let need_update = List.filter (needs_update ~db) l in
-  Printf.eprintf "%d packages to update.\n%!" (List.length need_update);
+  (match need_update with
+  | [] ->
+      Printf.eprintf "0 package to update.\n%!"
+  | l ->
+      Printf.eprintf "%d packages to update: %s\n%!"
+        (List.length l)
+        (String.concat ", " (List.map (fun p -> p.Repo.metadata.name) l))
+  );
   let packages = download ~conf ~dest:o.dest need_update in
   if not o.download_only then
     Db.update (Upgrade.upgrade ~install_new:true conf packages)
