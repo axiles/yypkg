@@ -82,7 +82,7 @@ let main () =
       in
       let ret = msgbox
         ~title:"Update available"
-        ~buttons:Button.([ yesNo ])
+        ~buttons:Button.([ okCancel ])
         (Lib.sp "There are %d packages to update: %s" (List.length l) summary)
       in
       if ret = ReturnCode.ok then (
