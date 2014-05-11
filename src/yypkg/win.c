@@ -22,6 +22,7 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <ntdef.h>
+#include <tlhelp32.h>
 #include <stdio.h>
 
 #endif
@@ -308,6 +309,56 @@ create_reparse_point(value ml_to, value ml_at)
   }
 
   CAMLreturn(Val_unit);
+}
+
+static char *
+get_parent_process_name(void)
+{
+  HANDLE snap;
+  PROCESSENTRY32 pe32;
+  char found = 0;
+  char *name = NULL;
+  DWORD parent_id;
+
+  snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (snap == INVALID_HANDLE_VALUE) {
+    return NULL;
+  }
+
+  pe32.dwSize = sizeof(pe32);
+
+  if (!Process32First(snap, &pe32)) {
+    CloseHandle(snap);
+    return NULL;
+  }
+
+  do {
+    if (pe32.th32ProcessID == GetCurrentProcessId()) {
+      found = 1;
+      parent_id = pe32.th32ParentProcessID;
+      break;
+    }
+  } while (Process32Next(snap, &pe32));
+
+  if (!found) {
+    CloseHandle(snap);
+    return NULL;
+  }
+
+  if (!Process32First(snap, &pe32)) {
+    CloseHandle(snap);
+    return NULL;
+  }
+
+  do {
+    if (pe32.th32ProcessID == parent_id) {
+      name = strdup(pe32.szExeFile);
+      break;
+    }
+  } while (Process32Next(snap, &pe32));
+
+  CloseHandle(snap);
+  return name;
 }
 
 #endif /* _WIN32 */
