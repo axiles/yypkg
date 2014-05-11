@@ -138,7 +138,7 @@ let packages ~conf ~follow ~wishes =
   Lib.ep "%d/%d packages available after filtering through predicates.\n"
     (List.length pkglist)
     (List.length repository.Repo.pkglist);
-  if wishes = [ "all" ] then
+  if wishes = [ "all" ] || wishes = [] then
     pkglist
   else
     let l = ListLabels.rev_map wishes ~f:(fun p ->
