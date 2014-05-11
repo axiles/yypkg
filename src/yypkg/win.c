@@ -43,9 +43,10 @@ yy_remove(value s)
   CAMLnoreturn;
 }
 
-value create_reparse_point(value s)
+value
+create_reparse_point(value s1, value s2)
 {
-  CAMLparam1(s);
+  CAMLparam2(s1, s2);
   caml_failwith("create_reparse_point() is only implemented on Windows.");
   CAMLnoreturn;
 }
