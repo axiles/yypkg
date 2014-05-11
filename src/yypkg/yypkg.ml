@@ -115,7 +115,7 @@ let main () =
         (Args.to_string_list actionopts) in
       Db.update (Install.install (Config.read ()) l)
   (* web-install, accepts several packages at once *)
-  | Some "--web-install" ->
+  | Some "--web" ->
       enter prefix;
       Web.main ~start_dir:old_cwd actionopts
   (* upgrade, accepts several packages at once *)

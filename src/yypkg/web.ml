@@ -176,7 +176,7 @@ let main ~start_dir opts =
     "--packages", (fun ~accu n o ->
       { accu with packages = Args.Get.string n o :: accu.packages });
   ] in
-  let o = Args.fold_values ~init ~where:"--web-install" l opts in
+  let o = Args.fold_values ~init ~where:"--web" l opts in
   (* TODO: check sanity of arguments *)
   let conf = Config.read () in
   let db = Db.read () in
@@ -191,7 +191,7 @@ let main ~start_dir opts =
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
-  mk ~n:"--web-install" ~h:"download and install a package by name" [
+  mk ~n:"--web" ~h:"download and install a package by name" [
     mk ~n:"--follow-dependencies" ~h:"also fetch and install dependencies" [];
     mk ~n:"--download-only" ~h:"only download packages, don't install them" [];
     mk ~n:"--download-folder"
