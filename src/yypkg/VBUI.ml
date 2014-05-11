@@ -64,6 +64,9 @@ let msgbox ?(title = "Question") ~buttons text =
   let text = replace_double_quotes text in
   run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " + " buttons) title)
 
+let concat_multilines l =
+  String.concat " & Chr(13) & Chr(10) & " l
+
 let main () =
   let conf = Config.read () in
   let db = Db.read () in
@@ -76,14 +79,17 @@ let main () =
         "There is no package update available")
   | l ->
       let summary =
-        String.concat "\n" (ListLabels.map l ~f:(fun p ->
+        concat_multilines (ListLabels.map l ~f:(fun p ->
           let version, build = p.metadata.version in
           Lib.sp "%s: %s-%d" p.metadata.name version build))
       in
       let ret = msgbox
         ~title:"Update available"
         ~buttons:Button.([ okCancel ])
-        (Lib.sp "There are %d packages to update: %s" (List.length l) summary)
+        (concat_multilines [
+          Lib.sp "There are %d packages to update:" (List.length l);
+          summary
+        ])
       in
       if ret = ReturnCode.ok then (
         let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
