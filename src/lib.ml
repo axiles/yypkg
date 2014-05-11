@@ -21,6 +21,8 @@ open Types
 exception ProcessFailed of (string * string option)
 exception Skip
 
+external get_parent_process_name : unit -> string = "ml_get_parent_process_name"
+
 let cwd = Sys.getcwd ()
 
 let ep = Printf.eprintf
@@ -356,23 +358,6 @@ let sha3_file file =
   sha3
 
 let started_from_windows_gui () =
-  if os_type = `Windows then
-    let pid = Unix.getpid () in
-    let cmd = String.concat "\n" [
-      sp "Set wmi = GetObject(\"winmgmts:\\\\root\\CIMV2\")";
-      sp "Set processes = wmi.ExecQuery(\"select * from Win32_Process where processid = %d\")" pid;
-      sp "For Each process In processes";
-      sp "  Set parents = wmi.ExecQuery(\"select * from Win32_Process where processid = \" & process.parentprocessid)";
-      sp "  For Each parent In parents";
-      sp "    If parent.name = \"cmd.exe\" Then";
-      sp "      WScript.Quit 1";
-      sp "    Else";
-      sp "      WScript.Quit 0";
-      sp "    End If";
-      sp "  Next";
-      sp "Next";
-    ]
-    in
-    0 = Sys.command cmd
-  else
-    false
+  let command_line_parents = [ "cmd.exe"; "sh.exe"; "bash.exe" ] in
+  os_type = `Windows
+    && not (List.mem (get_parent_process_name ()) command_line_parents)

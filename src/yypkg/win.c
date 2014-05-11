@@ -30,11 +30,13 @@
 #define CAML_NAME_SPACE
 
 #include <caml/memory.h>
+#include <caml/alloc.h>
 #include <caml/fail.h>
 #include <caml/unixsupport.h>
 
 value yy_remove(value s);
 value create_reparse_point(value s1, value s2);
+value ml_get_parent_process_name(void);
 
 #ifndef _WIN32
 
@@ -51,6 +53,14 @@ create_reparse_point(value s1, value s2)
 {
   CAMLparam2(s1, s2);
   caml_failwith("create_reparse_point() is only implemented on Windows.");
+  CAMLnoreturn;
+}
+
+value
+ml_get_parent_process_name(void)
+{
+  CAMLparam0();
+  caml_failwith("get_parent_process_name() is only implemented on Windows.");
   CAMLnoreturn;
 }
 
@@ -363,6 +373,25 @@ get_parent_process_name(void)
 
   CloseHandle(snap);
   return name;
+}
+
+value
+ml_get_parent_process_name(void)
+{
+  CAMLparam0();
+  char *name;
+
+  name = get_parent_process_name();
+
+  if (name == NULL) {
+    caml_failwith("Not found");
+  }
+  else {
+    CAMLlocal1(ml_name);
+    ml_name = caml_copy_string(name);
+    free(name);
+    CAMLreturn(ml_name);
+  }
 }
 
 #endif /* _WIN32 */
