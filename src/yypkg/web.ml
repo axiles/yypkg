@@ -190,7 +190,9 @@ let main ~start_dir opts =
       Printf.eprintf "%d packages to %s: %s\n%!"
         (List.length l)
         action
-        (String.concat ", " (List.map (fun p -> p.Repo.metadata.name) l))
+        (String.concat ", " (List.map (fun p -> p.Repo.metadata.name) l));
+      Printf.eprintf "Press return to continue or Ctrl-C to cancel.\n%!";
+      ignore (read_line ())
   );
   let packages = download ~conf ~dest:o.dest need_update in
   if not o.download_only then
