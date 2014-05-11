@@ -33,6 +33,9 @@
 #include <caml/fail.h>
 #include <caml/unixsupport.h>
 
+value yy_remove(value s);
+value create_reparse_point(value s1, value s2);
+
 #ifndef _WIN32
 
 value
