@@ -17,4 +17,4 @@ module Button : sig
 end
 
 val main : unit -> unit
-val msgbox : ?title:string -> buttons:string list -> string -> int
+val msgbox : ?title:string -> buttons:string list -> string list -> int

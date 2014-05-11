@@ -57,15 +57,16 @@ let run s =
   Unix.unlink path;
   ret
 
-let msgbox ?(title = "Question") ~buttons text =
-  let replace_double_quotes s =
-    Str.global_replace (Str.regexp "\"") "'" s
-  in
-  let text = replace_double_quotes text in
-  run (Lib.sp "MsgBox (%S, %s, %S)" text (String.concat " + " buttons) title)
-
 let concat_multilines l =
-  String.concat " & Chr(13) & Chr(10) & " l
+  String.concat " & Chr(13) & Chr(10) & " (List.map (Lib.sp "%S") l)
+
+let msgbox ?(title = "Question") ~buttons text =
+  let replace_double_quotes =
+    let re = (Str.regexp "\"") in
+    fun s -> Str.global_replace re "'" s
+  in
+  let text = concat_multilines (List.map replace_double_quotes text) in
+  run (Lib.sp "MsgBox (%s, %s, %S)" text (String.concat " + " buttons) title)
 
 let main () =
   let conf = Config.read () in
@@ -76,20 +77,18 @@ let main () =
       ignore (msgbox
         ~title:"No update available"
         ~buttons:[ Button.okOnly ]
-        "There is no package update available")
+        [ "There is no package update available." ])
   | l ->
       let summary =
-        concat_multilines (ListLabels.map l ~f:(fun p ->
+        ListLabels.map l ~f:(fun p ->
           let version, build = p.metadata.version in
-          Lib.sp "%s: %s-%d" p.metadata.name version build))
+          Lib.sp "%s: %s-%d" p.metadata.name version build)
       in
       let ret = msgbox
         ~title:"Update available"
         ~buttons:Button.([ okCancel ])
-        (concat_multilines [
-          Lib.sp "There are %d packages to update:" (List.length l);
-          summary
-        ])
+        ((Lib.sp "There are %d packages to update:" (List.length l))
+        :: summary)
       in
       if ret = ReturnCode.ok then (
         let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
@@ -97,8 +96,8 @@ let main () =
         ignore (msgbox
           ~title:"Update successful"
           ~buttons:[ Button.okOnly ]
-          (Lib.sp "The following packages have been updated successfully: %s"
-            summary)
+          ("The following packages have been updated successfully:"
+          :: summary)
         )
       )
       else

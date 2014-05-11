@@ -181,10 +181,8 @@ let () =
         VBUI.main ()
       with e ->
         ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.critical ] (
-          String.concat "\n" [
-            Printexc.to_string e;
-            Printexc.get_backtrace ();
-          ]
+          Printexc.to_string e
+          :: (Str.split (Str.regexp "\n") (Printexc.get_backtrace ()));
         ))
     )
     else
