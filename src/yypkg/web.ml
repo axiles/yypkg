@@ -15,8 +15,8 @@ module Get = struct
         `HTTP (user, host, port, path)
     | "http", _ ->
         fail (Lib.sp "http:// downloads require a website.")
-    | "file", `Absolute path ->
-        `File path
+    | "file", `Authority ({ URI.Authority.host = `Name []; port = None; user = None }, path) ->
+        `File (URI.Path.Absolute_or_empty.String.t ~encoded:false path)
     | "file", _ ->
         fail (Lib.sp "file:// downloads must be valid paths.")
     | scheme, _ ->
