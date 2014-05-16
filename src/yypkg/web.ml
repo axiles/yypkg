@@ -33,8 +33,16 @@ module Get = struct
         )
       )
     | `File path -> (
-        (* TODO: Not yet implemented *)
-        assert false
+        let ic = open_in_bin path in
+        let l = in_channel_length ic in
+        try
+          let b = Buffer.create l in
+          Buffer.add_channel b ic l;
+          close_in ic;
+          Buffer.contents b
+        with e ->
+          close_in ic;
+          raise e
     )
 
   let progress () =
