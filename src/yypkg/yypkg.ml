@@ -94,10 +94,16 @@ let installed prefix =
   with _ ->
     false
 
+let prefix_and_cmd_line cmd_line =
+  let prefix, cmd_line = prefix_of_cmd_line cmd_line in
+  match prefix, Lib.install_path with
+  | None, Some path when installed path -> Some path, cmd_line
+  | _ -> None, cmd_line
+
 let main () =
   let cmd_line = Args.parse cmd_line_spec Sys.argv in
   (* the second cmd_line is the first with occurences of "-prefix" removed *)
-  let prefix, cmd_line = prefix_of_cmd_line cmd_line in
+  let prefix, cmd_line = prefix_and_cmd_line cmd_line in
   let action, actionopts = action_of_cmd_line cmd_line in
   (* Keep track of the original working dir. *)
   let old_cwd = Sys.getcwd () in
