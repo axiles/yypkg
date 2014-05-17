@@ -45,30 +45,67 @@ module Get = struct
           raise e
     )
 
-  let progress uri =
-    let prefix = Printf.sprintf "GET %s" (Filename.basename uri) in
+  let pretty_print_size ~pad s =
+    let s = Int64.to_float s in
+    let div s n = s /. (1024. ** (float n)) in
+    if s < 1000. then
+      Lib.sp "%3.0fB" s
+    else
+      let spec = format_of_string (if pad then "%5.1f" else "%3.1f") in
+      let s' = div s 1 in
+      if s' < 1000. then
+        Lib.sp (spec ^^ (format_of_string "KB")) s'
+      else
+        let s' = div s 2 in
+        if s' < 1000. then
+          Lib.sp (spec ^^ (format_of_string "MB")) s'
+        else
+          Lib.sp (spec ^^ (format_of_string "GB")) (div s 3)
+
+  let progress ~filename ~size =
+    let report =
+      let prefix = Printf.sprintf "GET %s" filename in
+      fun ~total ~size ~speed ->
+        let total = pretty_print_size ~pad:true (Int64.of_int total) in
+        let speed = pretty_print_size ~pad:true (Int64.of_float speed) in
+        if size <> 0L then
+          Printf.printf "\r%s\t%s/%s\t%s/s%!"
+            prefix
+            total
+            (pretty_print_size ~pad:false size)
+            speed
+        else
+          Printf.printf "\r%s\t%s\t%s/s%!"
+            prefix
+            total
+            speed
+    in
     let t = ref (Unix.gettimeofday ()) in
     let total = ref 0 in
-    let total_last_report = ref 0 in
-    Printf.printf "%s%!" prefix;
+    let total_last = ref 0 in
+    let over = ref false in
+    report ~total:0 ~size ~speed:0.;
     fun ~string:_string ~offset ~length ->
       let t' = Unix.gettimeofday () in
       total := !total + offset + length;
-      if t' >= !t +. 1. then (
-        Printf.printf "\r%s [%.1fKB/s]%!"
-          prefix
-          ((float (!total - !total_last_report)) /. (t' -. !t) /. 1024.)
-        ;
+      if t' >= !t +. 0.5 then (
+        let speed = (float (!total - !total_last)) /. (t' -. !t) in
         t := t';
-        total_last_report := !total
+        total_last := !total;
+        report ~total:!total ~size ~speed
       )
-      else
-        ()
+      else (
+        if not !over && (float !total >= 0.99 *. Int64.to_float size) then (
+          let speed = (float (!total - !total_last)) /. (t' -. !t) in
+          report ~total:!total ~size ~speed;
+          over := true
+        )
+      )
 
-  let to_file ~agent ~file ~uri =
+  let to_file ~progress ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     (try
-      let data = body ~agent ~uri ~out:(progress uri) in
+      let data = body ~agent ~uri ~out:progress in
       print_newline ();
       let l = String.length data in
       assert (l = Unix.write fd data 0 l)
@@ -76,8 +113,8 @@ module Get = struct
       Unix.close fd; raise exn);
     Unix.close fd
 
-  let to_string ~agent uri =
-    let s = body ~agent ~uri ~out:(progress uri) in
+  let to_string ~progress ~agent ~uri =
+    let s = body ~agent ~uri ~out:progress in
     print_newline ();
     s
 end
@@ -100,15 +137,28 @@ let download ~conf ~dest packages =
   let agent = agent conf in
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
   ListLabels.map packages ~f:(fun p ->
-    let open Repo in
-    let uri = String.concat "/" [ conf.mirror; p.filename ] in
-    let output = Lib.filename_concat [ dest; p.filename ] in
-    (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
-      Get.to_file ~agent ~file:output ~uri;
-      if Lib.sha3_file output <> p.sha3 then (
+    let filename = p.Repo.filename in
+    let sha3 = p.Repo.sha3 in
+    let uri = String.concat "/" [ conf.mirror; filename ] in
+    let output = Lib.filename_concat [ dest; filename ] in
+    (if not (Sys.file_exists output && Lib.sha3_file output = sha3) then
+      let per () =
+        let size = Lib.int64_of_fileutil_size p.Repo.size_compressed in
+        let version, build = p.Repo.metadata.version in
+        let filename =
+          match p.Repo.metadata.host, p.Repo.metadata.target with
+          | host, Some target when target = host ->
+              Lib.sp "%s %s-%d (%s)" p.Repo.metadata.name version build target
+          | _ ->
+              Lib.sp "%s %s-%d" p.Repo.metadata.name version build
+        in
+        Get.progress ~size ~filename
+      in
+      Get.to_file ~agent ~file:output ~progress:(per ()) ~uri;
+      if Lib.sha3_file output <> sha3 then (
         Printf.printf "File downloaded but hash is wrong. Trying again.\n";
-        Get.to_file ~agent ~file:output ~uri;
-        if Lib.sha3_file output <> p.sha3 then (
+        Get.to_file ~agent ~file:output ~progress:(per ()) ~uri;
+        if Lib.sha3_file output <> sha3 then (
           Printf.printf "File downloaded but hash is wrong AGAIN! Aborting.\n";
           raise (Hash_failure output)
         )
@@ -135,7 +185,8 @@ let get_deps pkglist packages =
   find_all_by_name ~pkglist ~name_list:names
 
 let repo_of_uri ~agent uri =
-  let list_el_xz = Get.to_string ~agent uri in
+  let progress = Get.progress ~size:0L ~filename:(Filename.basename uri) in
+  let list_el_xz = Get.to_string ~agent ~progress ~uri in
   let archive = Lib.Archive.String list_el_xz in
   let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
   TypesSexp.To.repository (Pre_sexp.of_string list_el)

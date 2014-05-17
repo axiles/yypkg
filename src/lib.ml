@@ -361,3 +361,12 @@ let started_from_windows_gui () =
   let command_line_parents = [ "cmd.exe"; "sh.exe"; "bash.exe" ] in
   os_type = `Windows
     && not (List.mem (get_parent_process_name ()) command_line_parents)
+
+let rec int64_of_fileutil_size s =
+  let mul i = Int64.mul 1024L i in
+  match s with
+  | FileUtil.TB i -> int64_of_fileutil_size (FileUtil.GB (mul i))
+  | FileUtil.GB i -> int64_of_fileutil_size (FileUtil.MB (mul i))
+  | FileUtil.MB i -> int64_of_fileutil_size (FileUtil.KB (mul i))
+  | FileUtil.KB i -> int64_of_fileutil_size (FileUtil.B (mul i))
+  | FileUtil.B  i -> i
