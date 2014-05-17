@@ -107,7 +107,7 @@ let install ~host ~mirror ~arch =
       let opt_path = Lib.sp "/opt/windows_%d" bits in
       try
         let s = Lib.run_and_read [| "cygpath"; "-m"; opt_path |] `stdout in
-        Str.global_replace (Str.regexp "\\n$") "" s
+        Str.global_replace (Str.regexp "\n$") "" s
       with _ ->
         p "Could not find the path to the Cygwin installation.\n";
         p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} are understood).\n";
