@@ -1,6 +1,0 @@
-/var/log/packages/{yypkg,$pkg}
-
-check that the content of packages is relocatable: HARD, might not have to: use symlinks and the "correct" prefixes instead
-
-add --x86 only when needed: can't be enabled right now
-
