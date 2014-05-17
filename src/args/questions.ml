@@ -22,7 +22,8 @@ end
 
 module Choice = struct
   let rec get sm =
-    Printf.printf "Chose one of %s.\n" (StringMatcher.possible_values ~t:sm);
+    let choices = StringMatcher.possible_values ~t:sm in
+    Printf.printf "Chose one of %s (case-insensitive).\n" choices;
     try StringMatcher.of_string ~t:sm (read_line ()) with
     | _ ->
         print_endline "Could not understand the answer.";
