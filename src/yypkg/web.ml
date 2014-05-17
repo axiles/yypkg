@@ -45,16 +45,31 @@ module Get = struct
           raise e
     )
 
-  let progress () =
+  let progress uri =
+    let prefix = Printf.sprintf "GET %s" (Filename.basename uri) in
     let t = ref (Unix.gettimeofday ()) in
-    fun ~string:_string ~offset:_offset ~length:_length ->
+    let total = ref 0 in
+    let total_last_report = ref 0 in
+    Printf.printf "%s%!" prefix;
+    fun ~string:_string ~offset ~length ->
       let t' = Unix.gettimeofday () in
-      (if t' >= !t +. 1. then (print_char '.'; flush stdout; t := t'))
+      total := !total + offset + length;
+      if t' >= !t +. 1. then (
+        Printf.printf "\r%s [%.1fKB/s]%!"
+          prefix
+          ((float (!total - !total_last_report)) /. (t' -. !t) /. 1024.)
+        ;
+        t := t';
+        total_last_report := !total
+      )
+      else
+        ()
 
   let to_file ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     (try
-      let data = body ~agent ~uri ~out:(progress ()) in
+      let data = body ~agent ~uri ~out:(progress uri) in
+      print_newline ();
       let l = String.length data in
       assert (l = Unix.write fd data 0 l)
     with exn ->
@@ -62,7 +77,9 @@ module Get = struct
     Unix.close fd
 
   let to_string ~agent uri =
-    body ~agent ~uri ~out:(progress ())
+    let s = body ~agent ~uri ~out:(progress uri) in
+    print_newline ();
+    s
 end
 
 exception Hash_failure of string
@@ -79,17 +96,6 @@ let agent conf =
     )
   | _ -> assert false
 
-let get_uri_contents ~agent uri =
-  Printf.printf "Downloading %s...%!" (Filename.basename uri);
-  let content = Get.to_string ~agent uri in
-  Printf.printf " DONE\n%!";
-  content
-
-let get_uri ~agent uri output =
-  Printf.printf "Downloading %s...%!" (Filename.basename uri);
-  Get.to_file ~agent ~file:output ~uri;
-  Printf.printf " DONE\n%!"
-
 let download ~conf ~dest packages =
   let agent = agent conf in
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
@@ -98,10 +104,10 @@ let download ~conf ~dest packages =
     let uri = String.concat "/" [ conf.mirror; p.filename ] in
     let output = Lib.filename_concat [ dest; p.filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
-      get_uri ~agent uri output;
+      Get.to_file ~agent ~file:output ~uri;
       if Lib.sha3_file output <> p.sha3 then (
         Printf.printf "File downloaded but hash is wrong. Trying again.\n";
-        get_uri ~agent uri output;
+        Get.to_file ~agent ~file:output ~uri;
         if Lib.sha3_file output <> p.sha3 then (
           Printf.printf "File downloaded but hash is wrong AGAIN! Aborting.\n";
           raise (Hash_failure output)
@@ -129,7 +135,7 @@ let get_deps pkglist packages =
   find_all_by_name ~pkglist ~name_list:names
 
 let repo_of_uri ~agent uri =
-  let list_el_xz = get_uri_contents ~agent uri in
+  let list_el_xz = Get.to_string ~agent uri in
   let archive = Lib.Archive.String list_el_xz in
   let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
   TypesSexp.To.repository (Pre_sexp.of_string list_el)
