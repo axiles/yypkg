@@ -85,10 +85,24 @@ let install ~host ~mirror ~arch =
   | `Windows -> 
       p "Where do you want to install win-builds %d? The installation will create the directories bin, include, lib and others under this location (environment variables of the form ${FOO} are understood)\n" bits;
       Questions.Path.get ~mkdir ~existing:false
-  | `MSYS ->
-      let opt_path = Lib.sp "/opt/windows_%d" bits in
-      p "Please provide the full Windows path of your MSYS installation with forward-slashes, e.g. C:/MSYS; toolchain would be put in C:/MSYS%s (environment variables of the form ${FOO} are understood).\n" opt_path;
-      Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
+  | `MSYS -> (
+      let q () =
+        let opt_path = Lib.sp "/opt/windows_%d" bits in
+        p "Couldn't automatically find the MSYS installation path.\n";
+        p "Please provide it in full with forward-slashes.\n";
+        p "For example C:/MinGW/msys/1.0; toolchain will be put in C:/MSYS%s.\n" opt_path;
+        p "(environment variables of the form ${FOO} are understood).\n";
+        Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
+      in
+      try
+        let path = Filename.dirname (Sys.getenv "WD") in
+        if Sys.file_exists path then
+          Str.global_replace (Str.regexp "\\\\") "/" path
+        else
+          q ()
+      with _ ->
+        q ()
+    )
   | `Cygwin ->
       let opt_path = Lib.sp "/opt/windows_%d" bits in
       try
