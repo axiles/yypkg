@@ -1,9 +1,0 @@
-# Building on windows is a bit different but not harder: run the following
-# (yes, you can +x this script and run it in sh).
-
-cd src
-ocamlbuild yypkg.native makeypkg.native sherpa.native sherpa_gen.native sherpa_gui.native
-
-for bin in yypkg makeypkg sherpa sherpa_gen sherpa_gui; do
-  mv ${bin}.native ${bin}.exe
-done
