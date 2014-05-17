@@ -83,13 +83,15 @@ let install ~host ~mirror ~arch =
   let mkdir x = ignore (mkdir x) in
   let prefix = match host with
   | `Windows -> 
-      p "Where do you want to install win-builds %d? The installation will create the directories bin, include, lib and others under this location (environment variables of the form ${FOO} are understood)\n" bits;
+      p "Where do you want to install win-builds %d?\n" bits;
+      p "The installation will create the directories bin, include, lib and others under this location.\n";
+      p "(environment variables of the form ${FOO} are understood).\n";
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS -> (
       let q () =
         let opt_path = Lib.sp "/opt/windows_%d" bits in
         p "Couldn't automatically find the MSYS installation path.\n";
-        p "Please provide it in full with forward-slashes.\n";
+        p "Please provide it in full as a Windows path with forward-slashes.\n";
         p "For example C:/MinGW/msys/1.0; toolchain will be put in C:/MSYS%s.\n" opt_path;
         p "(environment variables of the form ${FOO} are understood).\n";
         Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
@@ -109,8 +111,10 @@ let install ~host ~mirror ~arch =
         let s = Lib.run_and_read [| "cygpath"; "-m"; opt_path |] `stdout in
         Str.global_replace (Str.regexp "\n$") "" s
       with _ ->
-        p "Could not find the path to the Cygwin installation.\n";
-        p "Please provide the full Windows path of your Cygwin installation with forward-slashes, e.g. C:/Cygwin (environment variables of the form ${FOO} are understood).\n";
+        p "Couldn't automatically find Cygwin installation path.\n";
+        p "Please provide it in full as a Windows path with forward-slashes.\n";
+        p "For example, C:/Cygwin. Toolchain will be put under %s.\n" opt_path;
+        p  "(environment variables of the form ${FOO} are understood).\n";
         Filename.concat (Questions.Path.get ~mkdir ~existing:true) opt_path
   in
 
