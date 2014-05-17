@@ -49,7 +49,7 @@ module Get = struct
     let t = ref (Unix.gettimeofday ()) in
     fun ~string:_string ~offset:_offset ~length:_length ->
       let t' = Unix.gettimeofday () in
-      (if t' >= !t +. 1. then (prerr_char '.'; flush stderr; t := t'))
+      (if t' >= !t +. 1. then (print_char '.'; flush stdout; t := t'))
 
   let to_file ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
@@ -80,15 +80,15 @@ let agent conf =
   | _ -> assert false
 
 let get_uri_contents ~agent uri =
-  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  Printf.printf "Downloading %s...%!" (Filename.basename uri);
   let content = Get.to_string ~agent uri in
-  Printf.eprintf " DONE\n%!";
+  Printf.printf " DONE\n%!";
   content
 
 let get_uri ~agent uri output =
-  Printf.eprintf "Downloading %s...%!" (Filename.basename uri);
+  Printf.printf "Downloading %s...%!" (Filename.basename uri);
   Get.to_file ~agent ~file:output ~uri;
-  Printf.eprintf " DONE\n%!"
+  Printf.printf " DONE\n%!"
 
 let download ~conf ~dest packages =
   let agent = agent conf in
@@ -100,10 +100,10 @@ let download ~conf ~dest packages =
     (if not (Sys.file_exists output && Lib.sha3_file output = p.sha3) then
       get_uri ~agent uri output;
       if Lib.sha3_file output <> p.sha3 then (
-        Printf.eprintf "File downloaded but hash is wrong. Trying again.\n";
+        Printf.printf "File downloaded but hash is wrong. Trying again.\n";
         get_uri ~agent uri output;
         if Lib.sha3_file output <> p.sha3 then (
-          Printf.eprintf "File downloaded but hash is wrong AGAIN! Aborting.\n";
+          Printf.printf "File downloaded but hash is wrong AGAIN! Aborting.\n";
           raise (Hash_failure output)
         )
       )
@@ -137,7 +137,7 @@ let repo_of_uri ~agent uri =
 let repository ~conf =
   let uri = String.concat "/" [ conf.mirror; "package_list.el.tar.xz"] in
   let agent = agent conf in
-  Printf.eprintf "Using mirror %S\n%!" conf.mirror;
+  Printf.printf "Using mirror %S\n%!" conf.mirror;
   repo_of_uri ~agent uri
 
 let packages ~conf ~follow ~wishes =
@@ -193,13 +193,13 @@ let main ~start_dir opts =
   let action = if o.download_only then "download" else "update" in
   (match need_update with
   | [] ->
-      Printf.eprintf "0 package to %s.\n%!" action
+      Printf.printf "0 package to %s.\n%!" action
   | l ->
-      Printf.eprintf "%d packages to %s: %s\n%!"
+      Printf.printf "%d packages to %s: %s\n%!"
         (List.length l)
         action
         (String.concat ", " (List.map (fun p -> p.Repo.metadata.name) l));
-      Printf.eprintf "Press return to continue or Ctrl-C to cancel.\n%!";
+      Printf.printf "Press return to continue or Ctrl-C to cancel.\n%!";
       ignore (read_line ())
   );
   let packages = download ~conf ~dest:o.dest need_update in
