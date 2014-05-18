@@ -43,7 +43,6 @@ let expand_environment_variables s =
   let getenv s =
     let beginning = Str.match_beginning () + 2 in
     let length = Str.match_end () - beginning - 1 in
-    print_endline (String.sub s beginning length);
     Unix.getenv (String.sub s beginning length)
   in
   let env_var_re = Str.regexp "\\${\\([0-9A-Za-z_]+\\)}" in
