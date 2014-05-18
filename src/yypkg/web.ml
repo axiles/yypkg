@@ -96,7 +96,9 @@ module Get = struct
       )
       else (
         let size_i = Int64.to_int size in
-        if not !over && (float !total >= 0.99 *. Int64.to_float size)
+        if not !over
+        && !t <> t'
+        && (float !total >= 0.99 *. Int64.to_float size)
         && (float !total <= Int64.to_float size) then (
           let total = min (max size_i !total) size_i in
           let speed = (float (total - !total_last)) /. (t' -. !t) in
