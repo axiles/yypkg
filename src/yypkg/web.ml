@@ -95,9 +95,12 @@ module Get = struct
         report ~total:!total ~size ~speed
       )
       else (
-        if not !over && (float !total >= 0.99 *. Int64.to_float size) then (
-          let speed = (float (!total - !total_last)) /. (t' -. !t) in
-          report ~total:!total ~size ~speed;
+        let size_i = Int64.to_int size in
+        if not !over && (float !total >= 0.99 *. Int64.to_float size)
+        && (float !total <= Int64.to_float size) then (
+          let total = min (max size_i !total) size_i in
+          let speed = (float (total - !total_last)) /. (t' -. !t) in
+          report ~total ~size ~speed;
           over := true
         )
       )
