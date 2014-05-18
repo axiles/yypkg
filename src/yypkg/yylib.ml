@@ -40,12 +40,14 @@ let conf_path =
 
 (* replace env var of the form ${windir} *)
 let expand_environment_variables s =
+  let getenv s =
+    let beginning = Str.match_beginning () + 2 in
+    let length = Str.match_end () - beginning - 1 in
+    print_endline (String.sub s beginning length);
+    Unix.getenv (String.sub s beginning length)
+  in
   let env_var_re = Str.regexp "\\${\\([0-9A-Za-z_]+\\)}" in
-  if Str.string_match env_var_re s 0 then
-    let repl = Unix.getenv (Str.matched_group 1 s) in
-    Str.replace_first env_var_re repl s
-  else
-    s
+  Str.global_substitute env_var_re getenv s
 
 (* run the command cmd and return a list of lines of the output *)
 let command cmd =
