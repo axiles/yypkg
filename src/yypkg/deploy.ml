@@ -88,8 +88,8 @@ let install ~host ~mirror ~arch =
       p "(environment variables of the form ${FOO} are understood).\n";
       Questions.Path.get ~mkdir ~existing:false
   | `MSYS -> (
+      let opt_path = Lib.sp "/opt/windows_%d" bits in
       let q () =
-        let opt_path = Lib.sp "/opt/windows_%d" bits in
         p "Couldn't automatically find the MSYS installation path.\n";
         p "Please provide it in full as a Windows path with forward-slashes.\n";
         p "For example C:/MinGW/msys/1.0; toolchain will be put in C:/MSYS%s.\n" opt_path;
@@ -99,7 +99,8 @@ let install ~host ~mirror ~arch =
       try
         let path = Filename.dirname (Sys.getenv "WD") in
         if Sys.file_exists path then
-          Str.global_replace (Str.regexp "\\\\") "/" path
+          let msys_path = Str.global_replace (Str.regexp "\\\\") "/" path in
+          Filename.concat msys_path opt_path
         else
           q ()
       with _ ->
