@@ -168,7 +168,7 @@ let skip_duplicates pkgs =
       name, pkgs
     )
     else
-      cur_name (p :: pkgs)
+      cur_name, (p :: pkgs)
   ))
 
 let generate dir =
