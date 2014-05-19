@@ -81,10 +81,12 @@ let repository_metadata pkglist =
       Lib.ep "Error: no target and no host found\n";
       assert false
   | _, _ ->
-      (if targets <> [] then
-        Lib.ep "Error: several targets seen: %s\n" (String.concat ", " targets));
-      (if hosts <> [] then
-        Lib.ep "Error: several hosts seen: %s\n" (String.concat ", " hosts));
+      let warn name = function
+        | [] -> ()
+        | l -> Lib.ep "Error: several %s seen: %s\n" name (String.concat ", " l)
+      in
+      warn "targets" targets;
+      warn "hosts" hosts;
       assert false
 
 module Output = struct
