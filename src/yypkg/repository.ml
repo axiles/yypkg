@@ -161,14 +161,17 @@ let pkg_compare a b =
 let skip_duplicates pkgs =
   let pkgs = List.sort pkg_compare pkgs in
   let pkgs = List.rev pkgs in
-  snd (ListLabels.fold_left ~init:("!", []) pkgs ~f:(fun (name, pkgs) p ->
-    let cur_name = p.Repo.metadata.name in
-    if cur_name = name then (
-      Lib.ep "Skipping %s because %s is already listed.\n" cur_name name;
-      name, pkgs
+  let init = ("!", "!", 0), [] in
+  snd (ListLabels.fold_left ~init pkgs ~f:(fun ((name, v, b) as p, pkgs) p' ->
+    let name' = p'.Repo.metadata.name in
+    let v', b' = p'.Repo.metadata.version in
+    if name' = name then (
+      Lib.ep "Skipping %s %s-%d because %s-%d is already present.\n"
+         name v' b' v b;
+      p, pkgs
     )
     else
-      cur_name, (p :: pkgs)
+      (name', v', b'), (p' :: pkgs)
   ))
 
 let generate dir =
