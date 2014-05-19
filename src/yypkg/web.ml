@@ -51,7 +51,8 @@ module Get = struct
     if s < 1000. then
       Lib.sp "%3.0fB" s
     else
-      let spec = format_of_string (if pad then "%5.1f" else "%3.1f") in
+      let spec =
+        if pad then format_of_string "%5.1f" else format_of_string "%3.1f" in
       let s' = div s 1 in
       if s' < 1000. then
         Lib.sp (spec ^^ (format_of_string "KB")) s'
