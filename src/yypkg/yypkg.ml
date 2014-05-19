@@ -98,7 +98,7 @@ let prefix_and_cmd_line cmd_line =
   let prefix, cmd_line = prefix_of_cmd_line cmd_line in
   match prefix, Lib.install_path with
   | None, Some path when installed path -> Some path, cmd_line
-  | _ -> None, cmd_line
+  | _ -> prefix, cmd_line
 
 let main () =
   let cmd_line = Args.parse cmd_line_spec Sys.argv in
