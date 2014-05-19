@@ -152,6 +152,25 @@ module Output = struct
     html ~directory ~repository
 end
 
+let pkg_compare a b =
+  if a.Repo.metadata.name <> b.Repo.metadata.name then
+    compare a.Repo.metadata.name b.Repo.metadata.name
+  else
+    compare a.Repo.metadata.version b.Repo.metadata.version
+
+let skip_duplicates pkgs =
+  let pkgs = List.sort pkg_compare pkgs in
+  let pkgs = List.rev pkgs in
+  snd (ListLabels.fold_left ~init:("!", []) pkgs ~f:(fun (name, pkgs) p ->
+    let cur_name = p.Repo.metadata.name in
+    if cur_name = name then (
+      Lib.ep "Skipping %s because %s is already listed.\n" cur_name name;
+      name, pkgs
+    )
+    else
+      cur_name (p :: pkgs)
+  ))
+
 let generate dir =
   let memoizer_pkgs = new memoizer ~directory:dir ~name:"pkg" in
   let files = Array.to_list (Sys.readdir dir) in
@@ -159,9 +178,9 @@ let generate dir =
   (* Build the list without deps first. *)
   let pkgs = ListLabels.rev_map files ~f:(fun f ->
     pkg_of_file ~memoizer:memoizer_pkgs (FilePath.concat dir f)) in
+  let pkgs = skip_duplicates pkgs in
   (* Add deps during a second stage. *)
-  let pkg_compare a b = compare a.Repo.metadata.name b.Repo.metadata.name in
-  let repository = repository_metadata (List.sort pkg_compare pkgs) in
+  let repository = repository_metadata pkgs in
   Output.write ~directory:dir ~repository;
   memoizer_pkgs#commit ()
 
