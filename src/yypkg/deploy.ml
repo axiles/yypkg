@@ -129,6 +129,8 @@ let install ~host ~mirror ~arch =
   ignore (read_line ());
 
   Init.init prefix;
+  (* FIXME: prefix might not be an absolute path *)
+  Unix.putenv "YYPREFIX" prefix;
   let conf = Config.update (fun conf ->
     let p_set = Config.Predicates.set in
     let conf = p_set conf ("host", [ host_triplet ]) in

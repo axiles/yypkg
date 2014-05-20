@@ -49,7 +49,6 @@ let prefix_of_cmd_line cmd_line =
   (* we've been given the --prefix with a string argument
    * we also set it as an env var so it can be used in install scripts *)
   | [ Args.Opt (_, [ Args.Val prefix ]) ], lf ->
-      Unix.putenv "YYPREFIX" prefix;
       Some prefix, lf
   (* all other combinations are invalid *)
   | _, lf -> None, lf
@@ -104,6 +103,8 @@ let main () =
   let cmd_line = Args.parse cmd_line_spec Sys.argv in
   (* the second cmd_line is the first with occurences of "-prefix" removed *)
   let prefix, cmd_line = prefix_and_cmd_line cmd_line in
+  (* FIXME: prefix might not be an absolute path *)
+  Unix.putenv "YYPREFIX" prefix;
   let action, actionopts = action_of_cmd_line cmd_line in
   (* Keep track of the original working dir. *)
   let old_cwd = Sys.getcwd () in
