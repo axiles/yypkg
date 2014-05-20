@@ -52,6 +52,7 @@ let expand_environment_variables s =
 let command cmd =
   (* TODO: quote the commands? *)
   let cmd = Array.map expand_environment_variables (Array.of_list cmd) in
+  Lib.log Lib.dbg "Going to run `%a'.\n%!" Lib.log_string_array cmd;
   Lib.split_by_line (Lib.run_and_read cmd `stdout)
 
 (* mkdir for use in installation scripts: it returns the path that got created

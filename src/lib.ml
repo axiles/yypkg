@@ -47,6 +47,12 @@ let log level =
   (if threshold >= level then Printf.fprintf else Printf.ifprintf)
   stderr
 
+let log_string_array oc a =
+  for i = 0 to Array.length a - 1; do
+    output_string oc a.(i);
+    (if i <> Array.length a - 1 then output_char oc ' ')
+  done
+
 let may f = function
   | None -> ()
   | Some v -> f v
