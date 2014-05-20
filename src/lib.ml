@@ -44,8 +44,8 @@ let log level =
       | s -> try int_of_string s with _ -> 0
     with Not_found -> 0
   in
-  (if threshold >= level then Printf.kfprintf else Printf.ikfprintf)
-  (fun _ -> ()) stderr
+  (if threshold >= level then Printf.fprintf else Printf.ifprintf)
+  stderr
 
 let may f = function
   | None -> ()
