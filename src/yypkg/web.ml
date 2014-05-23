@@ -5,6 +5,7 @@ module Get = struct
   exception Not_found
   exception Internal_Server_Error
   exception URI_parse_failure of string
+  exception Hash_failure of string
 
   let parse_uri uri =
     let { URI.scheme; part } = Match_failure.Unsafe.t (URI.String.t' uri) in
@@ -119,13 +120,44 @@ module Get = struct
       Unix.close fd; raise exn);
     Unix.close fd
 
-  let to_string ~progress ~agent ~uri =
-    let s = body ~agent ~uri ~out:progress in
-    print_newline ();
-    s
-end
+  let to_file ?(retries=0) ~sha3 ~uri ~file ~agent ~progress =
+    let get_with_sha3 file =
+      try
+        to_file ~agent ~file ~progress ~uri;
+        Some (Lib.sha3_file file)
+      with _ ->
+        None
+    in
+    let rec try_until f a n =
+      match n, f a with
+      | _, Some sha3' when sha3' = sha3 ->
+          ()
+      | 0, _ ->
+          Lib.ep "No valid download after %d tries. Aborting!\n%!" (retries+1);
+          raise (Hash_failure file)
+      | n, _ ->
+          Lib.ep "Wrong file hash, trying again (%d/%d).\n%!" (n+1) (retries+1);
+          try_until f a (n - 1)
+    in
+    try_until get_with_sha3 file retries
 
-exception Hash_failure of string
+  let to_string ~retries ~progress ~agent ~uri =
+    let rec try_until n =
+      let s = try body ~agent ~uri ~out:progress with
+      | _ when n = 0 ->
+          print_newline ();
+          Lib.ep "No valid download after %d tries. Aborting!\n%!" (retries+1);
+          raise (Failure (Lib.sp "Failed download %S." uri))
+      | _ ->
+          print_newline ();
+          Lib.ep "Download failed, trying again (%d/%d).\n%!" (n+1) (retries+1);
+          try_until (n-1)
+      in
+      print_newline ();
+      s
+    in
+    try_until retries
+end
 
 let agent conf =
   match Sys.os_type with
@@ -160,15 +192,7 @@ let download ~conf ~dest packages =
         in
         Get.progress ~size ~filename
       in
-      Get.to_file ~agent ~file:output ~progress:(per ()) ~uri;
-      if Lib.sha3_file output <> sha3 then (
-        Printf.printf "File downloaded but hash is wrong. Trying again.\n";
-        Get.to_file ~agent ~file:output ~progress:(per ()) ~uri;
-        if Lib.sha3_file output <> sha3 then (
-          Printf.printf "File downloaded but hash is wrong AGAIN! Aborting.\n";
-          raise (Hash_failure output)
-        )
-      )
+      Get.to_file ~retries:2 ~sha3 ~agent ~file:output ~progress:(per ()) ~uri
     );
     output
   )
@@ -192,7 +216,7 @@ let get_deps pkglist packages =
 
 let repo_of_uri ~agent uri =
   let progress = Get.progress ~size:0L ~filename:(Filename.basename uri) in
-  let list_el_xz = Get.to_string ~agent ~progress ~uri in
+  let list_el_xz = Get.to_string ~retries:2 ~agent ~progress ~uri in
   let archive = Lib.Archive.String list_el_xz in
   let list_el = Lib.Archive.get_contents ~archive ~file:"package_list.el" in
   TypesSexp.To.repository (Pre_sexp.of_string list_el)
