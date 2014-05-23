@@ -150,6 +150,14 @@ type deploy_opts = {
   x86_64 : bool option;
 }
 
+let press_return_to_exit () =
+  if Lib.started_from_windows_gui () then (
+    print_endline "Press return to continue...";
+    ignore (read_line ())
+  )
+  else
+    ()
+
 let main opts =
   let init = {
     mirror_ = mirror ();
@@ -174,8 +182,11 @@ let main opts =
   let i686 = Arch.get "i686" o.i686 in
   let x86_64 = Arch.get "x86_64" o.x86_64 in
 
-  (if i686 then install ~host ~mirror ~arch:`I686);
-  (if x86_64 then install ~host ~mirror ~arch:`X86_64)
+  try
+    (if i686 then install ~host ~mirror ~arch:`I686);
+    (if x86_64 then install ~host ~mirror ~arch:`X86_64);
+    press_return_to_exit ()
+  with _ -> press_return_to_exit ()
 
 let cli_spec =
   let mk ~n ~h c = Args.spec ~name:n ~help:h ~children:c in
