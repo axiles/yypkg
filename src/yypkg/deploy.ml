@@ -152,7 +152,7 @@ type deploy_opts = {
 
 let press_return_to_exit () =
   if Lib.started_from_windows_gui () then (
-    print_endline "Press return to continue...";
+    print_endline "Installation done. Press return to continue...";
     ignore (read_line ())
   )
   else
