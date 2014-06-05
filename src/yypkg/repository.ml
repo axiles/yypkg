@@ -101,7 +101,6 @@ module Output = struct
         `Right, "Version";
         `Right, "Size compressed";
         `Right, "Size expanded";
-        `Left, "Host";
         `Left, "Target";
         `Left, "Constraints";
         `Left, "Description";
@@ -115,7 +114,6 @@ module Output = struct
         `Right, string_of_version m.version;
         `Right, of_size size_compressed;
         `Right, of_size m.size_expanded;
-        `Left, m.host;
         `Left, (match m.target with Some target -> target | None -> "N/A");
         `Left, (String.concat ", " (List.map sp_predicate m.predicates));
         `Left, m.description;
@@ -124,6 +122,8 @@ module Output = struct
 
     let table pkgs =
       String.concat "\n" (List.concat [
+        (try [ Lib.sp "Host: %s<br>" (List.hd pkgs).Repo.metadata.host ]
+          with _ -> []);
         [ "<table border=\"1\">" ];
         [ tr_header ];
         List.sort compare (List.rev_map tr_pkg pkgs);
