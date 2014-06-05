@@ -100,22 +100,26 @@ module Output = struct
         `Left, "Name";
         `Right, "Version";
         `Right, "Size compressed/expanded";
+        `Left, "Description";
         `Left, "Target";
         `Left, "Constraints";
-        `Left, "Description";
         `Left, "Dependencies";
       ]
     let tr_pkg { Repo.deps; size_compressed; metadata = m } =
       let of_size = FileUtil.string_of_size ~fuzzy:true in
       let sp_predicate (k, v) = String.concat "=" [ k; v ] in
+      let shorten_description s =
+        let s = Str.(global_replace (regexp "[^(]*(\\([^)]*\\)) .*") "\\1" s) in
+        Str.(global_replace (regexp "\\. .*") "" s)
+      in
       tr [
         `Left, m.name;
         `Right, string_of_version m.version;
         `Right,
           Lib.sp "%s / %s" (of_size size_compressed) (of_size m.size_expanded);
+        `Left, shorten_description m.description;
         `Left, (match m.target with Some target -> target | None -> "");
         `Left, (String.concat ", " (List.map sp_predicate m.predicates));
-        `Left, m.description;
         `Left, String.concat ", " deps
       ]
 
