@@ -99,8 +99,7 @@ module Output = struct
       tr [
         `Left, "Name";
         `Right, "Version";
-        `Right, "Size compressed";
-        `Right, "Size expanded";
+        `Right, "Size compressed/expanded";
         `Left, "Target";
         `Left, "Constraints";
         `Left, "Description";
@@ -112,8 +111,8 @@ module Output = struct
       tr [
         `Left, m.name;
         `Right, string_of_version m.version;
-        `Right, of_size size_compressed;
-        `Right, of_size m.size_expanded;
+        `Right,
+          Lib.sp "%s / %s" (of_size size_compressed) (of_size m.size_expanded);
         `Left, (match m.target with Some target -> target | None -> "N/A");
         `Left, (String.concat ", " (List.map sp_predicate m.predicates));
         `Left, m.description;
