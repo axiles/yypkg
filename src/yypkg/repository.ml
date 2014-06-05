@@ -113,7 +113,7 @@ module Output = struct
         `Right, string_of_version m.version;
         `Right,
           Lib.sp "%s / %s" (of_size size_compressed) (of_size m.size_expanded);
-        `Left, (match m.target with Some target -> target | None -> "N/A");
+        `Left, (match m.target with Some target -> target | None -> "");
         `Left, (String.concat ", " (List.map sp_predicate m.predicates));
         `Left, m.description;
         `Left, String.concat ", " deps
