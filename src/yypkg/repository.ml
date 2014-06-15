@@ -89,7 +89,106 @@ let repository_metadata pkglist =
       warn "hosts" hosts;
       assert false
 
+let shorten_description s =
+  let s = Str.(global_replace (regexp "[^(]*(\\([^)]*\\)) .*") "\\1" s) in
+  Str.(global_replace (regexp "\\. .*") "" s)
+
 module Output = struct
+  module XML = struct
+    let escape () v =
+      let substitutes = [
+        "<", "&lt;";
+        ">", "&gt;";
+        "<=", "&lte;";
+        ">=", "&lte;";
+        "&", "&amp;";
+      ]
+      in
+      let re = Str.regexp (String.concat "\\|" (List.map fst substitutes)) in
+      let replace s = List.assoc (Str.matched_string s) substitutes in
+      Str.global_substitute re replace v
+    let attributes { Repo.size_compressed; metadata = m } =
+      let of_size = FileUtil.string_of_size ~fuzzy:true in
+      let sp name value = Lib.sp "%s=\"%a\"" name escape value in
+      String.concat " " [
+        sp "name" m.name;
+        sp "version" (string_of_version m.version);
+        sp "size_compressed" (of_size size_compressed);
+        sp "size_expanded" (of_size m.size_expanded);
+        sp "packager_email" m.packager_email;
+        sp "packager_name" m.packager_name;
+        sp "host" m.host;
+        sp "target" (match m.target with Some target -> target | None -> "");
+      ]
+    let predicate (k, v) =
+      Lib.sp "<predicate key=%S value=%S/>" k v
+    let comment s =
+      Lib.sp "<comment>%a</comment>" escape s
+    let package ({ Repo.metadata = m } as p) =
+      let attributes = attributes p in
+      let predicates = String.concat "" (List.map predicate m.predicates) in
+      let comments = String.concat "" (List.map comment m.comments) in
+      let description = shorten_description m.description in
+      String.concat "\n" [
+        Lib.sp "<?xml version=\"1.0\"?>";
+        Lib.sp "<package %s>" attributes;
+        Lib.sp "  <predicates>%s</predicates>" predicates;
+        Lib.sp "  <comments>%s</comments>" comments;
+        Lib.sp "  <description>%a</description>" escape description;
+        Lib.sp "</package>";
+      ]
+    let document pkgs =
+      String.concat "\n" [
+        "<packages>";
+        String.concat "\n" (List.sort compare (List.rev_map package pkgs));
+        "</packages>";
+      ]
+  end
+  module JSON = struct
+    let predicates l =
+      let predicate (k, v) =
+        Lib.sp "{ \"key\" : %S, \"value\" : %S }" k v
+      in
+      String.concat " " [
+        "[";
+        String.concat ", " (List.map predicate l);
+        "]"
+      ]
+    let comments l =
+      String.concat " " [
+        "[";
+        String.concat ", " (List.map String.escaped l);
+        "]"
+      ]
+    let fields { Repo.metadata = m; size_compressed } =
+      let of_size = FileUtil.string_of_size ~fuzzy:true in
+      let description = shorten_description m.description in
+      String.concat ",\n" [
+        Lib.sp "  \"name\" : %S" m.name;
+        Lib.sp "  \"version\" : %S" (string_of_version m.version);
+        Lib.sp "  \"size_compressed\" : %S" (of_size size_compressed);
+        Lib.sp "  \"size_expanded\" : %S" (of_size m.size_expanded);
+        Lib.sp "  \"packager_email\" : %S" m.packager_email;
+        Lib.sp "  \"packager_name\" : %S" m.packager_name;
+        Lib.sp "  \"host\" : %S" m.host;
+        Lib.sp "  \"target\" : %S" (match m.target with Some target -> target | None -> "");
+        Lib.sp "  \"predicates\" : %s" (predicates m.predicates);
+        Lib.sp "  \"comments\" : %s" (comments m.comments);
+        Lib.sp "  \"description\" : %S" description;
+      ]
+    let package p =
+      String.concat "\n" [
+        "{";
+        fields p;
+        "}"
+      ]
+    let json pkgs =
+      String.concat "\n" [
+        "[";
+        String.concat ",\n" (List.sort compare (List.rev_map package pkgs));
+        "]";
+      ]
+  end
   module HTML = struct
     let td (a, s) =
       Lib.sp "<td align=%S>%s</td>" (match a with `Right -> "right" | _ -> "") s
@@ -108,10 +207,6 @@ module Output = struct
     let tr_pkg { Repo.deps; size_compressed; metadata = m } =
       let of_size = FileUtil.string_of_size ~fuzzy:true in
       let sp_predicate (k, v) = String.concat "=" [ k; v ] in
-      let shorten_description s =
-        let s = Str.(global_replace (regexp "[^(]*(\\([^)]*\\)) .*") "\\1" s) in
-        Str.(global_replace (regexp "\\. .*") "" s)
-      in
       tr [
         `Left, m.name;
         `Right, string_of_version m.version;
@@ -127,7 +222,7 @@ module Output = struct
       String.concat "\n" (List.concat [
         (try [ Lib.sp "Host: %s<br>" (List.hd pkgs).Repo.metadata.host ]
           with _ -> []);
-        [ "<table border=\"1\">" ];
+        [ "<table border=\"1\" cellpadding=\"3px\" style=\"border-collapse: collapse;\">" ];
         [ tr_header ];
         List.sort compare (List.rev_map tr_pkg pkgs);
         [ "</table>" ]
@@ -144,15 +239,17 @@ module Output = struct
     let tar_args = [ [| "-C"; directory; el |] ] in
     Yylib.tar_xz ~tar_args ~xz_opt ~out:(file ^ ".tar.xz")
 
-  let html ~directory ~repository =
-    let html_oc = FilePath.concat directory "package_list.html" in
-    let html_oc = open_out_bin html_oc in
-    output_string html_oc (HTML.table repository.Repo.pkglist);
-    close_out html_oc
-
   let write ~directory ~repository =
+    let f ~extension ~serializer =
+      let file = FilePath.concat directory ("package_list." ^ extension) in
+      let oc = open_out_bin file in
+      output_string oc (serializer repository.Repo.pkglist);
+      close_out oc
+    in
     package_list ~directory ~repository;
-    html ~directory ~repository
+    f ~extension:"html" ~serializer:HTML.table;
+    f ~extension:"xml" ~serializer:XML.document;
+    f ~extension:"json" ~serializer:JSON.json
 end
 
 let pkg_compare a b =
