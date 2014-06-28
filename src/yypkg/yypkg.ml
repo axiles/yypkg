@@ -182,18 +182,36 @@ let () =
     let installed =
       match Lib.install_path with None -> false | Some path -> installed path
     in
-    if installed then (
-      enter Lib.install_path;
-      try
-        VBUI.main ()
-      with e ->
-        ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.critical ] (
-          Printexc.to_string e
-          :: (Str.split (Str.regexp "\n") (Printexc.get_backtrace ()));
-        ))
-    )
-    else
-      Deploy.main Args.([ Opt ("--host", [ Val "Native Windows" ]) ])
+    let install_path =
+      if installed then
+        Lib.install_path
+      else
+        let system_arch_file = ref None in
+        Yypkg_gui.Systems.prompt ~cb_ok:(fun ~system ~arch ~file ->
+          system_arch_file := Some (system, arch, file);
+          true
+        );
+        match !system_arch_file, Deploy.mirror () with
+        | Some (host_system, arch, Some prefix), Some mirror ->
+            let bits, host_triplet =
+              if arch = "i686" then
+                32, "i686-w64-mingw32"
+              else
+                64, "x86_64-w64-mingw32"
+            in
+            Deploy.init ~prefix ~mirror ~bits ~host_system ~host_triplet;
+            Some prefix
+        | _, _ ->
+            None
+    in
+    enter install_path;
+    try
+      VBUI.main ()
+    with e ->
+      ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.critical ] (
+        Printexc.to_string e
+        :: (Str.split (Str.regexp "\n") (Printexc.get_backtrace ()));
+      ))
   else
     let b = Buffer.create 1000 in
     (if Args.nothing_given () || Args.wants_help () then
