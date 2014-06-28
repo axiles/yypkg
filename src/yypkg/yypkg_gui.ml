@@ -1,14 +1,13 @@
+open Types
 open Efl
 
 module Systems = struct
   let prompt_for_mirror () =
-    let title = "Mirror required" in
     let s = ref "" in
     Elm.init ();
     Elm_toolbox.input_string
-    ~title
-    ~text:"Could not automatically find a mirror. Please provide one below.<br>An example is 'http://win-builds.org/1.5.0'."
-    title
+    ~title:"Mirror required"
+    "Could not automatically find a mirror. Please provide one below.<br>An example is 'http://win-builds.org/1.5.0'."
     (function Some s' -> s := s' | None -> assert false);
     Elm.run ();
     Elm.shutdown ();
@@ -62,6 +61,71 @@ module Systems = struct
     let systems, arch = systems_and_bits ~box w in
     let file_selector = path ~box w in
     let _ok, _cancel = ok_cancel ~arch ~systems ~file_selector ~cb_ok ~box w in
+    Evas_object.show w;
+    Elm.run ()
+end
+
+module Display = struct
+  let row_of_package pkg w =
+    let limit_description s =
+      if String.length s > 90 then
+        String.sub s 0 90
+      else
+        s
+    in
+    let label text =
+      Elm_label.addx w ~text ~size_hint:[ `expand; `fill; `halign 0. ]
+    in
+    let m = Yylib.metadata_of_pkg pkg in
+    let labels = List.map label [
+      m.name;
+      string_of_version m.version;
+      limit_description m.description;
+      FileUtil.string_of_size ~fuzzy:true m.size_expanded;
+    ]
+    in
+    Array.of_list (
+      (Elm_button.addx w ~size_hint:[] ~text:"Install" )
+      :: labels
+    )
+
+  let on_select ~descr ~pkg () =
+    let m = Yylib.metadata_of_pkg pkg in
+    let pd = Lib.sp "<font_weight=bold><align=left>%s:</align></font_weight> %s" in
+    Elm_object.part_text_set descr (String.concat "<br>" [
+      pd "Name" m.name;
+      pd "Version" (string_of_version m.version);
+      pd "Size on disk" (FileUtil.string_of_size ~fuzzy:true m.size_expanded);
+      pd "Description" m.description;
+    ])
+
+  let populate_table ~descr w =
+    let db = ref (Db.read ()) in
+    fun () ->
+      match !db with
+      | [] -> None
+      | pkg :: tl ->
+          db := tl;
+          let row = row_of_package pkg w in
+          Some (
+            Array.length row,
+            on_select ~pkg ~descr,
+            fun pack -> Array.iteri pack row
+          )
+
+  let main () =
+    let () = Elm.init () in
+    let w = Elm_win.addx ~title:"weee" ~autodel:true "aa" in
+    Elm.policy_quit_set `last_window_closed;
+    Evas_object.resize w 400 400;
+    let box = Elm_box.addx w in
+    Elm_win.resize_object_add w box;
+    let scroller_addx = Elm_object.create_addx Elm_scroller.add in
+    let scroller = scroller_addx ~box w in
+    let descr = Elm_label.addx w ~size_hint:[ `hexpand; `fill ] in
+    Elm_label.line_wrap_set descr `word;
+    let table = Efl_plus.Table.table ~scroller ~populate:(populate_table ~descr w) w in
+    Elm_box.pack_end box descr;
     Evas_object.show w;
     Elm.run ()
 end

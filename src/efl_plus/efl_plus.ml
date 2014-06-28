@@ -33,20 +33,16 @@ module Table = struct
     Evas_object.event_callback_add_mouse_down click_zone on_mouse_down;
     click_zone
 
-  let add_row ~column_gen ~w ~t ~i =
+  let add_row ~row ~w ~t ~i =
+    let columns, on_select, row_gen = row in
+
     let bg = Elm_bg.addx w in
     let bg_reset = if i mod 2 = 0 then t.bg_reset_even else t.bg_reset_odd in
     bg_reset bg;
+    Elm_table.pack t.table bg 0 i columns 1;
 
-    let widgets = Queue.create () in
-    let rec add_columns j =
-      match column_gen ~j ~w with
-      | None -> j
-      | Some widget ->
-          Queue.push (j, widget) widgets;
-          add_columns (j+1)
-    in
-    let columns = add_columns 0 in
+    let pack j o = Elm_table.pack t.table o j i 1 1 in
+    row_gen pack;
 
     let click_zone = click_zone w ~on_mouse_down:(fun _e _o md ->
       if md.Evas_event.Mouse_down.button = 1 then (
@@ -54,78 +50,27 @@ module Table = struct
         Queue.clear t.q_selected;
         Evas_object.color_set bg 0 0 120 120;
         Queue.push (bg_reset, bg) t.q_selected;
+        on_select ()
       )
     )
     in
-
-    Elm_table.pack t.table bg 0 i columns 1;
-    Queue.iter (fun (j, widget) -> Elm_table.pack t.table widget j i 1 1) widgets;
     Elm_table.pack t.table click_zone 0 i columns 1
 
-  let table ~population w =
+  let table ~scroller ~populate w =
+    Elm_scroller.content_min_limit scroller 1 0;
+    Elm_scroller.propagate_events_set scroller true;
     let table = Elm_table.addx w in
-    let bg_reset_even bg = Evas_object.color_set bg 60 0 0 60 in
-    let bg_reset_odd bg = Evas_object.color_set bg 0 60 0 60 in
+    Elm_table.padding_set table 2 0;
+    Elm_object.content_set scroller table;
+    let bg_reset_even bg = Evas_object.color_set bg 60 60 60 120 in
+    let bg_reset_odd bg = Evas_object.color_set bg 0 0 0 0 in
     let q_selected = Queue.create () in
     let t = { table; bg_reset_even; bg_reset_odd; q_selected } in
     let rec add_rows i =
-      match population ~i ~w with
-      | Some column_gen -> add_row ~column_gen ~w ~t ~i; add_rows (i+1)
+      match populate () with
+      | Some row -> add_row ~row ~w ~t ~i; add_rows (i+1)
       | None -> i
     in
     ignore (add_rows 0);
     table
-
-let data = [|
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchementzazaz"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement aza zaz az az "; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-  [| "franchement"; "obligé"; "de"; "faire"; "sale"; "='(" |];
-|]
-
-  let population ~i ~w =
-    if i < Array.length data then
-      Some (fun ~j ~w ->
-        if j = 0 then
-          Some (Elm_button.addx w ~text:"click!")
-        else if j < Array.length data.(i) then
-          let size_hint = [ `expand; `fill; `halign 0. ] in
-          Some (Elm_label.addx w ~size_hint ~text:data.(i).(j-1))
-        else
-          None
-      )
-    else
-      None
-
-  let build () =
-    let w = Elm_win.addx ~title:"weee" ~autodel:true "aa" in
-    Evas_object.resize w 400 200;
-    let box = Elm_box.addx w in
-    Elm_win.resize_object_add w box;
-    let scroller_addx = Elm_object.create_addx Elm_scroller.add in
-    let scroller = scroller_addx ~box w in
-    Elm_scroller.propagate_events_set scroller true;
-    let table = table ~population w in
-    Elm_object.content_set scroller table;
-    let _descr = Elm_label.addx w ~box ~size_hint:[] ~text:"lapins !" in
-    Evas_object.show w
 end
-
-let f () =
-  Elm.init ();
-  Elm.policy_quit_set `last_window_closed;
-  Table.build ();
-  Elm.run ();
-  Elm.shutdown ()
-

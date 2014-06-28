@@ -179,13 +179,17 @@ let main_wrap b =
 let () =
   Printexc.record_backtrace true;
   if Args.nothing_given () && Lib.started_from_windows_gui () then
-    let installed =
-      match Lib.install_path with None -> false | Some path -> installed path
-    in
     let install_path =
-      if installed then
-        Lib.install_path
-      else
+      try Some (Sys.getenv "YYPREFIX") with Not_found -> (
+        match Lib.install_path with
+        | Some path as some_path when installed path -> some_path
+        | _ -> None
+      )
+    in
+    let install_path = match install_path with
+    | Some _ ->
+        install_path
+    | None -> (
         let system_arch_file = ref None in
         Yypkg_gui.Systems.prompt ~cb_ok:(fun ~system ~arch ~file ->
           match file with
@@ -224,10 +228,11 @@ let () =
             Some prefix
         | _ ->
             None
+    )
     in
     enter install_path;
     try
-      VBUI.main ()
+      Yypkg_gui.Display.main ()
     with e ->
       ignore VBUI.(msgbox ~title:"Fatal error" ~buttons:[ Button.critical ] (
         Printexc.to_string e
