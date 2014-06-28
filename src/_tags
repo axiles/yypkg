@@ -10,7 +10,7 @@
 
 <yypkg/*>: package(fileutils.str), package(cryptokit), package(libocaml_http)
 
-<yypkg/yypkg_gui*>: package(efl)
+<yypkg/yypkg_gui*>: package(efl), thread
 <efl_plus/*>: package(efl)
 
-<yypkg/yypkg.{native,byte}>: package(bigarray), package(archive), package(libocaml_http), package(efl)
+<yypkg/yypkg.{native,byte}>: package(bigarray), package(archive), package(libocaml_http), package(efl), thread

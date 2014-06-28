@@ -66,7 +66,7 @@ module Systems = struct
 end
 
 module Display = struct
-  let row_of_package pkg w =
+  let row_of_pkg pkg w =
     let limit_description s =
       if String.length s > 90 then
         String.sub s 0 90
@@ -76,7 +76,7 @@ module Display = struct
     let label text =
       Elm_label.addx w ~text ~size_hint:[ `expand; `fill; `halign 0. ]
     in
-    let m = Yylib.metadata_of_pkg pkg in
+    let m = pkg.Repo.metadata in
     let labels = List.map label [
       m.name;
       string_of_version m.version;
@@ -90,7 +90,7 @@ module Display = struct
     )
 
   let on_select ~descr ~pkg () =
-    let m = Yylib.metadata_of_pkg pkg in
+    let m = pkg.Repo.metadata in
     let pd = Lib.sp "<font_weight=bold><align=left>%s:</align></font_weight> %s" in
     Elm_object.part_text_set descr (String.concat "<br>" [
       pd "Name" m.name;
@@ -99,19 +99,34 @@ module Display = struct
       pd "Description" m.description;
     ])
 
-  let populate_table ~descr w =
-    let db = ref (Db.read ()) in
+  let populate_table ~descr ~pkglist ~w =
+    let pkglist = ref pkglist in
     fun () ->
-      match !db with
+      match !pkglist with
       | [] -> None
       | pkg :: tl ->
-          db := tl;
-          let row = row_of_package pkg w in
+          pkglist := tl;
+          let row = row_of_pkg pkg w in
           Some (
             Array.length row,
             on_select ~pkg ~descr,
             fun pack -> Array.iteri pack row
           )
+
+  let fetch_and_fill ~table ~w ~descr =
+    let inwin = Elm_inwin.add w in
+    let label = Elm_label.addx ~text:"Downloading..." inwin in
+    Elm_inwin.content_set inwin label;
+    Evas_object.show inwin;
+    ignore (Thread.create (fun () ->
+      let conf = Config.read () in
+      let pkglist = Web.packages ~conf ~follow:false ~wishes:["all"] in
+      Ecore.call (fun () ->
+        Evas_object.del inwin;
+        Efl_plus.Table.add_rows 0 ~w ~t:table
+          ~populate:(populate_table ~descr ~pkglist ~w);
+      )
+    ) ())
 
   let main () =
     let () = Elm.init () in
@@ -124,8 +139,9 @@ module Display = struct
     let scroller = scroller_addx ~box w in
     let descr = Elm_label.addx w ~size_hint:[ `hexpand; `fill ] in
     Elm_label.line_wrap_set descr `word;
-    let table = Efl_plus.Table.table ~scroller ~populate:(populate_table ~descr w) w in
+    let table = Efl_plus.Table.table ~scroller ~populate:(populate_table ~descr ~pkglist:[] ~w) w in
     Elm_box.pack_end box descr;
+    fetch_and_fill ~w ~table ~descr;
     Evas_object.show w;
     Elm.run ()
 end
