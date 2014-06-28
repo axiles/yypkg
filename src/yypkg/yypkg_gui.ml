@@ -1,6 +1,19 @@
 open Efl
 
 module Systems = struct
+  let prompt_for_mirror () =
+    let title = "Mirror required" in
+    let s = ref "" in
+    Elm.init ();
+    Elm_toolbox.input_string
+    ~title
+    ~text:"Could not automatically find a mirror. Please provide one below.<br>An example is 'http://win-builds.org/1.5.0'."
+    title
+    (function Some s' -> s := s' | None -> assert false);
+    Elm.run ();
+    Elm.shutdown ();
+    !s
+
   let systems_and_bits ~box w =
     ignore (Elm_label.addx w ~box
       ~text:"Select the system and architecture to install for.");
@@ -29,18 +42,20 @@ module Systems = struct
       Elm.connect Elm_sig.clicked (fun _ ->
         let file = Elm_fileselector.path_get file_selector in
         match cb_ok ~system:(systems ()) ~arch:(arch ()) ~file with
-        | "" -> Evas_object.del w; Elm.shutdown ()
+        | "" -> Evas_object.del w; Elm.exit ()
         | s -> Elm_toolbox.message_box ~title:"Error" s (fun () -> ())
       )
     ] w in
     let cancel = Elm_button.addx ~box:box_ok_cancel ~text:"Cancel" ~cb:[
-      Elm.connect Elm_sig.clicked (fun _ -> Elm.exit ())
+      Elm.connect Elm_sig.clicked (fun _ -> Evas_object.del w)
     ] w in
     ok, cancel
 
   let prompt ~cb_ok =
     let () = Elm.init () in
     let w = Elm_win.addx ~title:"weee" ~autodel:true "aa" in
+    Elm.policy_exit_set `windows_del;
+    Elm.policy_quit_set `last_window_closed;
     let box = Elm_box.addx w in
     Elm_box.horizontal_set box false;
     Elm_win.resize_object_add w box;
