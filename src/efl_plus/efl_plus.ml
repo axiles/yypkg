@@ -18,15 +18,6 @@ module Radio = struct
     fun () -> a.(Elm_radio.value_get (Elm_radio.selected_object_get b.(0)))
 end
 
-module FileEntryButton = struct
-  let build ~box ~w =
-    let file = ref None in
-    ignore (Elm_fileselector_entry.addx ~box ~text:"Browse" w ~cb:[
-      Elm.connect Elm_sig.file_chosen (fun _o s -> file := s);
-    ]);
-    fun () -> !file
-end
-
 module Table = struct
   type t = {
     table : Evas_object.t;

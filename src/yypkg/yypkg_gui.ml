@@ -19,20 +19,18 @@ module Systems = struct
   let path ~box w =
     ignore (Elm_label.addx w ~box
       ~text:"Chose the installation path; for Cygwin/MSYS, select their installation root.");
-    Efl_plus.FileEntryButton.build ~box ~w
+    Elm_fileselector_entry.addx ~box ~text:"Browse" w
 
-  let ok_cancel ~arch ~systems ~file_get ~cb_ok ~box w =
+  let ok_cancel ~arch ~systems ~file_selector ~cb_ok ~box w =
     let box_ok_cancel = Elm_box.addx ~box w in
     Elm_box.horizontal_set box_ok_cancel true;
     Elm_box.homogeneous_set box_ok_cancel true;
     let ok = Elm_button.addx ~box:box_ok_cancel ~text:"OK" ~cb:[
       Elm.connect Elm_sig.clicked (fun _ ->
-        if cb_ok ~system:(systems ()) ~arch:(arch ()) ~file:(file_get ()) then (
-          Evas_object.del w;
-          Elm.shutdown ()
-        )
-        else
-          ()
+        let file = Elm_fileselector.path_get file_selector in
+        match cb_ok ~system:(systems ()) ~arch:(arch ()) ~file with
+        | "" -> Evas_object.del w; Elm.shutdown ()
+        | s -> Elm_toolbox.message_box ~title:"Error" s (fun () -> ())
       )
     ] w in
     let cancel = Elm_button.addx ~box:box_ok_cancel ~text:"Cancel" ~cb:[
@@ -47,8 +45,8 @@ module Systems = struct
     Elm_box.horizontal_set box false;
     Elm_win.resize_object_add w box;
     let systems, arch = systems_and_bits ~box w in
-    let file_get = path ~box w in
-    let _ok, _cancel = ok_cancel ~arch ~systems ~file_get ~cb_ok ~box w in
+    let file_selector = path ~box w in
+    let _ok, _cancel = ok_cancel ~arch ~systems ~file_selector ~cb_ok ~box w in
     Evas_object.show w;
     Elm.run ()
 end

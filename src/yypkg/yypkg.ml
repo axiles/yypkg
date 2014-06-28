@@ -189,10 +189,24 @@ let () =
         let system_arch_file = ref None in
         Yypkg_gui.Systems.prompt ~cb_ok:(fun ~system ~arch ~file ->
           system_arch_file := Some (system, arch, file);
-          true
+          match file with
+          | "" ->
+               "You must select an installation directory."
+          | file when system = "Cygwin" || system = "MSYS" ->
+              if Sys.file_exists file then
+                ""
+              else
+                Lib.sp "%s must already be installed<br>Select its installation path." system
+          | file when system = "Native Windows" ->
+              if Sys.file_exists file && Sys.readdir file <> [| |] then
+                Lib.sp "You must select an empty directory."
+              else
+                ""
+          | _ ->
+              assert false
         );
         match !system_arch_file, Deploy.mirror () with
-        | Some (host_system, arch, Some prefix), Some mirror ->
+        | Some (host_system, arch, prefix), Some mirror ->
             let bits, host_triplet =
               if arch = "i686" then
                 32, "i686-w64-mingw32"
