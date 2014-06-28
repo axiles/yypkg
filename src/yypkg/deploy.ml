@@ -74,6 +74,23 @@ let mirror () =
   else
     None
 
+let init ~prefix ~host_triplet ~host_system ~mirror ~bits =
+  Init.init prefix;
+  (* FIXME: prefix might not be an absolute path *)
+  Unix.putenv "YYPREFIX" prefix;
+  let conf = Config.update (fun conf ->
+    let p_set = Config.Predicates.set in
+    let conf = p_set conf ("host", [ host_triplet ]) in
+    let conf = p_set conf ("target", [ host_triplet ]) in
+    let conf = p_set conf ("host_system", [ host_system ]) in
+    { conf with mirror = Lib.sp "%s/packages/windows_%d" mirror bits }
+  )
+  in
+  let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
+  let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
+  Db.update (Install.install conf packages)
+
+
 let install ~host ~mirror ~arch =
   let host_triplet, bits = match arch with
   | `I686 -> "i686-w64-mingw32", 32
@@ -128,20 +145,7 @@ let install ~host ~mirror ~arch =
   p "\nPress return to continue or Ctrl-C to abort.\n";
   ignore (read_line ());
 
-  Init.init prefix;
-  (* FIXME: prefix might not be an absolute path *)
-  Unix.putenv "YYPREFIX" prefix;
-  let conf = Config.update (fun conf ->
-    let p_set = Config.Predicates.set in
-    let conf = p_set conf ("host", [ host_triplet ]) in
-    let conf = p_set conf ("target", [ host_triplet ]) in
-    let conf = p_set conf ("host_system", [ host_system ]) in
-    { conf with mirror = Lib.sp "%s/packages/windows_%d" mirror bits }
-  )
-  in
-  let l = Web.packages ~conf ~follow:true ~wishes:["all"] in
-  let packages = Web.download ~conf ~dest:Yylib.default_download_path l in
-  Db.update (Install.install conf packages)
+  init ~prefix ~host_triplet ~host_system ~mirror ~bits
 
 type deploy_opts = {
   mirror_ : string option;
