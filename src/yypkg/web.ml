@@ -109,11 +109,11 @@ module Get = struct
         )
       )
 
-  let to_file ~progress ~agent ~file ~uri =
+  let to_file ~progress:(out, _done) ~agent ~file ~uri =
     let fd = Unix.(openfile file [ O_WRONLY; O_CREAT; O_TRUNC ] 0o644) in
     (try
-      let data = body ~agent ~uri ~out:progress in
-      print_newline ();
+      let data = body ~agent ~uri ~out in
+      _done ();
       let l = String.length data in
       assert (l = Unix.write fd data 0 l)
     with exn ->
@@ -171,7 +171,19 @@ let agent conf =
     )
   | _ -> assert false
 
-let download ~conf ~dest packages =
+let progress_cli p =
+  let size = Lib.int64_of_fileutil_size p.Repo.size_compressed in
+  let version, build = p.Repo.metadata.version in
+  let filename =
+    match p.Repo.metadata.host, p.Repo.metadata.target with
+    | host, Some target when target = host ->
+        Lib.sp "%s %s-%d (%s)" p.Repo.metadata.name version build target
+    | _ ->
+        Lib.sp "%s %s-%d" p.Repo.metadata.name version build
+  in
+  Get.progress ~size ~filename, print_newline
+
+let download ~conf ~dest ?(progress=progress_cli) packages =
   let agent = agent conf in
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
   ListLabels.map packages ~f:(fun p ->
@@ -180,19 +192,8 @@ let download ~conf ~dest packages =
     let uri = String.concat "/" [ conf.mirror; filename ] in
     let output = Lib.filename_concat [ dest; filename ] in
     (if not (Sys.file_exists output && Lib.sha3_file output = sha3) then
-      let per () =
-        let size = Lib.int64_of_fileutil_size p.Repo.size_compressed in
-        let version, build = p.Repo.metadata.version in
-        let filename =
-          match p.Repo.metadata.host, p.Repo.metadata.target with
-          | host, Some target when target = host ->
-              Lib.sp "%s %s-%d (%s)" p.Repo.metadata.name version build target
-          | _ ->
-              Lib.sp "%s %s-%d" p.Repo.metadata.name version build
-        in
-        Get.progress ~size ~filename
-      in
-      Get.to_file ~retries:2 ~sha3 ~agent ~file:output ~progress:(per ()) ~uri
+      let progress = progress p in
+      Get.to_file ~retries:2 ~sha3 ~agent ~file:output ~progress ~uri
     );
     output
   )

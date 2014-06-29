@@ -66,7 +66,67 @@ module Systems = struct
 end
 
 module Display = struct
-  let row_of_pkg pkg w =
+  let tasks = Hashtbl.create 200
+
+  let add_task ~pkg ~labels ~w =
+    let task = Elm_hoversel.addx w in
+    Evas_object_smart.callback_add task Elm_sig.selected__item (fun _ it ->
+      let label = Elm_object.item_part_text_get it () in
+      Elm_object.part_text_set task label;
+      Hashtbl.replace tasks pkg label
+    );
+    Elm_hoversel.horizontal_set task false;
+    ListLabels.iter labels ~f:(fun (label, select) ->
+      ignore (Elm_hoversel.item_add task ~label ());
+      (if select then (
+        Elm_object.part_text_set task label;
+        Hashtbl.replace tasks pkg label
+      ));
+    );
+    task
+
+  let list_tasks () =
+    let extract values =
+      List.rev (Hashtbl.fold (fun pkg value accu ->
+        if List.mem value values then pkg :: accu else accu
+      ) tasks [])
+    in
+    extract [ "Install"; "Update" ], extract [ "Remove" ]
+
+  let state ~pkg ~db ~w =
+    let naviframe = Elm_naviframe.addx w in
+    let push o = Elm_naviframe.item_simple_push naviframe o in
+    let needs_update = Web.needs_update ~db pkg in
+    let task = add_task ~pkg ~w ~labels:[
+        "Keep as-is", db <> [] && not needs_update;
+        "Install", db = [];
+        "Update", needs_update;
+        "Remove", false;
+    ]
+    in
+    let downloading = Elm_progressbar.addx w in
+    Elm_progressbar.horizontal_set downloading true;
+    Elm_progressbar.unit_format_set downloading "%0.f%%";
+    let checking = Elm_label.addx ~text:"Checking" w in
+    let installing = Elm_label.addx ~text:"Installing" w in
+    let task_item = push task in
+    let checking_item = push checking in
+    let downloading_item = push downloading in
+    let installing_item = push installing in
+    Elm_naviframe.item_promote task_item;
+    naviframe, (function
+      | `Download f ->
+          Elm_naviframe.item_promote downloading_item;
+          Elm_progressbar.value_set downloading f;
+      | `Checking ->
+          Elm_naviframe.item_promote checking_item;
+      | `Installing ->
+          Elm_naviframe.item_promote installing_item;
+      | `Operation ->
+          Elm_naviframe.item_promote task_item;
+    )
+
+  let row_of_pkg ~db ~conf ~pkg ~w =
     let limit_description s =
       if String.length s > 90 then
         String.sub s 0 90
@@ -84,64 +144,87 @@ module Display = struct
       FileUtil.string_of_size ~fuzzy:true m.size_expanded;
     ]
     in
-    Array.of_list (
-      (Elm_button.addx w ~size_hint:[] ~text:"Install" )
+    let naviframe, state = state ~pkg ~db ~w in
+    state, Array.of_list (
+      naviframe
       :: labels
     )
 
   let on_select ~descr ~pkg () =
     let m = pkg.Repo.metadata in
     let pd = Lib.sp "<font_weight=bold><align=left>%s:</align></font_weight> %s" in
+    let size s = FileUtil.string_of_size ~fuzzy:true s in
     Elm_object.part_text_set descr (String.concat "<br>" [
       pd "Name" m.name;
       pd "Version" (string_of_version m.version);
-      pd "Size on disk" (FileUtil.string_of_size ~fuzzy:true m.size_expanded);
+      pd "Size on disk" (size m.size_expanded);
+      pd "Size compressed" (size pkg.Repo.size_compressed);
       pd "Description" m.description;
     ])
 
-  let populate_table ~descr ~pkglist ~w =
+  let populate_table ~db ~conf ~descr ~pkglist ~w =
     let pkglist = ref pkglist in
     fun () ->
       match !pkglist with
       | [] -> None
       | pkg :: tl ->
           pkglist := tl;
-          let row = row_of_pkg pkg w in
+          let state, row = row_of_pkg ~db ~conf ~pkg ~w in
           Some (
             Array.length row,
             on_select ~pkg ~descr,
             fun pack -> Array.iteri pack row
           )
 
-  let fetch_and_fill ~table ~w ~descr =
+  let pkglist = ref []
+
+  let fetch_and_fill ~conf ~db ~table ~w ~descr =
     let inwin = Elm_inwin.add w in
-    let label = Elm_label.addx ~text:"Downloading..." inwin in
-    Elm_inwin.content_set inwin label;
+    let label = Elm_label.addx ~inwin ~text:"Downloading..." inwin in
     Evas_object.show inwin;
     ignore (Thread.create (fun () ->
-      let conf = Config.read () in
-      let pkglist = Web.packages ~conf ~follow:false ~wishes:["all"] in
-      Ecore.call (fun () ->
+      pkglist := Web.packages ~conf ~follow:false ~wishes:["all"];
+    ) ());
+    ignore (Ecore_timer.add 0.010 (fun () ->
+      if !pkglist <> [] then (
         Evas_object.del inwin;
-        Efl_plus.Table.add_rows 0 ~w ~t:table
-          ~populate:(populate_table ~descr ~pkglist ~w);
+        ignore (Efl_plus.Table.add_rows ~w ~t:table
+          ~populate:(populate_table ~db ~conf ~descr ~pkglist:!pkglist ~w));
+        false;
       )
-    ) ())
+      else
+        true
+    ))
 
   let main () =
     let () = Elm.init () in
     let w = Elm_win.addx ~title:"weee" ~autodel:true "aa" in
+    Evas_object.resize w 768 512;
     Elm.policy_quit_set `last_window_closed;
-    Evas_object.resize w 400 400;
     let box = Elm_box.addx w in
     Elm_win.resize_object_add w box;
-    let scroller_addx = Elm_object.create_addx Elm_scroller.add in
-    let scroller = scroller_addx ~box w in
-    let descr = Elm_label.addx w ~size_hint:[ `hexpand; `fill ] in
+    Elm_box.horizontal_set box false;
+    let install_bt = Elm_button.addx ~size_hint:[] ~box w in
+    Elm_object.part_text_set install_bt "Install";
+    let panes = Elm_panes.addx ~box w in
+    Elm_panes.horizontal_set panes true;
+    Elm_panes.fixed_set panes true;
+    Elm_panes.content_right_size_set panes 0.25;
+    let table = Efl_plus.Table.table w in
+    let descr = Elm_label.addx w in
     Elm_label.line_wrap_set descr `word;
-    let table = Efl_plus.Table.table ~scroller ~populate:(populate_table ~descr ~pkglist:[] ~w) w in
-    Elm_box.pack_end box descr;
-    fetch_and_fill ~w ~table ~descr;
+    Elm_object.part_content_set panes ~p:"top" table.Efl_plus.Table.scroller;
+    Elm_object.part_content_set panes ~p:"bottom" descr;
+    let conf = Config.read () in
+    let db = Db.read () in
+    fetch_and_fill ~conf ~db ~w ~table ~descr;
+    ignore (Evas_object_smart.callback_add install_bt Elm_sig.clicked (fun _ ->
+      let install_list, remove_list = list_tasks () in
+      List.iter (fun p -> prerr_endline p.Repo.metadata.name) install_list;
+      let packages = Web.download ~conf ~dest:Yylib.default_download_path install_list in
+      (if false then
+        Db.update (Upgrade.upgrade ~install_new:true conf packages));
+    ));
     Evas_object.show w;
     Elm.run ()
 end

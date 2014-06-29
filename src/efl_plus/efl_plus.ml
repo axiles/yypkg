@@ -21,6 +21,7 @@ end
 module Table = struct
   type t = {
     table : Evas_object.t;
+    scroller : Evas_object.t;
     bg_reset_even : Evas_object.t -> unit;
     bg_reset_odd : Evas_object.t -> unit;
     q_selected : ((Evas_object.t -> unit) * Evas_object.t) Queue.t;
@@ -56,7 +57,7 @@ module Table = struct
     in
     Elm_table.pack t.table click_zone 0 i columns 1
 
-  let rec add_rows ~populate ~w ~t i =
+  let add_rows ~populate ~w ~t =
     let rec f i =
       match populate () with
       | Some row -> add_row ~row ~w ~t ~i; f (i+1)
@@ -64,7 +65,9 @@ module Table = struct
     in
     f 0
 
-  let table ~scroller ~populate w =
+  let table ?populate w =
+    let scroller_addx = Elm_object.create_addx Elm_scroller.add in
+    let scroller = scroller_addx w in
     Elm_scroller.content_min_limit scroller 1 0;
     Elm_scroller.propagate_events_set scroller true;
     let table = Elm_table.addx w in
@@ -73,7 +76,9 @@ module Table = struct
     let bg_reset_even bg = Evas_object.color_set bg 60 60 60 120 in
     let bg_reset_odd bg = Evas_object.color_set bg 0 0 0 0 in
     let q_selected = Queue.create () in
-    let t = { table; bg_reset_even; bg_reset_odd; q_selected } in
-    ignore (add_rows ~populate ~w ~t 0);
+    let t = { table; scroller; bg_reset_even; bg_reset_odd; q_selected } in
+    (match populate with
+    | Some populate -> ignore (add_rows ~populate ~w ~t)
+    | None -> ());
     t
 end
