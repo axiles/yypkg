@@ -183,20 +183,24 @@ let progress_cli p =
   in
   Get.progress ~size ~filename, print_newline
 
-let download ~conf ~dest ?(progress=progress_cli) packages =
-  let agent = agent conf in
+let download_init ~conf ~dest =
   FileUtil.mkdir ~parent:true ~mode:0o755 dest;
-  ListLabels.map packages ~f:(fun p ->
-    let filename = p.Repo.filename in
-    let sha3 = p.Repo.sha3 in
-    let uri = String.concat "/" [ conf.mirror; filename ] in
-    let output = Lib.filename_concat [ dest; filename ] in
-    (if not (Sys.file_exists output && Lib.sha3_file output = sha3) then
-      let progress = progress p in
-      Get.to_file ~retries:2 ~sha3 ~agent ~file:output ~progress ~uri
-    );
-    output
-  )
+  agent conf
+
+let download_one ~conf ~dest ~agent ?(progress=progress_cli) p =
+  let filename = p.Repo.filename in
+  let sha3 = p.Repo.sha3 in
+  let uri = String.concat "/" [ conf.mirror; filename ] in
+  let output = Lib.filename_concat [ dest; filename ] in
+  (if not (Sys.file_exists output && Lib.sha3_file output = sha3) then
+    let progress = progress p in
+    Get.to_file ~retries:2 ~sha3 ~agent ~file:output ~progress ~uri
+  );
+  output
+
+let download ~conf ~dest ?progress packages =
+  let agent = download_init ~conf ~dest in
+  List.map (download_one ~conf ~dest ~agent ?progress) packages
 
 let package_is_applicable ~conf pkg =
   let f = predicate_holds conf.preds in

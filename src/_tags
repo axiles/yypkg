@@ -1,4 +1,4 @@
-<{args,yypkg,sexplib,http_get,efl_plus}>: include
+<{args,yypkg,sexplib,http_get,efl_plus,mini_frp_not}>: include
 
 true: debug, warn_A, warn(-4-9-23-44)
 

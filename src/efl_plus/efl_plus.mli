@@ -12,13 +12,8 @@ module Table : sig
     q_selected : ((Efl.Evas_object.t -> unit) * Efl.Evas_object.t) Queue.t;
   }
 
-  val add_rows :
-    populate:(unit ->
-      (int * (unit -> unit) * ((int -> Efl.Evas.obj -> unit) -> 'a)) option)
-      -> w:Efl.Evas.obj -> t:t -> int
+  type row = int * (unit -> unit) * ((int -> Efl.Evas.obj -> unit) -> unit)
 
-  val table :
-    ?populate:(unit ->
-      (int * (unit -> unit) * ((int -> Efl.Evas.obj -> unit) -> 'a)) option)
-      -> Efl.Evas.obj -> t
+  val add_row : row:row -> w:Efl.Evas.obj -> t:t -> i:int -> unit
+  val table : Efl.Evas.obj -> t
 end
