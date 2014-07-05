@@ -151,7 +151,7 @@ module Display = struct
       let l = ListLabels.map install_list ~f:(fun pkg ->
         let push_state = get_push_state pkg in
         let progress pkg = progress ~push_state pkg in
-        push_state (Download 0.))
+        push_state (Download 0.);
         let file =
           try
             Web.download_one ~conf:t.conf ~dest ~agent ~progress pkg
